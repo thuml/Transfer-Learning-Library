@@ -10,6 +10,7 @@ class VisionDataset(datasets.VisionDataset):
 
     Args:
         root (string): Root directory of dataset
+        num_classes (int): number of classes
         data_list_file (string): In this file, each line has two values separated by a blank space.
             The first is the relative path of an image, and the second is the label of the corresponding image.
             If your data_list_file has different formats, you need to reimplement `parse_data_file` and `__getitem__`.
@@ -22,13 +23,14 @@ class VisionDataset(datasets.VisionDataset):
             target and transforms it.
     """
 
-    def __init__(self, root, data_list_file: str, download_urls=None, transform=None, target_transform=None):
+    def __init__(self, root, num_classes, data_list_file: str, download_urls=None, transform=None, target_transform=None):
         super().__init__(root, transform=transform, target_transform=target_transform)
         self.download_urls = download_urls
 
         if isinstance(download_urls, dict):
             self.download()
-
+        
+        self._num_classes = num_classes
         self.data_list = self.parse_data_file(data_list_file)
         self.loader = default_loader
 
@@ -58,11 +60,14 @@ class VisionDataset(datasets.VisionDataset):
             if self._check_exists(domain):
                 continue
 
+            print("Downloading {}".format(domain))
             download_and_extract_archive(url, download_root=self.root,
                                          filename="{}.tgz".format(domain), remove_finished=True)
 
-        print('Done!')
-
     def _check_exists(self, domain):
         return os.path.exists(os.path.join(self.root, domain))
+
+    @property
+    def num_classes(self):
+        return self._num_classes
 

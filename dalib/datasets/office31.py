@@ -32,7 +32,6 @@ class Office31(VisionDataset):
         else:
             download_urls = None
 
-        super(Office31, self).__init__(root, data_list_file=data_list_file,
+        super(Office31, self).__init__(root, num_classes=31, data_list_file=data_list_file,
                                        download_urls=download_urls,  **kwargs)
-
 
