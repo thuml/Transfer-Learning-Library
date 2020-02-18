@@ -6,11 +6,14 @@ __all__ = ['Baseline']
 class Baseline(nn.Module):
 
     def __init__(self, backbone, num_classes=1000, use_bottleneck=True, bottleneck_dim=256):
-        super().__init__()
+        super(Baseline, self).__init__()
         self.backbone = backbone
         self.use_bottleneck = use_bottleneck
         if self.use_bottleneck:
-            self.bottleneck = nn.Linear(backbone.out_features, bottleneck_dim)
+            self.bottleneck = nn.Sequential(
+                nn.Linear(backbone.out_features, bottleneck_dim),
+                nn.BatchNorm1d(bottleneck_dim)
+            )
             self.fc = nn.Linear(bottleneck_dim, num_classes)
         else:
             self.fc = nn.Linear(backbone.out_features, num_classes)
@@ -20,6 +23,7 @@ class Baseline(nn.Module):
         x = x.view(x.size(0), -1)
         if self.use_bottleneck:
             x = self.bottleneck(x)
+
         return self.fc(x)
 
     def get_parameters(self):
