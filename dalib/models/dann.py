@@ -1,63 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.autograd import Function
 
-
-__all__ = ['DANN']
-
-
-class DANN(nn.Module):
-
-    def __init__(self, backbone, num_classes=1000, use_bottleneck=True, bottleneck_dim=256,
-                 training=True, discriminator_hidden_dim=1024):
-        super(DANN, self).__init__()
-        self.backbone = backbone
-        self.use_bottleneck = use_bottleneck
-        self.training = training
-
-        if self.use_bottleneck:
-            self.bottleneck = nn.Sequential(
-                nn.Linear(backbone.out_features, bottleneck_dim),
-                nn.BatchNorm1d(bottleneck_dim)
-            )
-            self.fc = nn.Linear(bottleneck_dim, num_classes)
-        else:
-            self.fc = nn.Linear(backbone.out_features, num_classes)
-
-        if self.training:
-            self.domain_discriminator = DomainDiscriminator(self.fc.in_features, discriminator_hidden_dim)
-
-    def forward(self, x, keep_features=False):
-        f = self.backbone(x)
-        f = f.view(x.size(0), -1)
-        if self.use_bottleneck:
-            f = self.bottleneck(f)
-        y = self.fc(f)
-        if keep_features:
-            return y, f
-        else:
-            return y
-
-    def forward_loss(self, x_s, x_t, labels_s):
-        y_s, f_s = self(x_s, keep_features=True)
-        cls_loss = F.cross_entropy(y_s, labels_s)
-        d_s = self.domain_discriminator(f_s)
-        _, f_t = self(x_t, keep_features=True)
-        d_t = self.domain_discriminator(f_t)
-        transfer_loss = F.binary_cross_entropy(d_s, torch.ones((x_s.size(0), 1)).cuda()) + \
-                        F.binary_cross_entropy(d_t, torch.zeros((x_t.size(0), 1)).cuda())
-        return cls_loss + transfer_loss
-
-    def get_parameters(self):
-        params = [
-            {"params": self.backbone.parameters(), "lr_mult": 1.},
-            {"params": self.fc.parameters(), "lr_mult": 10.},
-        ]
-        if self.use_bottleneck:
-            params += [{"params": self.bottleneck.parameters(), "lr_mult": 10.}]
-        if self.training:
-            params += [{"params": self.domain_discriminator.parameters(), "lr_mult": 10.}]
-        return params
+__all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
 
 
 class DomainDiscriminator(nn.Module):
@@ -71,12 +16,42 @@ class DomainDiscriminator(nn.Module):
         self.relu2 = nn.ReLU()
         self.layer3 = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
+        self.grl = GradientReverseLayer.apply
 
-    def forward(self, x):
+    def forward(self, x, alpha):
+        x = self.grl(x, alpha)
         x = self.relu1(self.bn1(self.layer1(x)))
         x = self.relu2(self.bn2(self.layer2(x)))
         y = self.sigmoid(self.layer3(x))
         return y
 
+    def get_parameters(self):
+        return [{"params": self.parameters(), "lr_mult": 10.}]
 
 
+class DomainAdversarialLoss(nn.Module):
+
+    def __init__(self, domain_discriminator, size_average=None, reduce=None, reduction='mean'):
+        super(DomainAdversarialLoss, self).__init__()
+        self.domain_discriminator = domain_discriminator
+        self.bce = nn.BCELoss(size_average=size_average, reduce=reduce, reduction=reduction)
+
+    def forward(self, f_s, f_t, alpha=1.):
+        d_s = self.domain_discriminator(f_s, alpha)
+        d_label_s = torch.ones((f_s.size(0), 1)).cuda()
+        d_t = self.domain_discriminator(f_t, alpha)
+        d_label_t = torch.zeros((f_t.size(0), 1)).cuda()
+        return 0.5 * (self.bce(d_s, d_label_s) + self.bce(d_t, d_label_t))
+
+
+class GradientReverseLayer(Function):
+
+    @staticmethod
+    def forward(ctx, input, alpha):
+        ctx.alpha = alpha
+        output = input * 1.0
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output.neg() * ctx.alpha, None

@@ -1,2 +1,2 @@
-from .baseline import *
+from .classifier import *
 from .dann import *

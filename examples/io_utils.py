@@ -46,21 +46,21 @@ def basic_parser():
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=90, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-b', '--batch-size', default=48, type=int,
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 64)')
+                        help='mini-batch size (default: 36)')
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     parser.add_argument('-p', '--print-freq', default=10, type=int,
                         metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--gpu', default=0, type=int,
+    parser.add_argument('--gpu', default='0', type=str,
                         help='GPU id to use.')
     return parser
 
