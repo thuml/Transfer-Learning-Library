@@ -1,5 +1,4 @@
 import os
-
 import torchvision.datasets as datasets
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.utils import download_and_extract_archive

@@ -9,6 +9,7 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.use_bottleneck = use_bottleneck
+        self.num_classes = num_classes
         if self.use_bottleneck:
             self.bottleneck = nn.Sequential(
                 nn.Linear(backbone.out_features, bottleneck_dim),

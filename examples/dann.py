@@ -7,7 +7,6 @@ import sys
 import numpy as np
 
 import torch
-import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
@@ -16,7 +15,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')
+sys.path.append('.')  # TODO remove this when published
 
 import dalib.models as models
 import dalib.datasets as datasets
@@ -63,15 +62,11 @@ def main(args):
                                                num_workers=args.workers, pin_memory=True)
 
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size*2, shuffle=False,
                                              num_workers=args.workers, pin_memory=True)
 
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-    # torch.cuda.set_device("cuda: {}".format(args.gpu))
-    cudnn.benchmark = True
-
     # create model
+    cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
     classifier = models.Classifier(backbone, train_source_dataset.num_classes).cuda()
@@ -84,12 +79,16 @@ def main(args):
     classifier = torch.nn.DataParallel(classifier).cuda()
     domain_discri = torch.nn.DataParallel(domain_discri).cuda()
 
-    # define loss function (criterion)
-    criterion = nn.CrossEntropyLoss().cuda()
-    domain_adv_loss = models.DomainAdversarialLoss(domain_discri).cuda()
-
     best_acc1 = 0.
+
+    train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
+    if args.iters_per_epoch is None:
+        iters_per_epoch = max(len(train_source_loader), len(train_target_loader))
+    else:
+        iters_per_epoch = args.iters_per_epoch
+    # define loss function
+    domain_adv = models.DomainAdversarialLoss(domain_discri, max_iters=iters_per_epoch * args.epochs).cuda()
 
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
@@ -97,10 +96,10 @@ def main(args):
         print("lr={:.5f} alpha={:.5f}".format(optimizer.param_groups[0]['lr'], alpha))
 
         # train for one epoch
-        train(train_source_loader, train_target_iter, classifier, optimizer, epoch, args, domain_adv_loss, alpha)
+        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, criterion, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
         best_acc1 = max(acc1, best_acc1)
@@ -108,23 +107,26 @@ def main(args):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_loader, train_target_iter, model, optimizer, epoch, args, domain_adv_loss, alpha):
+def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, domain_adv, args):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
-        len(train_source_loader),
-        [batch_time, data_time, losses, cls_accs],
+        iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
+    domain_adv.train()
 
     end = time.time()
-    for i, (x_s, labels_s) in enumerate(train_source_loader):
+    for i in range(iters_per_epoch):
         # measure data loading time
         data_time.update(time.time() - end)
+        x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
         if args.gpu is not None:
@@ -136,14 +138,14 @@ def train(train_source_loader, train_target_iter, model, optimizer, epoch, args,
         y_s, f_s = model(x_s, keep_features=True)
         cls_loss = F.cross_entropy(y_s, labels_s)
         _, f_t = model(x_t, keep_features=True)
-        transfer_loss = domain_adv_loss(f_s, f_t, alpha)
-        loss = cls_loss + transfer_loss
+        transfer_loss, domain_acc = domain_adv(f_s, f_t)
+        loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        # domain_accs.update(domain_acc.item(), x_s.size(0))
+        domain_accs.update(domain_acc.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -158,7 +160,7 @@ def train(train_source_loader, train_target_iter, model, optimizer, epoch, args,
             progress.display(i)
 
 
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, args):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -180,7 +182,7 @@ def validate(val_loader, model, criterion, args):
 
             # compute output
             output = model(images)
-            loss = criterion(output, target)
+            loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -281,8 +283,20 @@ class ForeverDataIterator:
             data = next(self.iter)
         return data
 
+    def __len__(self):
+        return len(self.data_loader)
+
+
 if __name__ == '__main__':
     parser = basic_parser()
+    parser.add_argument('--iters_per_epoch', default=None, type=int,
+                        help='Number of iterations per epoch.'
+                             "If it's not specified, we will traverse the source and target data for each epoch.")
     args = parser.parse_args()
+
+    # TODO remove this when published
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
     main(args)
 

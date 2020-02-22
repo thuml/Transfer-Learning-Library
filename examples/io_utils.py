@@ -56,11 +56,13 @@ def basic_parser():
     parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
-    parser.add_argument('-p', '--print-freq', default=10, type=int,
+    parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default='0', type=str,
-                        help='GPU id to use.')
+                        help='GPU id(s) to use.')
+    parser.add_argument('--trade_off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
     return parser
 

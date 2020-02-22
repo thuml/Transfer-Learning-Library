@@ -1,6 +1,8 @@
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Function
+from ._util import GradientReverseLayer, binary_accuracy
+
 
 __all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
 
@@ -16,10 +18,8 @@ class DomainDiscriminator(nn.Module):
         self.relu2 = nn.ReLU()
         self.layer3 = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
-        self.grl = GradientReverseLayer.apply
 
-    def forward(self, x, alpha):
-        x = self.grl(x, alpha)
+    def forward(self, x):
         x = self.relu1(self.bn1(self.layer1(x)))
         x = self.relu2(self.bn2(self.layer2(x)))
         y = self.sigmoid(self.layer3(x))
@@ -31,27 +31,25 @@ class DomainDiscriminator(nn.Module):
 
 class DomainAdversarialLoss(nn.Module):
 
-    def __init__(self, domain_discriminator, size_average=None, reduce=None, reduction='mean'):
+    def __init__(self, domain_discriminator, max_iters, size_average=None, reduce=None, reduction='mean'):
         super(DomainAdversarialLoss, self).__init__()
+        self.grl = GradientReverseLayer()
+        self.max_iters = max_iters
+        self.iter_num = 0
         self.domain_discriminator = domain_discriminator
         self.bce = nn.BCELoss(size_average=size_average, reduce=reduce, reduction=reduction)
 
-    def forward(self, f_s, f_t, alpha=1.):
-        d_s = self.domain_discriminator(f_s, alpha)
+    def forward(self, f_s, f_t):
+        self.iter_num += 1
+        alpha = np.float(2.0 * 1. / (1.0 + np.exp(-10. * self.iter_num / self.max_iters)) - 1.)
+
+        f_s = self.grl(f_s, alpha)
+        d_s = self.domain_discriminator(f_s)
         d_label_s = torch.ones((f_s.size(0), 1)).cuda()
-        d_t = self.domain_discriminator(f_t, alpha)
+
+        f_t = self.grl(f_t, alpha)
+        d_t = self.domain_discriminator(f_t)
         d_label_t = torch.zeros((f_t.size(0), 1)).cuda()
-        return 0.5 * (self.bce(d_s, d_label_s) + self.bce(d_t, d_label_t))
+        return 0.5 * (self.bce(d_s, d_label_s) + self.bce(d_t, d_label_t)), 0.5 * (binary_accuracy(d_s, d_label_s) + binary_accuracy(d_t, d_label_t))
 
 
-class GradientReverseLayer(Function):
-
-    @staticmethod
-    def forward(ctx, input, alpha):
-        ctx.alpha = alpha
-        output = input * 1.0
-        return output
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output.neg() * ctx.alpha, None

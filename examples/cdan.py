@@ -1,26 +1,28 @@
+from io_utils import basic_parser
+
 import random
 import time
 import warnings
 import sys
+import numpy as np
 
 import torch
-import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
-sys.path.append('.')
+sys.path.append('.')  # TODO remove this when published
 
 import dalib.models as models
 import dalib.datasets as datasets
 import dalib.models.backbones as backbones
-from io_utils import basic_parser
 
 
-def main(args, **model_kwargs):
+def main(args):
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -43,88 +45,131 @@ def main(args, **model_kwargs):
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    val_tranform = \
+        transforms.Compose([
+            transforms.Resize(256),
+            transforms.TenCrop(224),
+            transforms.Lambda(lambda crops: torch.stack(
+                [transforms.Compose([
+                    transforms.ToTensor(),
+                    normalize
+                ])(crop) for crop in crops])),
+        ]) if args.tencrop else \
+        transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize
+        ])
 
     train_source_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = torch.utils.data.DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True)
+                                               num_workers=args.workers, pin_memory=True, drop_last=True)
     train_target_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = torch.utils.data.DataLoader(train_target_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True)
+                                               num_workers=args.workers, pin_memory=True, drop_last=True)
 
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False,
                                              num_workers=args.workers, pin_memory=True)
-
-    # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = backbones.__dict__[args.arch](pretrained=True)
-    model = models.__dict__[args.model](backbone, train_source_dataset.num_classes, **model_kwargs)
-
-    torch.cuda.set_device(args.gpu)
-    model = model.cuda(args.gpu)
-
-    # define loss function (criterion) and optimizer
-    criterion = nn.CrossEntropyLoss().cuda(args.gpu)
-
-    optimizer = torch.optim.SGD(model.get_parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
-
-    cudnn.benchmark = True
-
-    best_acc1 = 0.
+    train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
+    # create model
+    cudnn.benchmark = True
+    print("=> using pre-trained model '{}'".format(args.arch))
+    backbone = backbones.__dict__[args.arch](pretrained=True)
+    num_classes = train_source_dataset.num_classes
+    classifier = models.Classifier(backbone, num_classes).cuda()
+    classifier_feature_dim = classifier.features_dim
+    if args.randomized:
+        domain_in_feature = args.random_dim
+    else:
+        domain_in_feature = classifier_feature_dim * num_classes
+    domain_discri = models.ConditionalDomainDiscriminator(in_feature=domain_in_feature, hidden_size=1024).cuda()
+    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    classifier = torch.nn.DataParallel(classifier).cuda()
+    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
+
+    # define optimizer
+    optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
+                                weight_decay=args.weight_decay, nesterov=True)
+
+    if args.iters_per_epoch is None:
+        iters_per_epoch = max(len(train_source_loader), len(train_target_loader))
+    else:
+        iters_per_epoch = args.iters_per_epoch
+
+    # define loss function
+    domain_adv = models.ConditionalDomainAdversarialLoss(
+        domain_discri, max_iters=iters_per_epoch * args.epochs, entropy_conditioning=args.entropy_conditioning,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized
+    ).cuda()
+
+    # start training
+    best_acc1 = 0.
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
+        alpha = np.float(2.0 * 1. / (1.0 + np.exp(-10. * epoch / args.epochs)) - 1.)
+        print("lr={:.5f} alpha={:.5f}".format(optimizer.param_groups[0]['lr'], alpha))
 
         # train for one epoch
-        train(train_source_loader, train_target_iter, model, optimizer, epoch, args)
+        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
         best_acc1 = max(acc1, best_acc1)
 
-    print("best_acc1 = {}".format(best_acc1))
+    print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_loader, train_target_iter, model, optimizer, epoch, args):
-    batch_time = AverageMeter('Time', ':6.3f')
-    data_time = AverageMeter('Data', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
+def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, domain_adv, args):
+    batch_time = AverageMeter('Time', ':3.1f')
+    data_time = AverageMeter('Data', ':3.1f')
+    losses = AverageMeter('Loss', ':3.2f')
+    trans_losses = AverageMeter('Trans Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
-        len(train_source_loader),
-        [batch_time, data_time, losses],
+        iters_per_epoch,
+        [batch_time, data_time, losses, trans_losses, cls_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
+    domain_adv.train()
 
     end = time.time()
-    for i, (x_s, labels_s) in enumerate(train_source_loader):
+    for i in range(iters_per_epoch):
         # measure data loading time
         data_time.update(time.time() - end)
+        x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
-        if args.gpu is not None:
-            x_s = x_s.cuda(args.gpu, non_blocking=True)
-            x_t = x_t.cuda(args.gpu, non_blocking=True)
-            labels_s = labels_s.cuda(args.gpu, non_blocking=True)
+        x_s = x_s.cuda()
+        x_t = x_t.cuda()
+        labels_s = labels_s.cuda()
 
         # compute output
-        loss = model.forward_loss(x_s, x_t, labels_s)
+        y_s, f_s = model(x_s, keep_features=True)
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        trans_loss_s, domain_acc_s = domain_adv(f_s, y_s, domain=1)
+        y_t, f_t = model(x_t, keep_features=True)
+        trans_loss_t, domain_acc_t = domain_adv(f_t, y_t, domain=0)
+        transfer_loss = 0.5 * (trans_loss_s + trans_loss_t)
+        loss = cls_loss + transfer_loss * args.trade_off
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+        domain_acc = 0.5 * (domain_acc_s + domain_acc_t)
 
         losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        domain_accs.update(domain_acc.item(), x_s.size(0))
+        trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -139,7 +184,7 @@ def train(train_source_loader, train_target_iter, model, optimizer, epoch, args)
             progress.display(i)
 
 
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, args):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -156,12 +201,12 @@ def validate(val_loader, model, criterion, args):
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             if args.gpu is not None:
-                images = images.cuda(args.gpu, non_blocking=True)
-            target = target.cuda(args.gpu, non_blocking=True)
+                images = images.cuda()
+            target = target.cuda()
 
             # compute output
             output = model(images)
-            loss = criterion(output, target)
+            loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -225,7 +270,7 @@ class ProgressMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
+    lr = args.lr * (1. + 0.1 * epoch) ** (-0.75)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr * param_group['lr_mult']
     return lr
@@ -261,4 +306,23 @@ class ForeverDataIterator:
             self.iter = iter(self.data_loader)
             data = next(self.iter)
         return data
+
+    def __len__(self):
+        return len(self.data_loader)
+
+
+if __name__ == '__main__':
+    parser = basic_parser()
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
+    parser.add_argument('--randomized', type=bool, default=False, help="whether use randomized multilinear map")
+    parser.add_argument('--random_dim', type=int, default=1024, help="output dimension of randomized multilinear map")
+    parser.add_argument('-E', '--entropy_conditioning', action='store_true', default=False, help="whether use entropy conditioning")
+    args = parser.parse_args()
+
+    # # TODO remove this when published
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+    main(args)
 

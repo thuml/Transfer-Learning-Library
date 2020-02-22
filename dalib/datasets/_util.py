@@ -1,8 +1,4 @@
 
-def subset(s: dict, keys: list):
-    return dict((key, value) for key, value in s.items() if key in keys)
-
-
 def get_download_info(all_urls: dict, dependencies: list):
     """
     :param all_urls:
