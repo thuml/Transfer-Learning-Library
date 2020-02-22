@@ -45,22 +45,12 @@ def main(args):
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = \
-        transforms.Compose([
-            transforms.Resize(256),
-            transforms.TenCrop(224),
-            transforms.Lambda(lambda crops: torch.stack(
-                [transforms.Compose([
-                    transforms.ToTensor(),
-                    normalize
-                ])(crop) for crop in crops])),
-        ]) if args.tencrop else \
-        transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize
-        ])
+    val_tranform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        normalize
+    ])
 
     train_source_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.source, download=True, transform=train_transform)
@@ -82,13 +72,13 @@ def main(args):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.Classifier(backbone, num_classes).cuda()
+    classifier = models.classifier.Classifier(backbone, num_classes).cuda()
     classifier_feature_dim = classifier.features_dim
     if args.randomized:
         domain_in_feature = args.random_dim
     else:
         domain_in_feature = classifier_feature_dim * num_classes
-    domain_discri = models.ConditionalDomainDiscriminator(in_feature=domain_in_feature, hidden_size=1024).cuda()
+    domain_discri = models.cdan.DomainDiscriminator(in_feature=domain_in_feature, hidden_size=1024).cuda()
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
     domain_discri = torch.nn.DataParallel(domain_discri).cuda()
@@ -103,7 +93,7 @@ def main(args):
         iters_per_epoch = args.iters_per_epoch
 
     # define loss function
-    domain_adv = models.ConditionalDomainAdversarialLoss(
+    domain_adv = models.cdan.ConditionalDomainAdversarialLoss(
         domain_discri, max_iters=iters_per_epoch * args.epochs, entropy_conditioning=args.entropy_conditioning,
         num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized
     ).cuda()

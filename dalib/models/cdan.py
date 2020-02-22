@@ -5,25 +5,24 @@ import torch.nn.functional as F
 from .dann import GradientReverseLayer, binary_accuracy
 
 
-__all__ = ['ConditionalDomainDiscriminator', 'ConditionalDomainAdversarialLoss']
+__all__ = ['DomainDiscriminator', 'ConditionalDomainAdversarialLoss']
 
 
-class ConditionalDomainDiscriminator(nn.Module):
+class DomainDiscriminator(nn.Module):
     def __init__(self, in_feature, hidden_size):
-        super(ConditionalDomainDiscriminator, self).__init__()
+        super(DomainDiscriminator, self).__init__()
         self.layer1 = nn.Linear(in_feature, hidden_size)
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(0.5)
         self.layer2 = nn.Linear(hidden_size, hidden_size)
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(0.5)
-        self.layer3 = nn.Linear(hidden_size, 1)
+        self.layer2 = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.dropout1(self.relu1(self.layer1(x)))
-        # x = self.dropout2(self.relu2(self.layer2(x)))
-        y = self.sigmoid(self.layer3(x))
+        y = self.sigmoid(self.layer2(x))
         return y
 
     def get_parameters(self):
