@@ -1,34 +1,29 @@
 import os
-from .vision import ImageListDataset
-from ._util import get_download_info
+from .imagelist import ImageList
+from ._util import download as download_data, check_exits
 
 
-class VisDA2017(ImageListDataset):
-    all_urls = {
-        "train.tar": "http://csr.bu.edu/ftp/visda17/clf/train.tar",
-        "validation.tar": "http://csr.bu.edu/ftp/visda17/clf/validation.tar",
-        "visda2017_uda.tgz": "https://cloud.tsinghua.edu.cn/f/dab8487fe13f4dbbbf96/?dl=1"
-    }
-    tasks = {
-        "T": {
-            "data_list": "train.txt",
-            "dependencies": [("train", "train.tar"), ("train.txt", "visda2017_uda.tgz")]
-        },
-        "V": {
-            "data_list": "validation.txt",
-            "dependencies": [("validation", "validation.tar"), ("validation.txt", "visda2017_uda.tgz")]
-        }
+class VisDA2017(ImageList):
+    download_list = [
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/58034129e0204ef6b840/?dl=1"),
+        ("train", "train.tar", "http://csr.bu.edu/ftp/visda17/clf/train.tar"),
+        ("validation", "validation.tar", "http://csr.bu.edu/ftp/visda17/clf/validation.tar")
+    ]
+    image_list = {
+        "T": "image_list/train.txt",
+        "V": "image_list/validation.txt"
     }
 
     def __init__(self, root, task, download=False, **kwargs):
-        assert task in self.tasks
-        data_list_file = os.path.join(root, self.tasks[task]["data_list"])
-        # Download only the data needed for this task.
-        if download:
-            download_info = get_download_info(self.all_urls, self.tasks[task]['dependencies'])
-        else:
-            download_info = None
+        assert task in self.image_list
+        data_list_file = os.path.join(root, self.image_list[task])
 
-        super(VisDA2017, self).__init__(root, num_classes=12, data_list_file=data_list_file,
-                                         download_info=download_info, **kwargs)
+        if download:
+            list(map(lambda args: download_data(root, *args), self.download_list))
+        else:
+            list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
+
+        super(VisDA2017, self).__init__(root, num_classes=12, data_list_file=data_list_file, **kwargs)
+
+
 

@@ -1,10 +1,7 @@
-from io_utils import basic_parser
-
 import random
 import time
 import warnings
 import sys
-import numpy as np
 
 import torch
 import torch.nn.parallel
@@ -20,6 +17,7 @@ sys.path.append('.')  # TODO remove this when published
 import dalib.models as models
 import dalib.datasets as datasets
 import dalib.models.backbones as backbones
+from io_utils import basic_parser, AverageMeter, ProgressMeter, accuracy
 
 
 def main(args):
@@ -87,23 +85,18 @@ def main(args):
     optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
                                 weight_decay=args.weight_decay, nesterov=True)
 
-    if args.iters_per_epoch is None:
-        iters_per_epoch = max(len(train_source_loader), len(train_target_loader))
-    else:
-        iters_per_epoch = args.iters_per_epoch
+    iters_per_epoch = args.iters_per_epoch
 
     # define loss function
     domain_adv = models.cdan.ConditionalDomainAdversarialLoss(
-        domain_discri, max_iters=iters_per_epoch * args.epochs, entropy_conditioning=args.entropy_conditioning,
+        domain_discri, entropy_conditioning=args.entropy_conditioning,
         num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized
     ).cuda()
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
-        adjust_learning_rate(optimizer, epoch, args)
-        alpha = np.float(2.0 * 1. / (1.0 + np.exp(-10. * epoch / args.epochs)) - 1.)
-        print("lr={:.5f} alpha={:.5f}".format(optimizer.param_groups[0]['lr'], alpha))
+        print("lr={:.5f}".format(optimizer.param_groups[0]['lr']))
 
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args)
@@ -135,6 +128,7 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
 
     end = time.time()
     for i in range(iters_per_epoch):
+        adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
         # measure data loading time
         data_time.update(time.time() - end)
         x_s, labels_s = next(train_source_iter)
@@ -147,14 +141,12 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
         # compute output
         y_s, f_s = model(x_s, keep_features=True)
         cls_loss = F.cross_entropy(y_s, labels_s)
-        trans_loss_s, domain_acc_s = domain_adv(f_s, y_s, domain=1)
         y_t, f_t = model(x_t, keep_features=True)
-        trans_loss_t, domain_acc_t = domain_adv(f_t, y_t, domain=0)
-        transfer_loss = 0.5 * (trans_loss_s + trans_loss_t)
+        transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
+        domain_acc = domain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
-        domain_acc = 0.5 * (domain_acc_s + domain_acc_t)
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
@@ -216,71 +208,19 @@ def validate(val_loader, model, args):
 
     return top1.avg
 
+# def adjust_learning_rate(optimizer, epoch, args):
+#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+#     lr = args.lr * (1. + 0.1 * epoch) ** (-0.75)
+#     for param_group in optimizer.param_groups:
+#         param_group['lr'] = lr * param_group['lr_mult']
+#     return lr
 
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self, name, fmt=':f'):
-        self.name = name
-        self.fmt = fmt
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-    def __str__(self):
-        fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
-        return fmtstr.format(**self.__dict__)
-
-
-class ProgressMeter(object):
-    def __init__(self, num_batches, meters, prefix=""):
-        self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
-        self.meters = meters
-        self.prefix = prefix
-
-    def display(self, batch):
-        entries = [self.prefix + self.batch_fmtstr.format(batch)]
-        entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
-
-    def _get_batch_fmtstr(self, num_batches):
-        num_digits = len(str(num_batches // 1))
-        fmt = '{:' + str(num_digits) + 'd}'
-        return '[' + fmt + '/' + fmt.format(num_batches) + ']'
-
-
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (1. + 0.1 * epoch) ** (-0.75)
+def adjust_learning_rate(optimizer, iter, args):
+    """Sets the learning rate decayed each iterations"""
+    lr = args.lr * (1. + 0.001 * iter) ** (-0.75)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr * param_group['lr_mult']
     return lr
-
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
-
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
 
 
 class ForeverDataIterator:
@@ -303,8 +243,6 @@ class ForeverDataIterator:
 
 if __name__ == '__main__':
     parser = basic_parser()
-    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
-                        help='Number of iterations per epoch')
     parser.add_argument('--randomized', type=bool, default=False, help="whether use randomized multilinear map")
     parser.add_argument('--random_dim', type=int, default=1024, help="output dimension of randomized multilinear map")
     parser.add_argument('-E', '--entropy_conditioning', action='store_true', default=False, help="whether use entropy conditioning")

@@ -54,30 +54,24 @@ def main(args):
     train_source_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = torch.utils.data.DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True, drop_last=True)
-
+                                               num_workers=args.workers, pin_memory=True)
     train_target_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = torch.utils.data.DataLoader(train_target_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True, drop_last=True)
+                                               num_workers=args.workers, pin_memory=True)
+
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False,
                                              num_workers=args.workers, pin_memory=True)
-    train_source_iter = ForeverDataIterator(train_source_loader)
-    train_target_iter = ForeverDataIterator(train_target_loader)
-    if args.iters_per_epoch is None:
-        iters_per_epoch = max(len(train_source_loader), len(train_target_loader))
-    else:
-        iters_per_epoch = args.iters_per_epoch
 
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.mdd.Classifier(backbone, num_classes, use_bottleneck=True,
+    classifier = models.mdd2.Classifier(backbone, num_classes, use_bottleneck=True,
                                        bottleneck_dim=args.bottleneck_dim, head_bottleneck_dim=args.head_bottleneck_dim).cuda()
-    adversarial_classifier = models.mdd.AdversarialClassifier(args.bottleneck_dim, num_classes,
+    adversarial_classifier = models.mdd2.AdversarialClassifier(args.bottleneck_dim, num_classes,
                                                               bottleneck_dim=args.head_bottleneck_dim).cuda()
 
     all_parameters = classifier.get_parameters() + adversarial_classifier.get_parameters()
@@ -89,19 +83,29 @@ def main(args):
                                 weight_decay=args.wd, nesterov=True)
 
     # define loss function
-    mdd_loss = models.mdd.MarginDisparityDiscrepancyLoss(adversarial_classifier, args.margin).cuda()
+    mdd_loss = models.mdd2.MarginDisparityDiscrepancyLoss(adversarial_classifier, args.margin).cuda()
 
     # start training
     best_acc1 = 0.
-    for epoch in range(args.epochs):
+    max_iters = 20000
+    iters_per_epoch = min(len(train_source_loader), len(train_target_loader))
+    epoch = 0
+    print_freq = 10
+    while True:
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, mdd_loss, args)
+        train(iter(train_source_loader), iter(train_target_loader), classifier, optimizer, epoch, iters_per_epoch, mdd_loss, args)
 
-        # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        if epoch % print_freq == 0 and epoch != 0:
+            # evaluate on validation set
+            acc1 = validate(val_loader, classifier, args)
 
-        # remember best acc@1 and save checkpoint
-        best_acc1 = max(acc1, best_acc1)
+            # remember best acc@1 and save checkpoint
+            best_acc1 = max(acc1, best_acc1)
+
+        if epoch * iters_per_epoch >= max_iters:
+            break
+
+        epoch += 1
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
@@ -112,10 +116,11 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
     losses = AverageMeter('Loss', ':3.2f')
     trans_losses = AverageMeter('Trans Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
     progress = ProgressMeter(
         iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs],
+        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -124,17 +129,16 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
 
     end = time.time()
     for i in range(iters_per_epoch):
-        adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
-
         # measure data loading time
+        adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
         data_time.update(time.time() - end)
-
         x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_t, labels_t = next(train_target_iter)
 
         x_s = x_s.cuda()
         x_t = x_t.cuda()
         labels_s = labels_s.cuda()
+        labels_t = labels_t.cuda()
 
         # compute output
         y_s, f_s = model(x_s, keep_features=True)
@@ -144,9 +148,11 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_t.size(0))
         trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
@@ -233,10 +239,18 @@ class ForeverDataIterator:
 
 if __name__ == '__main__':
     parser = basic_parser()
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     parser.add_argument('--margin', type=float, default=4., help="margin gamma")
+
+    # bottleneck_parser = parser.add_mutually_exclusive_group(required=False)
+    # bottleneck_parser.add_argument('--bottleneck', action='store_true')
+    # bottleneck_parser.add_argument('--no-bottleneck', action='store_false')
+    # parser.set_defaults(bottleneck=True)
+    parser.set_defaults(wd=0.0005, lr=0.0004)
+
     parser.add_argument('--bottleneck_dim', default=1024, type=int)
-    parser.add_argument('--head_bottleneck_dim', default=1024, type=int)
-    parser.set_defaults(wd=0.0005, lr=0.004, print_freq=100)
+    parser.add_argument('--head_bottleneck_dim', default=256, type=int)
 
     args = parser.parse_args()
     # # TODO remove this when published

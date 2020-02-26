@@ -36,7 +36,7 @@ class GradientReverseLayer(nn.Module):
 
 
 class WarmStartGradientReverseLayer(nn.Module):
-    def __init__(self, alpha=1.0, lo=0.0, hi=0.1, max_iters=1000):
+    def __init__(self, alpha=1.0, lo=0.0, hi=0.1, max_iters=1000.):
         super(WarmStartGradientReverseLayer, self).__init__()
         self.alpha = alpha
         self.lo = lo
@@ -45,9 +45,11 @@ class WarmStartGradientReverseLayer(nn.Module):
         self.max_iters = max_iters
 
     def forward(self, input):
-        self.iter_num += 1
         coeff = np.float(
             2.0 * (self.hi - self.lo) / (1.0 + np.exp(-self.alpha * self.iter_num / self.max_iters))
             - (self.hi - self.lo) + self.lo
         )
         return GradientReverseFunction.apply(input, coeff)
+
+    def step(self):
+        self.iter_num += 1
