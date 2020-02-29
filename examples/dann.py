@@ -67,7 +67,7 @@ def main(args):
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
-    classifier = models.classifier.Classifier(backbone, train_source_dataset.num_classes).cuda()
+    classifier = models.dann.Classifier(backbone, train_source_dataset.num_classes).cuda()
     domain_discri = models.dann.DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).cuda()
 
     # define optimizer

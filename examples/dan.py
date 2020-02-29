@@ -17,6 +17,7 @@ sys.path.append('.')  # TODO remove this when published
 import dalib.models as models
 import dalib.datasets as datasets
 import dalib.models.backbones as backbones
+
 from io_utils import basic_parser, AverageMeter, ProgressMeter, accuracy
 
 
@@ -54,52 +55,44 @@ def main(args):
         root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = torch.utils.data.DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.workers, pin_memory=True, drop_last=True)
+
     train_target_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = torch.utils.data.DataLoader(train_target_dataset, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.workers, pin_memory=True, drop_last=True)
-
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False,
                                              num_workers=args.workers, pin_memory=True)
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
+    iters_per_epoch = args.iters_per_epoch
+
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.cdan.Classifier(backbone, num_classes).cuda()
-    classifier_feature_dim = classifier.features_dim
-    if args.randomized:
-        domain_in_feature = args.random_dim
-    else:
-        domain_in_feature = classifier_feature_dim * num_classes
-    domain_discri = models.cdan.DomainDiscriminator(in_feature=domain_in_feature, hidden_size=1024).cuda()
-    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    classifier = models.dan.Classifier(backbone, num_classes).cuda()
+
+    all_parameters = classifier.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
-    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
 
     # define optimizer
     optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
-                                weight_decay=args.weight_decay, nesterov=True)
-
-    iters_per_epoch = args.iters_per_epoch
+                                weight_decay=args.wd, nesterov=True)
 
     # define loss function
-    domain_adv = models.cdan.ConditionalDomainAdversarialLoss(
-        domain_discri, entropy_conditioning=args.entropy_conditioning,
-        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized
-    ).cuda()
+    mkmmd_loss = models.dan.MultipleKernelMaximumMeanDiscrepancy(
+        [models.dan.GaussianKernel(alpha=2**k) for k in range(-3, 2)]
+    )
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         print("lr={:.5f}".format(optimizer.param_groups[0]['lr']))
-
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args)
+        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, mkmmd_loss, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
@@ -110,47 +103,51 @@ def main(args):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, domain_adv, args):
-    batch_time = AverageMeter('Time', ':3.1f')
+def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, mkmmd_loss, args):
+    batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    trans_losses = AverageMeter('Trans Loss', ':3.2f')
+    trans_losses = AverageMeter('Trans Loss', ':5.4f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    domain_accs = AverageMeter('Domain Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
+
     progress = ProgressMeter(
         iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, domain_accs],
+        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    domain_adv.train()
+    mkmmd_loss.train()
 
     end = time.time()
     for i in range(iters_per_epoch):
         adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
+
         # measure data loading time
         data_time.update(time.time() - end)
+
         x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_t, labels_t = next(train_target_iter)
 
         x_s = x_s.cuda()
         x_t = x_t.cuda()
         labels_s = labels_s.cuda()
+        labels_t = labels_t.cuda()
 
         # compute output
         y_s, f_s = model(x_s, keep_features=True)
-        cls_loss = F.cross_entropy(y_s, labels_s)
         y_t, f_t = model(x_t, keep_features=True)
-        transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
-        domain_acc = domain_adv.domain_discriminator_accuracy
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        transfer_loss = mkmmd_loss(f_s, f_t)
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_accs.update(domain_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_t.size(0))
         trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
@@ -208,16 +205,10 @@ def validate(val_loader, model, args):
 
     return top1.avg
 
-# def adjust_learning_rate(optimizer, epoch, args):
-#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-#     lr = args.lr * (1. + 0.1 * epoch) ** (-0.75)
-#     for param_group in optimizer.param_groups:
-#         param_group['lr'] = lr * param_group['lr_mult']
-#     return lr
 
 def adjust_learning_rate(optimizer, iter, args):
-    """Sets the learning rate decayed each iterations"""
-    lr = args.lr * (1. + 0.001 * iter) ** (-0.75)
+    """Sets the learning rate to the initial LR decayed each iterations"""
+    lr = args.lr * (1. + 0.0003 * iter) ** (-0.75)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr * param_group['lr_mult']
     return lr
@@ -243,12 +234,12 @@ class ForeverDataIterator:
 
 if __name__ == '__main__':
     parser = basic_parser()
-    parser.add_argument('--randomized', type=bool, default=False, help="whether use randomized multilinear map")
-    parser.add_argument('--random_dim', type=int, default=1024, help="output dimension of randomized multilinear map")
-    parser.add_argument('-E', '--entropy_conditioning', action='store_true', default=False, help="whether use entropy conditioning")
-    args = parser.parse_args()
+    parser.set_defaults(wd=0.0005, lr=0.003, print_freq=100)
+    parser.add_argument('--gkm', type=float, default=0.9, help='momentum of Gaussian Kernel. Default: 0.9')
 
+    args = parser.parse_args()
     # # TODO remove this when published
+    print(args)
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 

@@ -54,67 +54,58 @@ def main(args):
     train_source_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = torch.utils.data.DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True)
+                                               num_workers=args.workers, pin_memory=True, drop_last=True)
+
     train_target_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = torch.utils.data.DataLoader(train_target_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True)
-
+                                               num_workers=args.workers, pin_memory=True, drop_last=True)
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False,
                                              num_workers=args.workers, pin_memory=True)
+    train_source_iter = ForeverDataIterator(train_source_loader)
+    train_target_iter = ForeverDataIterator(train_target_loader)
+
+    iters_per_epoch = args.iters_per_epoch
 
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = backbones.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.mdd2.Classifier(backbone, num_classes, use_bottleneck=True,
-                                       bottleneck_dim=args.bottleneck_dim, head_bottleneck_dim=args.head_bottleneck_dim).cuda()
-    adversarial_classifier = models.mdd2.AdversarialClassifier(args.bottleneck_dim, num_classes,
-                                                              bottleneck_dim=args.head_bottleneck_dim).cuda()
+    classifier = models.afn.Classifier(backbone, num_classes).cuda()
 
-    all_parameters = classifier.get_parameters() + adversarial_classifier.get_parameters()
+    all_parameters = classifier.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
-    adversarial_classifier = torch.nn.DataParallel(adversarial_classifier).cuda()
 
     # define optimizer
-    optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
-                                weight_decay=args.wd, nesterov=True)
+    optimizer = torch.optim.SGD(all_parameters, args.lr,
+                                weight_decay=args.wd)
 
     # define loss function
-    mdd_loss = models.mdd2.MarginDisparityDiscrepancyLoss(adversarial_classifier, args.margin).cuda()
+    safn = models.afn.StepwiseAdaptiveFeatureNorm()
 
     # start training
     best_acc1 = 0.
-    max_iters = 20000
-    iters_per_epoch = min(len(train_source_loader), len(train_target_loader))
-    epoch = 0
-    print_freq = 10
-    while True:
+    for epoch in range(args.epochs):
+        print("lr={:.5f}".format(optimizer.param_groups[0]['lr']))
         # train for one epoch
-        train(iter(train_source_loader), iter(train_target_loader), classifier, optimizer, epoch, iters_per_epoch, mdd_loss, args)
+        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, safn, args)
 
-        if epoch % print_freq == 0 and epoch != 0:
-            # evaluate on validation set
-            acc1 = validate(val_loader, classifier, args)
+        # evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
 
-            # remember best acc@1 and save checkpoint
-            best_acc1 = max(acc1, best_acc1)
-
-        if epoch * iters_per_epoch >= max_iters:
-            break
-
-        epoch += 1
+        # remember best acc@1 and save checkpoint
+        best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, mdd_loss, args):
-    batch_time = AverageMeter('Time', ':3.1f')
+def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, safn, args):
+    batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    trans_losses = AverageMeter('Trans Loss', ':3.2f')
+    trans_losses = AverageMeter('Trans Loss', ':5.4f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
@@ -125,13 +116,13 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
 
     # switch to train mode
     model.train()
-    mdd_loss.train()
+    safn.train()
 
     end = time.time()
     for i in range(iters_per_epoch):
         # measure data loading time
-        adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
         data_time.update(time.time() - end)
+
         x_s, labels_s = next(train_source_iter)
         x_t, labels_t = next(train_target_iter)
 
@@ -144,7 +135,7 @@ def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_p
         y_s, f_s = model(x_s, keep_features=True)
         y_t, f_t = model(x_t, keep_features=True)
         cls_loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = mdd_loss(y_s, f_s, y_t, f_t)
+        transfer_loss = safn(f_s) + safn(f_t)
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
@@ -211,14 +202,6 @@ def validate(val_loader, model, args):
     return top1.avg
 
 
-def adjust_learning_rate(optimizer, iter, args):
-    """Sets the learning rate to the initial LR decayed each iterations"""
-    lr = args.lr * (1. + 0.0002 * iter) ** (-0.75)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr * param_group['lr_mult']
-    return lr
-
-
 class ForeverDataIterator:
     """A data iterator that will never stop producing data"""
     def __init__(self, data_loader):
@@ -239,18 +222,9 @@ class ForeverDataIterator:
 
 if __name__ == '__main__':
     parser = basic_parser()
-    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
-                        help='Number of iterations per epoch')
-    parser.add_argument('--margin', type=float, default=4., help="margin gamma")
-
-    # bottleneck_parser = parser.add_mutually_exclusive_group(required=False)
-    # bottleneck_parser.add_argument('--bottleneck', action='store_true')
-    # bottleneck_parser.add_argument('--no-bottleneck', action='store_false')
-    # parser.set_defaults(bottleneck=True)
-    parser.set_defaults(wd=0.0005, lr=0.0004)
-
-    parser.add_argument('--bottleneck_dim', default=1024, type=int)
-    parser.add_argument('--head_bottleneck_dim', default=256, type=int)
+    parser.set_defaults(wd=0.0005, lr=0.001, print_freq=100, trade_off=0.05)
+    parser.add_argument('--gkm', type=float, default=0.9, help='momentum of Gaussian Kernel. Default: 0.9')
+    parser.add_argument('--delta_r', type=float, default=1., help='step increase of radius(R)')
 
     args = parser.parse_args()
     # # TODO remove this when published

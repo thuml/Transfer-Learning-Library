@@ -26,7 +26,7 @@ class ImageList(datasets.VisionDataset):
             target_dir/cat_nsdf3.png 1
 
         The first value is the relative path of an image, and the second value is the label of the corresponding image.
-        If your data_list_file has different formats, you need to reimplement `parse_data_file`.
+        If your data_list_file has different formats, please over-ride `parse_data_file`.
     """
 
     def __init__(self, root, num_classes, data_list_file, transform=None, target_transform=None):

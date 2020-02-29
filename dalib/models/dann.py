@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from ._util import WarmStartGradientReverseLayer, binary_accuracy
-
+from .classifier import Classifier as ClassifierBase
 
 __all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
 
@@ -94,3 +94,11 @@ class DomainAdversarialLoss(nn.Module):
         return 0.5 * (self.bce(d_s, d_label_s) + self.bce(d_t, d_label_t))
 
 
+class Classifier(ClassifierBase):
+    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+        bottleneck = nn.Sequential(
+            nn.Linear(backbone.out_features, bottleneck_dim),
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU()
+        )
+        super(Classifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)

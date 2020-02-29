@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from ._util import binary_accuracy, WarmStartGradientReverseLayer
+from .classifier import Classifier as ClassifierBase
 
 
 __all__ = ['DomainDiscriminator', 'ConditionalDomainAdversarialLoss']
@@ -146,3 +147,11 @@ def entropy(predictions):
     return H.sum(dim=1)
 
 
+class Classifier(ClassifierBase):
+    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+        bottleneck = nn.Sequential(
+            nn.Linear(backbone.out_features, bottleneck_dim),
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU()
+        )
+        super(Classifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)

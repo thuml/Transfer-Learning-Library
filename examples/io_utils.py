@@ -33,11 +33,6 @@ def basic_parser():
                         ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
-    parser.add_argument('-m', '--model', metavar='MODEL', default='Baseline',
-                        choices=model_names,
-                        help='model: ' +
-                             ' | '.join(model_names) +
-                             ' (default: Baseline)')
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,
                         help='backbone architecture: ' +

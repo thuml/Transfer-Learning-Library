@@ -18,6 +18,15 @@ dalib.models.classifier module
     :show-inheritance:
     :members:
 
+dalib.models.dan module
+------------------------
+
+.. autoclass:: dalib.models.dan.MultipleKernelMaximumMeanDiscrepancy
+    :show-inheritance:
+
+.. autoclass:: dalib.models.dan.GaussianKernel
+    :show-inheritance:
+
 dalib.models.dann module
 ------------------------
 
@@ -49,6 +58,12 @@ dalib.models.mdd module
     :show-inheritance:
 
 .. autoclass:: dalib.models.mdd.Classifier
+    :show-inheritance:
+
+dalib.models.afn module
+------------------------
+
+.. autoclass:: dalib.models.afn.StepwiseAdaptiveFeatureNorm
     :show-inheritance:
 
 Module contents
