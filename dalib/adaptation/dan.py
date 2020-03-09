@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .classifier import Classifier as ClassifierBase
+from dalib.vision.classifier import Classifier as ClassifierBase
 
 __all__ = ['MultipleKernelMaximumMeanDiscrepancy', 'GaussianKernel']
 
@@ -22,7 +22,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         >>> feature_dim = 1024
         >>> batch_size = 10
         >>> kernels = [GaussianKernel(alpha=0.5), GaussianKernel(1.), GaussianKernel(2.)]
-        >>> loss = models.dan.MultipleKernelMaximumMeanDiscrepancy(kernels)
+        >>> loss = adaptation.dan.MultipleKernelMaximumMeanDiscrepancy(kernels)
         >>> # features from source domain and target domain
         >>> f_s, f_t = torch.randn(batch_size, feature_dim), torch.randn(batch_size, feature_dim)
         >>> output = loss(f_s, f_t)

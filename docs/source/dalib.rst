@@ -7,7 +7,8 @@ Subpackages
 .. toctree::
 
     dalib.datasets
-    dalib.models
+    dalib.adaptation
+    dalib.vision
 
 Module contents
 ---------------

@@ -3,14 +3,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from ._util import binary_accuracy, WarmStartGradientReverseLayer
-from .classifier import Classifier as ClassifierBase
+from dalib.vision.classifier import Classifier as ClassifierBase
 
 
 __all__ = ['DomainDiscriminator', 'ConditionalDomainAdversarialLoss']
 
 
 class DomainDiscriminator(nn.Module):
-    """Domain discriminator model. See class:`dalib.models.dann.DomainDiscriminator` for details.
+    """Domain discriminator model. See class:`dalib.adaptation.dann.DomainDiscriminator` for details.
     """
     def __init__(self, in_feature, hidden_size):
         super(DomainDiscriminator, self).__init__()

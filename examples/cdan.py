@@ -2,6 +2,7 @@ import random
 import time
 import warnings
 import sys
+import argparse
 
 import torch
 import torch.nn.parallel
@@ -14,10 +15,10 @@ import torch.nn.functional as F
 
 sys.path.append('.')  # TODO remove this when published
 
-import dalib.models as models
+import dalib.adaptation as adaptation
 import dalib.datasets as datasets
-import dalib.models.backbones as backbones
-from io_utils import basic_parser, AverageMeter, ProgressMeter, accuracy
+import dalib.vision as vision
+from tools.io_utils import AverageMeter, ProgressMeter, accuracy
 
 
 def main(args):
@@ -68,15 +69,15 @@ def main(args):
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = backbones.__dict__[args.arch](pretrained=True)
+    backbone = vision.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.cdan.Classifier(backbone, num_classes).cuda()
+    classifier = adaptation.cdan.Classifier(backbone, num_classes).cuda()
     classifier_feature_dim = classifier.features_dim
-    if args.randomized:
-        domain_in_feature = args.random_dim
-    else:
-        domain_in_feature = classifier_feature_dim * num_classes
-    domain_discri = models.cdan.DomainDiscriminator(in_feature=domain_in_feature, hidden_size=1024).cuda()
+
+    domain_discri = adaptation.cdan.DomainDiscriminator(
+        in_feature=classifier_feature_dim * num_classes,
+        hidden_size=1024
+    ).cuda()
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
     domain_discri = torch.nn.DataParallel(domain_discri).cuda()
@@ -88,9 +89,9 @@ def main(args):
     iters_per_epoch = args.iters_per_epoch
 
     # define loss function
-    domain_adv = models.cdan.ConditionalDomainAdversarialLoss(
-        domain_discri, entropy_conditioning=args.entropy_conditioning,
-        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized
+    domain_adv = adaptation.cdan.ConditionalDomainAdversarialLoss(
+        domain_discri, entropy_conditioning=False,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
     ).cuda()
 
     # start training
@@ -208,12 +209,6 @@ def validate(val_loader, model, args):
 
     return top1.avg
 
-# def adjust_learning_rate(optimizer, epoch, args):
-#     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-#     lr = args.lr * (1. + 0.1 * epoch) ** (-0.75)
-#     for param_group in optimizer.param_groups:
-#         param_group['lr'] = lr * param_group['lr_mult']
-#     return lr
 
 def adjust_learning_rate(optimizer, iter, args):
     """Sets the learning rate decayed each iterations"""
@@ -242,10 +237,53 @@ class ForeverDataIterator:
 
 
 if __name__ == '__main__':
-    parser = basic_parser()
-    parser.add_argument('--randomized', type=bool, default=False, help="whether use randomized multilinear map")
-    parser.add_argument('--random_dim', type=int, default=1024, help="output dimension of randomized multilinear map")
-    parser.add_argument('-E', '--entropy_conditioning', action='store_true', default=False, help="whether use entropy conditioning")
+    architecture_names = sorted(
+        name for name in vision.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(vision.__dict__[name])
+    )
+    dataset_names = sorted(
+        name for name in datasets.__dict__
+        if not name.startswith("__") and callable(datasets.__dict__[name])
+    )
+
+    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser.add_argument('root', metavar='DIR',
+                        help='root path of dataset')
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
+                        help='dataset: ' + ' | '.join(dataset_names) +
+                             ' (default: Office31)')
+    parser.add_argument('-s', '--source', help='source domain(s)')
+    parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+                        choices=architecture_names,
+                        help='backbone architecture: ' +
+                             ' | '.join(architecture_names) +
+                             ' (default: resnet18)')
+    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
+                        metavar='N',
+                        help='mini-batch size (default: 36)')
+    parser.add_argument('--lr', default=0.01, type=float,
+                        metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                        help='momentum')
+    parser.add_argument('--wd', default=1e-3, type=float,
+                        metavar='W', help='weight decay (default: 1e-3)',
+                        dest='weight_decay')
+    parser.add_argument('-p', '--print-freq', default=100, type=int,
+                        metavar='N', help='print frequency (default: 10)')
+    parser.add_argument('--seed', default=None, type=int,
+                        help='seed for initializing training. ')
+    parser.add_argument('--gpu', default='0', type=str,
+                        help='GPU id(s) to use.')
+    parser.add_argument('--trade_off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     args = parser.parse_args()
 
     # # TODO remove this when published

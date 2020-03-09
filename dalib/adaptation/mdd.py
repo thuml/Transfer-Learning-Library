@@ -24,7 +24,7 @@ class MarginDisparityDiscrepancyLoss(nn.Module):
 
     .. note::
         MarginDisparityDiscrepancyLoss has already used GradientReverseLayer, thus adversarial_classifier is
-        merely a classifier head, e.g. `dalib.models.mdd.AdversarialClassifier`
+        merely a classifier head, e.g. `dalib.adaptation.mdd.AdversarialClassifier`
 
     Shape:
         - y_s, y_t: :math:`(N, C)` where C = number of classes.
@@ -127,7 +127,7 @@ class ClassifierHead(nn.Module):
 
 
 class Classifier(nn.Module):
-    """Classifier for MDD. Similar as `nn.dalib.models.classifier.Classifier`"""
+    """Classifier for MDD. Similar as `nn.dalib.vision.classifier.Classifier`"""
     def __init__(self, backbone, num_classes, use_bottleneck=True, bottleneck_dim=1024, head_bottleneck_dim=1024):
         super(Classifier, self).__init__()
         self.backbone = backbone

@@ -2,6 +2,7 @@ import random
 import time
 import warnings
 import sys
+import argparse
 
 import torch
 import torch.nn.parallel
@@ -14,11 +15,11 @@ import torch.nn.functional as F
 
 sys.path.append('.')  # TODO remove this when published
 
-import dalib.models as models
+import dalib.adaptation as adaptation
 import dalib.datasets as datasets
-import dalib.models.backbones as backbones
+import dalib.vision as vision
 
-from io_utils import basic_parser, AverageMeter, ProgressMeter, accuracy
+from tools.io_utils import AverageMeter, ProgressMeter, accuracy
 
 
 def main(args):
@@ -71,9 +72,9 @@ def main(args):
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = backbones.__dict__[args.arch](pretrained=True)
+    backbone = vision.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = models.afn.Classifier(backbone, num_classes).cuda()
+    classifier = adaptation.afn.Classifier(backbone, num_classes).cuda()
 
     all_parameters = classifier.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
@@ -83,7 +84,7 @@ def main(args):
                                 weight_decay=args.wd)
 
     # define loss function
-    safn = models.afn.StepwiseAdaptiveFeatureNorm()
+    safn = adaptation.afn.StepwiseAdaptiveFeatureNorm(delta_r=args.delta_r)
 
     # start training
     best_acc1 = 0.
@@ -221,9 +222,52 @@ class ForeverDataIterator:
 
 
 if __name__ == '__main__':
-    parser = basic_parser()
-    parser.set_defaults(wd=0.0005, lr=0.001, print_freq=100, trade_off=0.05)
-    parser.add_argument('--gkm', type=float, default=0.9, help='momentum of Gaussian Kernel. Default: 0.9')
+    architecture_names = sorted(
+        name for name in vision.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(vision.__dict__[name])
+    )
+    dataset_names = sorted(
+        name for name in datasets.__dict__
+        if not name.startswith("__") and callable(datasets.__dict__[name])
+    )
+
+    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser.add_argument('root', metavar='DIR',
+                        help='root path of dataset')
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
+                        help='dataset: ' + ' | '.join(dataset_names) +
+                             ' (default: Office31)')
+    parser.add_argument('-s', '--source', help='source domain(s)')
+    parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+                        choices=architecture_names,
+                        help='backbone architecture: ' +
+                             ' | '.join(architecture_names) +
+                             ' (default: resnet18)')
+    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
+                        metavar='N',
+                        help='mini-batch size (default: 36)')
+    parser.add_argument('--lr', default=0.001, type=float,
+                        metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                        help='momentum')
+    parser.add_argument('--wd', default=0.0005, type=float,
+                        metavar='W', help='weight decay (default: 1e-3)')
+    parser.add_argument('-p', '--print-freq', default=100, type=int,
+                        metavar='N', help='print frequency (default: 10)')
+    parser.add_argument('--seed', default=None, type=int,
+                        help='seed for initializing training. ')
+    parser.add_argument('--gpu', default='0', type=str,
+                        help='GPU id(s) to use.')
+    parser.add_argument('--trade_off', default=0.05, type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     parser.add_argument('--delta_r', type=float, default=1., help='step increase of radius(R)')
 
     args = parser.parse_args()

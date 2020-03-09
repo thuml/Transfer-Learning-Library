@@ -2,6 +2,7 @@ import random
 import time
 import warnings
 import sys
+import argparse
 
 import torch
 import torch.nn.parallel
@@ -14,10 +15,10 @@ import torch.nn.functional as F
 
 sys.path.append('.')  # TODO remove this when published
 
-import dalib.models as models
+import dalib.adaptation as adaptation
 import dalib.datasets as datasets
-import dalib.models.backbones as backbones
-from io_utils import basic_parser, AverageMeter, ProgressMeter, accuracy
+import dalib.vision as vision
+from tools.io_utils import AverageMeter, ProgressMeter, accuracy
 
 
 def main(args):
@@ -66,9 +67,9 @@ def main(args):
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = backbones.__dict__[args.arch](pretrained=True)
-    classifier = models.dann.Classifier(backbone, train_source_dataset.num_classes).cuda()
-    domain_discri = models.dann.DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).cuda()
+    backbone = vision.__dict__[args.arch](pretrained=True)
+    classifier = adaptation.dann.Classifier(backbone, train_source_dataset.num_classes).cuda()
+    domain_discri = adaptation.dann.DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).cuda()
 
     # define optimizer
     optimizer = torch.optim.SGD(classifier.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
@@ -83,7 +84,7 @@ def main(args):
     train_target_iter = ForeverDataIterator(train_target_loader)
     iters_per_epoch = args.iters_per_epoch
     # define loss function
-    domain_adv = models.dann.DomainAdversarialLoss(domain_discri).cuda()
+    domain_adv = adaptation.dann.DomainAdversarialLoss(domain_discri).cuda()
 
     for epoch in range(args.epochs):
         print("lr={:.5f}".format(optimizer.param_groups[0]['lr']))
@@ -233,7 +234,53 @@ class ForeverDataIterator:
 
 
 if __name__ == '__main__':
-    parser = basic_parser()
+    architecture_names = sorted(
+        name for name in vision.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(vision.__dict__[name])
+    )
+    dataset_names = sorted(
+        name for name in datasets.__dict__
+        if not name.startswith("__") and callable(datasets.__dict__[name])
+    )
+
+    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser.add_argument('root', metavar='DIR',
+                        help='root path of dataset')
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
+                        help='dataset: ' + ' | '.join(dataset_names) +
+                             ' (default: Office31)')
+    parser.add_argument('-s', '--source', help='source domain(s)')
+    parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+                        choices=architecture_names,
+                        help='backbone architecture: ' +
+                             ' | '.join(architecture_names) +
+                             ' (default: resnet18)')
+    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
+                        metavar='N',
+                        help='mini-batch size (default: 36)')
+    parser.add_argument('--lr', default=0.01, type=float,
+                        metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                        help='momentum')
+    parser.add_argument('--wd', default=1e-3, type=float,
+                        metavar='W', help='weight decay (default: 1e-3)',
+                        dest='weight_decay')
+    parser.add_argument('-p', '--print-freq', default=100, type=int,
+                        metavar='N', help='print frequency (default: 10)')
+    parser.add_argument('--seed', default=None, type=int,
+                        help='seed for initializing training. ')
+    parser.add_argument('--gpu', default='0', type=str,
+                        help='GPU id(s) to use.')
+    parser.add_argument('--trade_off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     args = parser.parse_args()
 
     # TODO remove this when published

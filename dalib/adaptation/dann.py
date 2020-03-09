@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from ._util import WarmStartGradientReverseLayer, binary_accuracy
-from .classifier import Classifier as ClassifierBase
+from dalib.vision.classifier import Classifier as ClassifierBase
 
 __all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
 

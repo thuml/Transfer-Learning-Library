@@ -1,6 +1,6 @@
 import math
 import torch.nn as nn
-from .classifier import Classifier as ClassifierBase
+from dalib.vision.classifier import Classifier as ClassifierBase
 
 
 class StepwiseAdaptiveFeatureNorm(nn.Module):
@@ -30,6 +30,21 @@ class StepwiseAdaptiveFeatureNorm(nn.Module):
         return ((features.norm(p=2, dim=1) - radius) ** 2).mean()
 
 
+class L2PreservedDropout(nn.Module):
+    """Dropout that preserves the L 1-norm in both of the training and evaluation phases.
+    .. TODO math definitions
+    """
+    def __init__(self, *args, **kwargs):
+        super(L2PreservedDropout, self).__init__()
+        self.dropout = nn.Dropout(*args, **kwargs)
+
+    def forward(self, input):
+        output = self.dropout(input)
+        if self.training:
+            output.mul_(math.sqrt(1 - self.dropout.p))
+        return output
+
+
 class Classifier(ClassifierBase):
     def __init__(self, backbone, num_classes, bottleneck_dim=1000, dropout_p=0.5):
         bottleneck = nn.Sequential(
@@ -48,17 +63,3 @@ class Classifier(ClassifierBase):
         ]
         return params
 
-
-class L2PreservedDropout(nn.Module):
-    """Dropout that preserves the L 1-norm in both of the training and evaluation phases.
-    .. TODO math definitions
-    """
-    def __init__(self, *args, **kwargs):
-        super(L2PreservedDropout, self).__init__()
-        self.dropout = nn.Dropout(*args, **kwargs)
-
-    def forward(self, input):
-        output = self.dropout(input)
-        if self.training:
-            output.mul_(math.sqrt(1 - self.dropout.p))
-        return output
