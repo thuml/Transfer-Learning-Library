@@ -1,3 +1,1 @@
-from .resnet import *
-
-__all__ = ['resnet', 'classifier']
+__all__ = ['datasets', 'models']

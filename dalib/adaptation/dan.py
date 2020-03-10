@@ -1,18 +1,18 @@
 import torch
 import torch.nn as nn
-from dalib.vision.classifier import Classifier as ClassifierBase
+from dalib.modules.classifier import Classifier as ClassifierBase
 
 __all__ = ['MultipleKernelMaximumMeanDiscrepancy', 'GaussianKernel']
 
 
 class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
-    """The Multiple Kernel Maximum Mean Discrepancy (MK-MMD) used in
+    r"""The Multiple Kernel Maximum Mean Discrepancy (MK-MMD) used in
     `Learning Transferable Features with Deep Adaptation Networks <https://arxiv.org/pdf/1502.02791>`_
 
     .. TODO math definitions
 
-    :param kernels: multiple kernels to compute the domain discrepancy
-    :type kernels: list of class:`nn.Module` object, e.g. GaussianKernel
+    Parameters:
+        - kernels (list of class:`nn.Module` object): multiple kernels to compute the domain discrepancy
 
     Shape:
         - f_s, f_t: :math:`(N, F)` where F means the dimension of input features.
@@ -51,9 +51,10 @@ class GaussianKernel(nn.Module):
 
     .. math::
         k(x_1, x_2) = \exp \left( - \dfrac{\| x_1 - x_2 \|^2}{2\sigma^2} \right)
+
     where :math:`x_1, x_2 \in R^d` are 1-d tensors.
 
-    Gaussian Kernel Matrix K is defined on input group :math:`X=(x_1, x_2, ..., x_m)`
+    Gaussian Kernel Matrix K is defined on input group :math:`X=(x_1, x_2, ..., x_m),`
 
     .. math::
         K(X)_{i,j} = k(x_i, x_j)
@@ -74,15 +75,12 @@ class GaussianKernel(nn.Module):
         :math:`\sigma^2_t = \dfrac{\alpha}{n^2}\sum_{i,j} \| x_i - x_j \|^2` is the
         new observed value.
 
-    :param sigma: bandwidth :math:`\sigma`. Default: None
-    :type sigma: float, optional
-    :param momentum: value used for the :math:`\sigma^2` computation. Default: 0.1
-    :type momentum: float, optional
-    :param track_running_stats: If ``True``, this module tracks the running mean of :math:`\sigma^2`.
-        Otherwise, this module does not track such statistics and always uses fix :math:`\sigma^2`. Default: ``True``
-    :type track_running_stats: bool, optional
-    :param alpha: decide the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
-    :type alpha: float, optional
+    Parameters:
+        - sigma (float, optional): bandwidth :math:`\sigma`. Default: None
+        - momentum (float, optional): value used for the :math:`\sigma^2` computation. Default: 0.1
+        - track_running_stats (bool, optional): If ``True``, this module tracks the running mean of :math:`\sigma^2`.
+          Otherwise, it won't track such statistics and always uses fix :math:`\sigma^2`. Default: ``True``
+        - alpha (float, optional): decide the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
 
     Shape:
         - Input: :math:`(N, F)` where F means the dimension of input features.
@@ -129,7 +127,7 @@ class JointMaximumMeanDiscrepancy(nn.Module):
 
 
 def _update_index_matrix(batch_size, index_matrix=None):
-    """
+    r"""
     Update the `index_matrix` which convert `kernel_matrix` to loss.
     If `index_matrix` is a tensor with shape (2 x batch_size, 2 x batch_size), then return `index_matrix`.
     Else return a new tensor with shape (2 x batch_size, 2 x batch_size).

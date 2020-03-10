@@ -1,14 +1,14 @@
 import math
 import torch.nn as nn
-from dalib.vision.classifier import Classifier as ClassifierBase
+from dalib.modules.classifier import Classifier as ClassifierBase
 
 
 class StepwiseAdaptiveFeatureNorm(nn.Module):
-    """Stepwise Adaptive Feature Norm proposed by `Larger Norm More Transferable:
+    r"""Stepwise Adaptive Feature Norm proposed by `Larger Norm More Transferable:
     An Adaptive Feature Norm Approach for Unsupervised Domain Adaptation <https://arxiv.xilesou.top/abs/1811.07456>`_
 
-    :param delta_r: step size of :math:`\Delta r`.  Default: 1.
-    :type delta_r: float, optional
+    Parameters:
+        - delta_r (float, optional): step size of :math:`\Delta r`.  Default: 1.
 
     Shape:
         - Input: :math:`(N, F)` where F means the dimension of input features.

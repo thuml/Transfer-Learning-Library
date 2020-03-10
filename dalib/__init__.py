@@ -1,1 +1,1 @@
-__all__ = ['datasets', 'adaptation', 'vision', 'text']
+__all__ = ['adaptation', 'modules', 'vision', 'text']

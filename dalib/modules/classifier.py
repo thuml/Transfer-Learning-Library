@@ -6,14 +6,11 @@ __all__ = ['Classifier']
 class Classifier(nn.Module):
     """A generic Classifier class for domain adaptation in image classification.
 
-    :param backbone: Any backbone to extract 1-d features from data
-    :type backbone: class:`nn.Module` object
-    :param num_classes: Number of classes
-    :type num_classes: int
-    :param bottleneck: Any bottleneck layer. Use no bottleneck by default
-    :type bottleneck: class:`nn.Module` object, optional
-    :param bottleneck_dim: Feature dimension the of bottleneck layer. Default: 256
-    :type bottleneck_dim: int, optional
+    Parameters:
+        - backbone (class:`nn.Module` object): Any backbone to extract 1-d features from data
+        - num_classes (int): Number of classes
+        - bottleneck (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
+        - bottleneck_dim (int, optional): Feature dimension the of bottleneck layer. Default: 256
 
     .. note::
         Different classifiers are used in different domain adaptation algorithms to achieve better accuracy
@@ -44,15 +41,16 @@ class Classifier(nn.Module):
 
     def forward(self, x, keep_features=False):
         """
-        Args:
-            - x: (Tensor) input data
-            - keep_features: (bool, optional)
-        :return: Tuple (output, features) if `keep_features` is set True. Else only the logit output.
+        Parameters:
+            - x (Tensor): input data
+            - keep_features (bool, optional)
+            - return: Tuple (output, features) if `keep_features` is set True. Else only the logit output.
 
         Shapes:
             - x: (N, *), same shape as the input of the `backbone`.
             - output: (N, C), where C means the number of classes.
             - features: (N, F), where F means the dimension of the features.
+
         """
         f = self.backbone(x)
         f = f.view(x.size(0), -1)

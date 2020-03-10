@@ -1,12 +1,9 @@
-dalib.adaptation package
-========================
+DALIB Algorithms
+============================
 
-Module contents
----------------
+.. TODO introductions, examples & benchmarks
 
-.. automodule:: dalib.adaptation
-
-dalib.adaptation.dan module
+DAN
 ---------------------------
 
 .. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
@@ -15,7 +12,7 @@ dalib.adaptation.dan module
 .. autoclass:: dalib.adaptation.dan.GaussianKernel
     :show-inheritance:
 
-dalib.adaptation.dann module
+DANN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
@@ -24,7 +21,7 @@ dalib.adaptation.dann module
 .. autoclass:: dalib.adaptation.dann.DomainDiscriminator
     :show-inheritance:
 
-dalib.adaptation.cdan module
+CDAN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
@@ -33,7 +30,7 @@ dalib.adaptation.cdan module
 .. autoclass:: dalib.adaptation.cdan.DomainDiscriminator
     :show-inheritance:
 
-dalib.adaptation.mdd module
+MDD
 ----------------------------
 
 .. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancyLoss
@@ -48,7 +45,7 @@ dalib.adaptation.mdd module
 .. autoclass:: dalib.adaptation.mdd.Classifier
     :show-inheritance:
 
-dalib.adaptation.afn module
+AFN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.afn.StepwiseAdaptiveFeatureNorm

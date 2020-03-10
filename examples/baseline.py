@@ -15,8 +15,8 @@ import torchvision.transforms as transforms
 
 sys.path.append('.')
 
-import dalib.datasets as datasets
-import dalib.vision as vision
+import dalib.vision.datasets as datasets
+import dalib.vision.models as models
 from tools.io_utils import AverageMeter, ProgressMeter, accuracy
 
 
@@ -62,8 +62,8 @@ def main(args):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = vision.__dict__[args.arch](pretrained=True)
-    model = vision.classifier.Classifier(backbone, train_dataset.num_classes)
+    backbone = models.__dict__[args.arch](pretrained=True)
+    model = models.Classifier(backbone, train_dataset.num_classes)
 
     model = model.cuda()
 
@@ -192,9 +192,9 @@ def adjust_learning_rate(optimizer, epoch, args):
 
 if __name__ == '__main__':
     architecture_names = sorted(
-        name for name in vision.__dict__
+        name for name in models.__dict__
         if name.islower() and not name.startswith("__")
-        and callable(vision.__dict__[name])
+        and callable(models.__dict__[name])
     )
     dataset_names = sorted(
         name for name in datasets.__dict__

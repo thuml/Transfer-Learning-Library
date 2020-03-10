@@ -1,10 +1,10 @@
-dalib.text package
-==================
+Text Models
+=========================
 
 Module contents
 ---------------
 
-.. automodule:: dalib.text
+.. automodule:: dalib.text.models
    :members:
    :undoc-members:
    :show-inheritance:

@@ -7,13 +7,11 @@ Welcome to dalib's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 2
-   dalib
 
+    dalib.modules
+    dalib.adaptation
+    dalib.vision.datasets
+    dalib.vision.models
+    dalib.text.datasets
+    dalib.text.models
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

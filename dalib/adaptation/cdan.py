@@ -2,15 +2,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ._util import binary_accuracy, WarmStartGradientReverseLayer
-from dalib.vision.classifier import Classifier as ClassifierBase
+from dalib.modules.grl import WarmStartGradientReverseLayer
+from ._util import binary_accuracy
+from dalib.modules.classifier import Classifier as ClassifierBase
 
 
 __all__ = ['DomainDiscriminator', 'ConditionalDomainAdversarialLoss']
 
 
 class DomainDiscriminator(nn.Module):
-    """Domain discriminator model. See class:`dalib.adaptation.dann.DomainDiscriminator` for details.
+    r"""Domain discriminator model. See class:`dalib.adaptation.dann.DomainDiscriminator` for details.
     """
     def __init__(self, in_feature, hidden_size):
         super(DomainDiscriminator, self).__init__()
@@ -30,35 +31,30 @@ class DomainDiscriminator(nn.Module):
 
 
 class ConditionalDomainAdversarialLoss(nn.Module):
-    """The `Conditional Domain Adversarial Loss <https://arxiv.org/abs/1705.10667>`_
+    r"""The `Conditional Domain Adversarial Loss <https://arxiv.org/abs/1705.10667>`_
 
-    Conditional Domain adversarial loss measures the domain discrepancy through training a domain discriminator in a conditional manner.
+    Conditional Domain adversarial loss measures the domain discrepancy through training a domain discriminator in a
+    conditional manner.
 
     ..
         TODO add CDAN math definitions, explain what y_s, f_s, y_t, f_t means.
 
-    :param domain_discriminator: A domain discriminator object, which predicts the domains
-        of features. Its input shape is (N, F) and output shape is (N, 1)
-    :type domain_discriminator: class:`nn.Module` object
-    :param entropy_conditioning: If True, use entropy-aware weight to reweight each training
-        example. Default: False
-    :type entropy_conditioning: bool, optional
-    :param randomized: If True, use randomized multi linear map. Else, use multi linear map.
-        Default: False
-    :type randomized: bool, optional
-    :param num_classes: Number of classes
-    :type num_classes: int, optional
-    :param features_dim: Dimension of input features
-    :type features_dim: int, optional
-    :param randomized_dim: Dimension of features after randomized. Default: 1024
-    :type randomized_dim: int, optional
-    :param reduction: Specifies the reduction to apply to the output:
-        ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
-        ``'mean'``: the sum of the output will be divided by the number of
-        elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
-        and :attr:`reduce` are in the process of being deprecated, and in the meantime,
-        specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
-    :type reduction: string, optional
+    Parameters:
+        - domain_discriminator (class:`nn.Module` object): A domain discriminator object, which predicts the domains of
+          features. Its input shape is (N, F) and output shape is (N, 1)
+        - entropy_conditioning (bool, optional): If True, use entropy-aware weight to reweight each training example.
+          Default: False
+        - randomized (bool, optional): If True, use randomized multi linear map. Else, use multi linear map.
+          Default: False
+        - num_classes (int, optional): Number of classes
+        - features_dim (int, optional): Dimension of input features
+        - randomized_dim (int, optional): Dimension of features after randomized. Default: 1024
+        - reduction (string, optional): Specifies the reduction to apply to the output:
+          ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+          ``'mean'``: the sum of the output will be divided by the number of
+          elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+          and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+          specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
 
     .. note::
         You need to provide num_classes, features_dim and randomized_dim `only when` randomized

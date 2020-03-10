@@ -1,22 +1,22 @@
 import torch
 import torch.nn as nn
-from ._util import WarmStartGradientReverseLayer, binary_accuracy
-from dalib.vision.classifier import Classifier as ClassifierBase
+from dalib.modules.grl import WarmStartGradientReverseLayer
+from ._util import binary_accuracy
+from dalib.modules.classifier import Classifier as ClassifierBase
 
 __all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
 
 
 class DomainDiscriminator(nn.Module):
-    """Domain discriminator model from
+    r"""Domain discriminator model from
     `"Domain-Adversarial Training of Neural Networks" <https://arxiv.org/abs/1505.07818>`_
 
     Distinguish whether the features with input size (N, F) come from the source domain or the target domain.
     The source domain label is 1 and the target domain label is 0.
 
-    :param in_feature: dimension of the input feature
-    :type in_feature: int
-    :param hidden_size: dimension of the hidden features
-    :type hidden_size: int
+    Parameters:
+        - in_feature (int): dimension of the input feature
+        - hidden_size (int): dimension of the hidden features
 
     Shape:
         - Input: :math:`(N, F)`
@@ -44,23 +44,22 @@ class DomainDiscriminator(nn.Module):
 
 
 class DomainAdversarialLoss(nn.Module):
-    """The `Domain Adversarial Loss <https://arxiv.org/abs/1505.07818>`_
+    r"""The `Domain Adversarial Loss <https://arxiv.org/abs/1505.07818>`_
 
     Domain adversarial loss measures the domain discrepancy through training a domain discriminator.
 
     ..
         TODO add DANN math definitions, explain what f_s, f_t means.
 
-    :param domain_discriminator: A domain discriminator object, which predicts the domains
-        of features. Its input shape is (N, F) and output shape is (N, 1)
-    :type domain_discriminator: class:`nn.Module` object
-    :param reduction: Specifies the reduction to apply to the output:
-        ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
-        ``'mean'``: the sum of the output will be divided by the number of
-        elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
-        and :attr:`reduce` are in the process of being deprecated, and in the meantime,
-        specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
-    :type reduction: string, optional
+    Parameters:
+        - domain_discriminator (class:`nn.Module` object): A domain discriminator object, which predicts the domains \
+          of features. Its input shape is (N, F) and output shape is (N, 1)
+        - reduction (string, optional): Specifies the reduction to apply to the output:
+          ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+          ``'mean'``: the sum of the output will be divided by the number of
+          elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+          and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+          specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
 
     Shape:
         - f_s, f_t: :math:`(N, F)` where F means the dimension of input features.

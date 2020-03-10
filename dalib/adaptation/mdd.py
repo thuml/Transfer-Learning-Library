@@ -1,26 +1,24 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ._util import WarmStartGradientReverseLayer
+from dalib.modules.grl import WarmStartGradientReverseLayer
 
 __all__ = ['Classifier', 'AdversarialClassifier',
            'MarginDisparityDiscrepancyLoss', 'MarginDisparityDiscrepancy']
 
 
 class MarginDisparityDiscrepancyLoss(nn.Module):
-    """The margin disparity discrepancy (MDD) Loss
+    r"""The margin disparity discrepancy (MDD) Loss
 
-    :param adversarial_classifier: A classifier head which tries to maximize the margin disparity discrepancy.
-    :type adversarial_classifier: class:`nn.Module` object
-    :param margin:  margin gamma. Default: 2
-    :type margin: float, optional
-    :param reduction: Specifies the reduction to apply to the output:
-        ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
-        ``'mean'``: the sum of the output will be divided by the number of
-        elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
-        and :attr:`reduce` are in the process of being deprecated, and in the meantime,
-        specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
-        :type reduction: string, optional
+    Parameters:
+        - adversarial_classifier (class:`nn.Module` object): A classifier head which tries to maximize the margin disparity discrepancy.
+        - margin (float, optional):  margin gamma. Default: 2
+        - reduction (string, optional): Specifies the reduction to apply to the output:
+          ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+          ``'mean'``: the sum of the output will be divided by the number of
+          elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+          and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+          specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
 
     .. note::
         MarginDisparityDiscrepancyLoss has already used GradientReverseLayer, thus adversarial_classifier is
@@ -59,7 +57,7 @@ class MarginDisparityDiscrepancyLoss(nn.Module):
 
 
 class MarginDisparityDiscrepancy(nn.Module):
-    """
+    r"""
     The margin disparity discrepancy (MDD) is proposed to measure the distribution discrepancy in domain adaptation.
     The definition can be described as:
 
@@ -67,8 +65,9 @@ class MarginDisparityDiscrepancy(nn.Module):
         TODO add MDD math definitions, explain what y_s, y_s_adv, y_t, y_t_adv means.
 
     You can see more details in `Bridging Theory and Algorithm for Domain Adaptation`
-    Args:
-        margin (float): margin gamma.
+
+    Parameters:
+        - margin (float): margin gamma.
 
     Shape:
         - Input: :math:`(N, C)` where C = number of classes.
@@ -87,13 +86,13 @@ class MarginDisparityDiscrepancy(nn.Module):
 
 
 def shift_log(x, offset=1e-6):
-    """
+    r"""
     First shift, then calculate log.
     Used to avoid the gradient explosion problem in log(x) function when x=0.
 
-    :param x: input tensor
-    :param offset:
-    :return:
+    Parameters:
+        - x: input tensor
+        - offset:
 
     .. note::
         Input tensor falls in [0., 1.] and the output tensor falls in [-log(offset), 0]
@@ -127,7 +126,7 @@ class ClassifierHead(nn.Module):
 
 
 class Classifier(nn.Module):
-    """Classifier for MDD. Similar as `nn.dalib.vision.classifier.Classifier`"""
+    r"""Classifier for MDD. Similar as `nn.dalib.vision.classifier.Classifier`"""
     def __init__(self, backbone, num_classes, use_bottleneck=True, bottleneck_dim=1024, head_bottleneck_dim=1024):
         super(Classifier, self).__init__()
         self.backbone = backbone

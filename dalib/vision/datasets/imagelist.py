@@ -6,17 +6,13 @@ from torchvision.datasets.folder import default_loader
 class ImageList(datasets.VisionDataset):
     """A generic Dataset class for domain adaptation in image classification
 
-    :param root: Root directory of dataset
-    :type root: str
-    :param num_classes: Number of classes
-    :type num_classes: int
-    :param data_list_file: File to read the image list from.
-    :type data_list_file: str
-    :param transform: A function/transform that  takes in an PIL image
-        and returns a transformed version. E.g, ``transforms.RandomCrop``.
-    :type transform: callable, optional
-    :param target_transform: A function/transform that takes in the target and transforms it.
-    :type target_transform: callable, optional
+    Parameters:
+        - root (str): Root directory of dataset
+        - num_classes (int): Number of classes
+        - data_list_file (str): File to read the image list from.
+        - transform (callable, optional): A function/transform that  takes in an PIL image \
+            and returns a transformed version. E.g, ``transforms.RandomCrop``.
+        - target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: In `data_list_file`, each line 2 values in the following format.
         ::
@@ -37,10 +33,9 @@ class ImageList(datasets.VisionDataset):
 
     def __getitem__(self, index):
         """
-        :param index: Index
-        :type index: int
-        :return: (image, target) where target is index of the target class.
-        :rtype tuple
+        Parameters:
+            - index (int): Index
+            - return (tuple): (image, target) where target is index of the target class.
         """
         path, target = self.data_list[index]
         img = self.loader(path)
@@ -56,10 +51,9 @@ class ImageList(datasets.VisionDataset):
     def parse_data_file(self, file_name):
         """Parse file to data list
 
-        :param file_name: The path of data file
-        :type file_name: str
-        :return: List of (image path, class_index) tuples
-        :rtype: list
+        Parameters:
+            - file_name (str): The path of data file
+            - return (list): List of (image path, class_index) tuples
         """
         with open(file_name, "r") as f:
             data_list = []

@@ -6,21 +6,17 @@ from ._util import download as download_data, check_exits
 class OfficeHome(ImageList):
     """`OfficeHome <http://hemanthdv.org/OfficeHome-Dataset/>`_ Dataset.
 
-       :param root: Root directory of dataset
-       :type root: str
-       :param task: The task (domain) to create dataset. Choices include 'Ar' (Art),
+    Parameters:
+        - root (str): Root directory of dataset
+        - task (str): The task (domain) to create dataset. Choices include 'Ar' (Art), \
             'Cl' (Clipart), 'Pr' (Product) and 'Rw' (Real_World).
-       :type task: str
-       :param download: If true, downloads the dataset from the internet and puts it
+        - download (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
-       :type download: bool, optional
-       :param transform: A function/transform that  takes in an PIL image and returns a
+        - transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
             transformed version. E.g, ``transforms.RandomCrop``.
-       :type transform: callable, optional
-       :param target_transform: A function/transform that takes in the target and transforms it.
-       :type target_transform: callable, optional
+        - target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
-       """
+    """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/ee615d5ad5e146278a80/?dl=1"),
         ("Art", "Art.tgz", "https://cloud.tsinghua.edu.cn/f/81a4f30c7e894298b435/?dl=1"),

@@ -16,8 +16,8 @@ import torch.nn.functional as F
 sys.path.append('.')  # TODO remove this when published
 
 import dalib.adaptation as adaptation
-import dalib.datasets as datasets
-import dalib.vision as vision
+import dalib.vision.datasets as datasets
+import dalib.vision.models as models
 from tools.io_utils import AverageMeter, ProgressMeter, accuracy
 
 
@@ -67,7 +67,7 @@ def main(args):
     # create model
     cudnn.benchmark = True
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = vision.__dict__[args.arch](pretrained=True)
+    backbone = models.__dict__[args.arch](pretrained=True)
     classifier = adaptation.dann.Classifier(backbone, train_source_dataset.num_classes).cuda()
     domain_discri = adaptation.dann.DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).cuda()
 
@@ -235,9 +235,9 @@ class ForeverDataIterator:
 
 if __name__ == '__main__':
     architecture_names = sorted(
-        name for name in vision.__dict__
+        name for name in models.__dict__
         if name.islower() and not name.startswith("__")
-        and callable(vision.__dict__[name])
+        and callable(models.__dict__[name])
     )
     dataset_names = sorted(
         name for name in datasets.__dict__
