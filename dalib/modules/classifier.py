@@ -10,7 +10,7 @@ class Classifier(nn.Module):
         - backbone (class:`nn.Module` object): Any backbone to extract 1-d features from data
         - num_classes (int): Number of classes
         - bottleneck (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
-        - bottleneck_dim (int, optional): Feature dimension the of bottleneck layer. Default: 256
+        - bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 256
 
     .. note::
         Different classifiers are used in different domain adaptation algorithms to achieve better accuracy

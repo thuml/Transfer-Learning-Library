@@ -2,6 +2,8 @@ import math
 import torch.nn as nn
 from dalib.modules.classifier import Classifier as ClassifierBase
 
+__all__ = ['StepwiseAdaptiveFeatureNorm', 'Classifier']
+
 
 class StepwiseAdaptiveFeatureNorm(nn.Module):
     r"""Stepwise Adaptive Feature Norm proposed by `Larger Norm More Transferable:

@@ -19,11 +19,11 @@ import dalib.adaptation as adaptation
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
-from tools.io_utils import AverageMeter, ProgressMeter, accuracy
+from tools.io_utils import AverageMeter, ProgressMeter, accuracy, create_exp_dir
+from tools.transforms import ResizeImage
 
 
 def main(args):
-
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -39,15 +39,18 @@ def main(args):
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
+    resize_size = 256
+    crop_size = 224
     train_transform = transforms.Compose([
+        ResizeImage(resize_size),
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize
     ])
     val_tranform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        ResizeImage(resize_size),
+        transforms.CenterCrop(crop_size),
         transforms.ToTensor(),
         normalize
     ])
@@ -55,15 +58,15 @@ def main(args):
     train_source_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = torch.utils.data.DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True, drop_last=True)
+                                               num_workers=args.workers, drop_last=True)
 
     train_target_dataset = datasets.__dict__[args.data](
         root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = torch.utils.data.DataLoader(train_target_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True, drop_last=True)
+                                               num_workers=args.workers, drop_last=True)
     val_dataset = datasets.__dict__[args.data](root=args.root, task=args.target, download=True, transform=val_tranform)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size * 2, shuffle=False,
-                                             num_workers=args.workers, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
+                                             num_workers=args.workers)
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
     if args.iters_per_epoch is None:
@@ -76,27 +79,21 @@ def main(args):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = adaptation.mdd.Classifier(backbone, num_classes, use_bottleneck=True,
-                                           bottleneck_dim=args.bottleneck_dim, head_bottleneck_dim=args.head_bottleneck_dim).cuda()
-    adversarial_classifier = adaptation.mdd.AdversarialClassifier(args.bottleneck_dim, num_classes,
-                                                                  bottleneck_dim=args.head_bottleneck_dim).cuda()
+    classifier = adaptation.mdd.Classifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, width=args.bottleneck_dim)
+    mdd = adaptation.mdd.MarginDisparityDiscrepancy(args.margin)
 
-    all_parameters = classifier.get_parameters() + adversarial_classifier.get_parameters()
+    all_parameters = classifier.get_parameters()
     classifier = torch.nn.DataParallel(classifier).cuda()
-    adversarial_classifier = torch.nn.DataParallel(adversarial_classifier).cuda()
 
     # define optimizer
     optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
                                 weight_decay=args.wd, nesterov=True)
 
-    # define loss function
-    mdd_loss = adaptation.mdd.MarginDisparityDiscrepancyLoss(adversarial_classifier, args.margin).cuda()
-
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, mdd_loss, args)
+        train(train_source_iter, train_target_iter, classifier, mdd, optimizer, epoch, iters_per_epoch, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
@@ -107,51 +104,56 @@ def main(args):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_iter, train_target_iter, model, optimizer, epoch, iters_per_epoch, mdd_loss, args):
+def train(train_source_iter, train_target_iter, classifier, mdd, optimizer, epoch, iters_per_epoch, args):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
     trans_losses = AverageMeter('Trans Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
     progress = ProgressMeter(
         iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs],
+        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
-    model.train()
-    mdd_loss.train()
+    classifier.train()
 
     end = time.time()
     for i in range(iters_per_epoch):
         adjust_learning_rate(optimizer, i + iters_per_epoch * epoch, args)
+        optimizer.zero_grad()
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_t, labels_t = next(train_target_iter)
 
         x_s = x_s.cuda()
         x_t = x_t.cuda()
         labels_s = labels_s.cuda()
+        labels_t = labels_t.cuda()
 
         # compute output
-        y_s, f_s = model(x_s, keep_features=True)
-        y_t, f_t = model(x_t, keep_features=True)
+        x = torch.cat((x_s, x_t), dim=0)
+        outputs, outputs_adv = classifier(x, keep_adv_output=True)
+        y_s, y_t = outputs.narrow(0, 0, x_s.size(0)), outputs.narrow(0, x_s.size(0), x_t.size(0))
+        y_s_adv, y_t_adv = outputs_adv.narrow(0, 0, x_s.size(0)), outputs_adv.narrow(0, x_s.size(0), x_t.size(0))
         cls_loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = mdd_loss(y_s, f_s, y_t, f_t)
-        loss = cls_loss + transfer_loss * args.trade_off
+        transfer_loss = mdd(y_s, y_s_adv, y_t, y_t_adv)
+        loss = cls_loss + transfer_loss
 
         cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_t.size(0))
         trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
@@ -275,19 +277,19 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default='0', type=str,
                         help='GPU id(s) to use.')
-    parser.add_argument('--trade_off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--margin', type=float, default=4., help="margin gamma")
     parser.add_argument('--bottleneck_dim', default=1024, type=int)
-    parser.add_argument('--head_bottleneck_dim', default=1024, type=int)
+    parser.add_argument('--save', type=str, default=None, help='If not None, save the scripts to this directory')
 
     args = parser.parse_args()
     # # TODO remove this when published
     print(args)
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    if args.save is not None:
+        create_exp_dir(args.save, ['dalib', 'examples', 'tools'])
 
     main(args)
 

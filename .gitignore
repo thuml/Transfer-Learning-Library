@@ -124,3 +124,6 @@ dmypy.json
 .pyre/
 
 .idea/
+
+exp/*
+trash/*
