@@ -4,6 +4,19 @@ from ._util import download as download_data, check_exits
 
 
 class Office31(ImageList):
+    """Office31 Dataset.
+
+    Parameters:
+        - **root** (str): Root directory of dataset
+        - **task** (str): The task (domain) to create dataset. Choices include ``'A'``: amazon, \
+            ``'D'``: dslr and ``'W'``: webcam.
+        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, ``transforms.RandomCrop``.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+
+    """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/1f5646f39aeb4d7389b9/?dl=1"),
         ("amazon", "amazon.tgz", "https://cloud.tsinghua.edu.cn/f/05640442cd904c39ad60/?dl=1"),

@@ -7,7 +7,7 @@ import argparse
 import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-from torch.optim import SGD
+import torch.optim
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
@@ -16,13 +16,12 @@ import torch.nn.functional as F
 
 sys.path.append('.')  # TODO remove this when published
 
-from dalib.adaptation.cdan import DomainDiscriminator, ConditionalDomainAdversarialLoss, ImageClassifier
+from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
-from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
+from tools.utils import AverageMeter, ProgressMeter, accuracy, create_exp_dir, ForeverDataIterator
 from tools.transforms import ResizeImage
-from tools.lr_scheduler import StepwiseLR
 
 
 def main(args):
@@ -70,94 +69,113 @@ def main(args):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
+    G = models.__dict__[args.arch](pretrained=True).cuda()  # feature extractor
     num_classes = train_source_dataset.num_classes
-    classifier = ImageClassifier(backbone, num_classes).cuda()
-    classifier_feature_dim = classifier.features_dim
-    domain_discri = DomainDiscriminator(
-        in_feature=classifier_feature_dim * num_classes,
-        hidden_size=1024
-    ).cuda()
-    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
-    classifier = torch.nn.DataParallel(classifier).cuda()
-    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
+    # two image classifier heads
+    F1 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).cuda()
+    F2 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).cuda()
 
-    # define optimizer and lr scheduler
-    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
+    # define optimizer
+    # the learning rate is fixed according to origin paper
+    optimizer_g = torch.optim.SGD(G.parameters(), lr=args.lr, weight_decay=0.0005)
+    optimizer_f = torch.optim.SGD(F1.get_parameters()+F2.get_parameters(), momentum=0.9, lr=args.lr, weight_decay=0.0005)
 
-    # define loss function
-    domain_adv = ConditionalDomainAdversarialLoss(
-        domain_discri, entropy_conditioning=False,
-        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
-    ).cuda()
+    G = torch.nn.DataParallel(G).cuda()
+    F1 = torch.nn.DataParallel(F1).cuda()
+    F2 = torch.nn.DataParallel(F2).cuda()
 
     # start training
     best_acc1 = 0.
+    best_results = None
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
-              lr_sheduler, epoch, args)
+        train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimizer_f, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        results = validate(val_loader, G, F1, F2, args)
 
         # remember best acc@1 and save checkpoint
-        best_acc1 = max(acc1, best_acc1)
+        if max(results) > best_acc1:
+            best_acc1 = max(results)
+            best_results = results
 
-    print("best_acc1 = {:3.1f}".format(best_acc1))
+    print("best_acc1 = {:3.1f}, results = {}".format(best_acc1, best_results))
 
 
-def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
-          lr_sheduler, epoch, args):
+def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimizer_f, epoch, args):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
     trans_losses = AverageMeter('Trans Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    domain_accs = AverageMeter('Domain Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
+
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, domain_accs],
+        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
-    model.train()
-    domain_adv.train()
+    G.train()
+    F1.train()
+    F2.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_sheduler.step()
-
         # measure data loading time
         data_time.update(time.time() - end)
 
         x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_t, labels_t = next(train_target_iter)
 
         x_s = x_s.cuda()
         x_t = x_t.cuda()
         labels_s = labels_s.cuda()
+        labels_t = labels_t.cuda()
 
-        # compute output
-        y_s, f_s = model(x_s)
-        cls_loss = F.cross_entropy(y_s, labels_s)
-        y_t, f_t = model(x_t)
-        transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
-        domain_acc = domain_adv.domain_discriminator_accuracy
-        loss = cls_loss + transfer_loss * args.trade_off
+        # Step A train all networks to minimize loss on source domain
+        optimizer_g.zero_grad()
+        optimizer_f.zero_grad()
+        g_s, g_t = G(x_s), G(x_t)
+        y1_s, y2_s = F1(g_s), F2(g_s)
+        y1_t, y2_t = F1(g_t), F2(g_t)
+        y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
+        loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
+               0.01 * (entropy(y1_t) + entropy(y2_t))
+        loss.backward()
+        optimizer_g.step()
+        optimizer_f.step()
 
-        cls_acc = accuracy(y_s, labels_s)[0]
+        # Step B train classifier to maximize discrepancy
+        optimizer_g.zero_grad()
+        optimizer_f.zero_grad()
+        g_s, g_t = G(x_s), G(x_t)
+        y1_s, y2_s = F1(g_s), F2(g_s)
+        y1_t, y2_t = F1(g_t), F2(g_t)
+        y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
+        loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
+               0.01 * (entropy(y1_t) + entropy(y2_t)) - classifier_discrepancy(y1_t, y2_t)
+        loss.backward()
+        optimizer_f.step()
+
+        # Step C train genrator to minimize discrepancy
+        for k in range(args.num_k):
+            optimizer_g.zero_grad()
+            optimizer_f.zero_grad()
+            g_t = G(x_t)
+            y1_t, y2_t = F1(g_t), F2(g_t)
+            y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
+            mcd_loss = classifier_discrepancy(y1_t, y2_t)
+            mcd_loss.backward()
+            optimizer_g.step()
+
+        cls_acc = accuracy(y1_s, labels_s)[0]
+        tgt_acc = accuracy(y1_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_accs.update(domain_acc.item(), x_s.size(0))
-        trans_losses.update(transfer_loss.item(), x_s.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        tgt_accs.update(tgt_acc.item(), x_t.size(0))
+        trans_losses.update(mcd_loss.item(), x_s.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -167,18 +185,19 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
             progress.display(i)
 
 
-def validate(val_loader, model, args):
+def validate(val_loader, G, F1, F2, args):
     batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
+    top1_1 = AverageMeter('Acc_1', ':6.2f')
+    top1_2 = AverageMeter('Acc_2', ':6.2f')
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, top5],
+        [batch_time, top1_1, top1_2],
         prefix='Test: ')
 
     # switch to evaluate mode
-    model.eval()
+    G.eval()
+    F1.eval()
+    F2.eval()
 
     with torch.no_grad():
         end = time.time()
@@ -188,14 +207,14 @@ def validate(val_loader, model, args):
             target = target.cuda()
 
             # compute output
-            output, _ = model(images)
-            loss = F.cross_entropy(output, target)
+            g = G(images)
+            y1, y2 = F1(g), F2(g)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1[0], images.size(0))
-            top5.update(acc5[0], images.size(0))
+            acc1, = accuracy(y1, target)
+            acc2, = accuracy(y2, target)
+            top1_1.update(acc1[0], images.size(0))
+            top1_2.update(acc2[0], images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -204,10 +223,10 @@ def validate(val_loader, model, args):
             if i % args.print_freq == 0:
                 progress.display(i)
 
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
+        print(' * Acc1 {top1_1.avg:.3f} Acc2 {top1_2.avg:.3f}'
+              .format(top1_1=top1_1, top1_2=top1_2))
 
-    return top1.avg
+    return top1_1.avg, top1_2.avg
 
 
 if __name__ == '__main__':
@@ -241,26 +260,22 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', default=0.01, type=float,
+    parser.add_argument('--lr', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum')
-    parser.add_argument('--wd', default=1e-3, type=float,
-                        metavar='W', help='weight decay (default: 1e-3)',
-                        dest='weight_decay')
+    parser.add_argument('--num_k', type=int, default=4, metavar='K',
+                        help='how many steps to repeat the generator update')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
-                        metavar='N', help='print frequency (default: 100)')
+                        metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default='0', type=str,
                         help='GPU id(s) to use.')
-    parser.add_argument('--trade_off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('--bottleneck_dim', default=1024, type=int)
 
     args = parser.parse_args()
-    # # TODO remove this when published
+    # TODO remove this when published
     print(args)
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
