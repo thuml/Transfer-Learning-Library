@@ -15,6 +15,13 @@ Office-31
    :members:
    :show-inheritance:
 
+Office-Caltech
+---------------------------------------
+
+.. automodule:: dalib.vision.datasets.officecaltech
+   :members:
+   :show-inheritance:
+
 Office-Home
 ---------------------------------------
 
@@ -26,5 +33,12 @@ VisDA-2017
 --------------------------------------
 
 .. automodule:: dalib.vision.datasets.visda2017
+   :members:
+   :show-inheritance:
+
+DomainNet
+--------------------------------------
+
+.. automodule:: dalib.vision.datasets.domainnet
    :members:
    :show-inheritance:

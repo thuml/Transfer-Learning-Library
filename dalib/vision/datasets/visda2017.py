@@ -4,6 +4,18 @@ from ._util import download as download_data, check_exits
 
 
 class VisDA2017(ImageList):
+    """`VisDA-2017 <http://ai.bu.edu/visda-2017/assets/attachments/VisDA_2017.pdf>`_ Dataset
+
+    Parameters:
+        - **root** (str): Root directory of dataset
+        - **task** (str): The task (domain) to create dataset. Choices include ``'T'``: training and ``'V'``: validation.
+        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, ``transforms.RandomCrop``.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+
+    """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/58034129e0204ef6b840/?dl=1"),
         ("train", "train.tar", "http://csr.bu.edu/ftp/visda17/clf/train.tar"),

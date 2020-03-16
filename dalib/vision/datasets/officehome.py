@@ -7,14 +7,14 @@ class OfficeHome(ImageList):
     """`OfficeHome <http://hemanthdv.org/OfficeHome-Dataset/>`_ Dataset.
 
     Parameters:
-        - root (str): Root directory of dataset
-        - task (str): The task (domain) to create dataset. Choices include 'Ar' (Art), \
-            'Cl' (Clipart), 'Pr' (Product) and 'Rw' (Real_World).
-        - download (bool, optional): If true, downloads the dataset from the internet and puts it \
+        - **root** (str): Root directory of dataset
+        - **task** (str): The task (domain) to create dataset. Choices include ``'Ar'``: Art, \
+            ``'Cl'``: Clipart, ``'Pr'``: Product and ``'Rw'``: Real_World.
+        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
-        - transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
             transformed version. E.g, ``transforms.RandomCrop``.
-        - target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
     """
     download_list = [

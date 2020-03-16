@@ -7,12 +7,12 @@ class ImageList(datasets.VisionDataset):
     """A generic Dataset class for domain adaptation in image classification
 
     Parameters:
-        - root (str): Root directory of dataset
-        - num_classes (int): Number of classes
-        - data_list_file (str): File to read the image list from.
-        - transform (callable, optional): A function/transform that  takes in an PIL image \
+        - **root** (str): Root directory of dataset
+        - **num_classes** (int): Number of classes
+        - **data_list_file** (str): File to read the image list from.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image \
             and returns a transformed version. E.g, ``transforms.RandomCrop``.
-        - target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: In `data_list_file`, each line 2 values in the following format.
         ::
@@ -34,8 +34,8 @@ class ImageList(datasets.VisionDataset):
     def __getitem__(self, index):
         """
         Parameters:
-            - index (int): Index
-            - return (tuple): (image, target) where target is index of the target class.
+            - **index** (int): Index
+            - **return** (tuple): (image, target) where target is index of the target class.
         """
         path, target = self.data_list[index]
         img = self.loader(path)
@@ -52,8 +52,8 @@ class ImageList(datasets.VisionDataset):
         """Parse file to data list
 
         Parameters:
-            - file_name (str): The path of data file
-            - return (list): List of (image path, class_index) tuples
+            - **file_name** (str): The path of data file
+            - **return** (list): List of (image path, class_index) tuples
         """
         with open(file_name, "r") as f:
             data_list = []

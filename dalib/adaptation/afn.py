@@ -2,7 +2,7 @@ import math
 import torch.nn as nn
 from dalib.modules.classifier import Classifier as ClassifierBase
 
-__all__ = ['StepwiseAdaptiveFeatureNorm', 'Classifier']
+__all__ = ['StepwiseAdaptiveFeatureNorm', 'ImageClassifier']
 
 
 class StepwiseAdaptiveFeatureNorm(nn.Module):
@@ -10,7 +10,7 @@ class StepwiseAdaptiveFeatureNorm(nn.Module):
     An Adaptive Feature Norm Approach for Unsupervised Domain Adaptation <https://arxiv.xilesou.top/abs/1811.07456>`_
 
     Parameters:
-        - delta_r (float, optional): step size of :math:`\Delta r`.  Default: 1.
+        - **delta_r** (float, optional): step size of :math:`\Delta r`.  Default: 1.
 
     Shape:
         - Input: :math:`(N, F)` where F means the dimension of input features.
@@ -33,8 +33,11 @@ class StepwiseAdaptiveFeatureNorm(nn.Module):
 
 
 class L2PreservedDropout(nn.Module):
-    """Dropout that preserves the L 1-norm in both of the training and evaluation phases.
-    .. TODO math definitions
+    """Dropout that preserves the L2-norm in both of the training and evaluation phases.
+
+    Given a d-dimensional input vector :math:`x`, in the training phase, randomly zero the element
+    with probability :math:`p` by samples.
+    In the evaluation phase, scale the output by a factor of :math:`\dfrac{1}{\sqrt{1-p}}`.
     """
     def __init__(self, *args, **kwargs):
         super(L2PreservedDropout, self).__init__()
@@ -47,7 +50,7 @@ class L2PreservedDropout(nn.Module):
         return output
 
 
-class Classifier(ClassifierBase):
+class ImageClassifier(ClassifierBase):
     def __init__(self, backbone, num_classes, bottleneck_dim=1000, dropout_p=0.5):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
@@ -55,13 +58,13 @@ class Classifier(ClassifierBase):
             nn.ReLU(),
             L2PreservedDropout(dropout_p)
         )
-        super(Classifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
 
     def get_parameters(self):
         params = [
             {"params": self.backbone.parameters(), "momentum": 0.},
             {"params": self.bottleneck.parameters(), "momentum": 0.9},
-            {"params": self.fc.parameters(), "momentum": 0.9},
+            {"params": self.head.parameters(), "momentum": 0.9},
         ]
         return params
 

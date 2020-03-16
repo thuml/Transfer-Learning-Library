@@ -1,15 +1,16 @@
-import argparse
 import random
 import time
 import warnings
 import sys
+import argparse
 
 import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import torch.optim
+from torch.optim import SGD
 import torch.utils.data
+from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 
@@ -17,7 +18,10 @@ sys.path.append('.')
 
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-from tools.io_utils import AverageMeter, ProgressMeter, accuracy
+from dalib.modules.classifier import Classifier
+
+from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
+from tools.transforms import ResizeImage
 
 
 def main(args):
@@ -32,57 +36,50 @@ def main(args):
                       'from checkpoints.')
 
     print("Use GPU: {} for training".format(args.gpu))
+    cudnn.benchmark = True
 
     # Data loading code
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_transform = transforms.Compose([
+        ResizeImage(256),
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize
+    ])
+    val_tranform = transforms.Compose([
+        ResizeImage(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        normalize
+    ])
 
-    train_dataset = datasets.__dict__[args.data](
-        root=args.root, task=args.source, download=True,
-        transform=transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize
-        ])
-    )
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                                               num_workers=args.workers, pin_memory=True, drop_last=True)
-    val_dataset = datasets.__dict__[args.data](
-        root=args.root, task=args.target, download=True,
-        transform=transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])
-    )
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
-                                             num_workers=args.workers, pin_memory=True)
+    dataset = datasets.__dict__[args.data]
+    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    model = models.Classifier(backbone, train_dataset.num_classes)
+    model = Classifier(backbone, train_source_dataset.num_classes)
 
     model = model.cuda()
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
-    optimizer = torch.optim.SGD(model.get_parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
-
-    cudnn.benchmark = True
+    # define optimizer and lr scheduler
+    optimizer = SGD(model.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     best_acc1 = 0.
-
     for epoch in range(args.epochs):
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        train(train_source_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, args)
@@ -117,7 +114,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         target = target.cuda()
 
         # compute output
-        output = model(images)
+        output, _ = model(images)
         loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -160,7 +157,7 @@ def validate(val_loader, model, criterion, args):
             target = target.cuda()
 
             # compute output
-            output = model(images)
+            output, _ = model(images)
             loss = criterion(output, target)
 
             # measure accuracy and record loss
@@ -218,9 +215,9 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-b', '--batch-size', default=36, type=int,
+    parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 36)')
+                        help='mini-batch size (default: 32)')
     parser.add_argument('--lr', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -229,13 +226,13 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
-                        metavar='N', help='print frequency (default: 10)')
+                        metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default='0', type=str,
                         help='GPU id(s) to use.')
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     # TODO remove this when published
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu

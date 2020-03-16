@@ -4,18 +4,17 @@ DALIB Basic Modules
 
 Classifier
 -------------------------------
-
-.. automodule:: dalib.modules.classifier
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autoclass:: dalib.modules.classifier.Classifier
+    :show-inheritance:
+    :members:
 
 GRL
 ------------------------
+.. autoclass:: dalib.modules.grl.WarmStartGradientReverseLayer
+    :show-inheritance:
+    :members:
 
-.. automodule:: dalib.modules.grl
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
+Kernels
+------------------------
+.. autoclass:: dalib.modules.kernels.GaussianKernel
+    :show-inheritance:
