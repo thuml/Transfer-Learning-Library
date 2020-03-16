@@ -1,7 +1,4 @@
 Domain-Adaptation-Lib
-======================
-
-The DALIB package consists of popular algorithms, datasets and backbones for domain adaptation.
 
 
 Installation
