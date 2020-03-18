@@ -7,7 +7,7 @@ Welcome to dalib's documentation!
 =================================
 
 .. toctree::
-
+    tutorial
     dalib.modules
     dalib.adaptation
     dalib.vision.datasets

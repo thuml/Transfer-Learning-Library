@@ -1,4 +1,4 @@
-Domain-Adaptation-Lib
+Domain-Adaptation-Library
 
 
 Installation
@@ -6,29 +6,16 @@ Installation
 
 DALIB requires PyTorch 1.4 or newer.
 
-Anaconda:
-
-.. code:: bash
-
-    conda install dalib
-
 pip:
 
-.. code:: bash
+```bash
+    pip install -i https://test.pypi.org/simple/ dalib
+```
 
-    pip install dalib
-
-From source:
-
-.. code:: bash
-
-    python setup.py install
-    # or, for OSX
-    # MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py install
-
+    
 Documentation
 =============
-You can find the API documentation on the * website: *
+You can find the API documentation on the website: [DALIB API](https://192.168.6.114:9000/index.html)
 
 Contributing
 ============
