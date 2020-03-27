@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 sys.path.append('.')  # TODO remove this when published
 
-from dalib.adaptation.cdan import DomainDiscriminator, ConditionalDomainAdversarialLoss, ImageClassifier
+from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier, DomainDiscriminator
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
@@ -74,13 +74,11 @@ def main(args):
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes).cuda()
     classifier_feature_dim = classifier.features_dim
-    domain_discri = DomainDiscriminator(
-        in_feature=classifier_feature_dim * num_classes,
-        hidden_size=1024
-    ).cuda()
+
+    # domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024, num_layers=args.num_layers, use_dropout=True).cuda()
+    domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).cuda()
+
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
-    classifier = torch.nn.DataParallel(classifier).cuda()
-    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
 
     # define optimizer and lr scheduler
     optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
@@ -88,7 +86,7 @@ def main(args):
 
     # define loss function
     domain_adv = ConditionalDomainAdversarialLoss(
-        domain_discri, entropy_conditioning=False,
+        domain_discri, entropy_conditioning=args.E,
         num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
     ).cuda()
 
@@ -140,9 +138,12 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
         labels_s = labels_s.cuda()
 
         # compute output
-        y_s, f_s = model(x_s)
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
         cls_loss = F.cross_entropy(y_s, labels_s)
-        y_t, f_t = model(x_t)
         transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
         domain_acc = domain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
@@ -234,7 +235,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
@@ -258,6 +259,7 @@ if __name__ == '__main__':
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('-E', default=False, action='store_true', help='use entropy conditioning')
 
     args = parser.parse_args()
     # # TODO remove this when published

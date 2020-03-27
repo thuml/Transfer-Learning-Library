@@ -70,7 +70,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
     def forward(self, z_s, z_t):
         features = torch.cat([z_s, z_t], dim=0)
         batch_size = int(z_s.size(0))
-        self.index_matrix = _update_index_matrix(batch_size, self.index_matrix)
+        self.index_matrix = _update_index_matrix(batch_size, self.index_matrix).to(z_s.device)
         kernel_matrix = sum([kernel(features) for kernel in self.kernels])   # Add up the matrix of each kernel
         loss = (kernel_matrix * self.index_matrix).sum() / float(batch_size)  # Use quad-tuple for linear complexity
         return loss
@@ -137,13 +137,13 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         self.kernels = kernels
         self.index_matrix = None
 
-    def forward(self, f_s, f_t):
-        batch_size = int(f_s[0].size(0))
-        self.index_matrix = _update_index_matrix(batch_size, self.index_matrix)
+    def forward(self, z_s, z_t):
+        batch_size = int(z_s[0].size(0))
+        self.index_matrix = _update_index_matrix(batch_size, self.index_matrix).to(z_s[0].device)
 
         kernel_matrix = torch.ones_like(self.index_matrix)
-        for layer_f_s, layer_f_t, layer_kernels in zip(f_s, f_t, self.kernels):
-            layer_features = torch.cat([layer_f_s, layer_f_t], dim=0)
+        for layer_z_s, layer_z_t, layer_kernels in zip(z_s, z_t, self.kernels):
+            layer_features = torch.cat([layer_z_s, layer_z_t], dim=0)
             kernel_matrix *= sum([kernel(layer_features) for kernel in layer_kernels])  # Add up the matrix of each kernel
 
         loss = (kernel_matrix * self.index_matrix).sum() / float(batch_size)  # Use quad-tuple for linear complexity
@@ -164,7 +164,7 @@ def _update_index_matrix(batch_size, index_matrix=None):
             [ 0.,  0.,  0.,  1.,  0.,  0.]]
     """
     if index_matrix is None or index_matrix.size(0) != batch_size * 2:
-        index_matrix = torch.zeros(2 * batch_size, 2 * batch_size).cuda()
+        index_matrix = torch.zeros(2 * batch_size, 2 * batch_size)
         for i in range(batch_size):
             s1, s2 = i, (i + 1) % batch_size
             t1, t2 = s1 + batch_size, s2 + batch_size

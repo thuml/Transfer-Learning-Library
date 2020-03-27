@@ -97,7 +97,7 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         g = F.softmax(logits, dim=1).detach()
         h = self.grl(self.map(f, g))
         d = self.domain_discriminator(h)
-        d_label = torch.ones((f.size(0), 1)).cuda() * domain
+        d_label = torch.ones((f.size(0), 1)).to(logits.device) * domain
         weight = 1.0 + torch.exp(-entropy(g))
         batch_size = f.size(0)
         weight = weight / torch.sum(weight) * batch_size

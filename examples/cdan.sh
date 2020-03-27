@@ -8,18 +8,19 @@ python examples/cdan.py data/office31 -d Office31 -s D -t A -a resnet50 --gpu 0 
 python examples/cdan.py data/office31 -d Office31 -s W -t A -a resnet50 --gpu 0 --epochs 20  > benchmarks/cdan/Office31_W2A.txt
 
 # Office-Home
-python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --gpu 1 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Cl.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --gpu 1 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Pr.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --gpu 2 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Rw.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --gpu 2 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Ar.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --gpu 3 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Pr.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --gpu 3 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Rw.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --gpu 4 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Ar.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --gpu 4 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Cl.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Rw.txt
-python examples/cdan.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Rw2Ar.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --gpu 2 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Cl.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --gpu 4 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Pr.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --gpu 4 --epochs 40 > benchmarks/cdan/OfficeHome_Ar2Rw.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --gpu 4 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Ar.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Pr.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Cl2Rw.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Ar.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --gpu 5 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Cl.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --gpu 6 --epochs 40 > benchmarks/cdan/OfficeHome_Pr2Rw.txt
+python examples/cdan.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --gpu 6 --epochs 40 > benchmarks/cdan/OfficeHome_Rw2Ar.txt
 python examples/cdan.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --gpu 6 --epochs 40 > benchmarks/cdan/OfficeHome_Rw2Cl.txt
 python examples/cdan.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --gpu 6 --epochs 40 > benchmarks/cdan/OfficeHome_Rw2Pr.txt
 
 # VisDA-2017
 python examples/cdan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet50 --gpu 2 --epochs 50 > benchmarks/cdan/VisDA2017.txt
+python examples/cdan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet101 --gpu 0 --epochs 50 > benchmarks/cdan/VisDA2017_resnet101.txt

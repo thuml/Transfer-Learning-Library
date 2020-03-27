@@ -6,6 +6,7 @@ import argparse
 
 import torch
 import torch.nn.parallel
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 import torch.utils.data
@@ -85,12 +86,10 @@ def main(args):
                                  width=args.bottleneck_dim).cuda()
     mdd = MarginDisparityDiscrepancy(args.margin).cuda()
 
-    # The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
-    classifier = torch.nn.DataParallel(classifier).cuda()
-
     # define optimizer and lr_scheduler
-    optimizer = SGD(classifier.module.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0002, decay_rate=0.75)
+    # The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=args.lr_gamma, decay_rate=0.75)
 
     # start training
     best_acc1 = 0.
@@ -126,6 +125,8 @@ def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
     classifier.train()
     mdd.train()
 
+    criterion = nn.CrossEntropyLoss().cuda()
+
     end = time.time()
     for i in range(args.iters_per_epoch):
         lr_scheduler.step()
@@ -149,10 +150,11 @@ def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
         y_s_adv, y_t_adv = outputs_adv.chunk(2, dim=0)
 
         # compute cross entropy loss on source domain
-        cls_loss = F.cross_entropy(y_s, labels_s)
+        cls_loss = criterion(y_s, labels_s)
         # compute margin disparity discrepancy between domains
         transfer_loss = mdd(y_s, y_s_adv, y_t, y_t_adv)
         loss = cls_loss + transfer_loss * args.trade_off
+        classifier.module.step()
 
         cls_acc = accuracy(y_s, labels_s)[0]
         tgt_acc = accuracy(y_t, labels_t)[0]
@@ -241,7 +243,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
@@ -267,6 +269,7 @@ if __name__ == '__main__':
     parser.add_argument('--center_crop', default=False, action='store_true')
     parser.add_argument('--trade_off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--lr_gamma', default=0.0002, type=float)
     args = parser.parse_args()
 
     # TODO remove this when published

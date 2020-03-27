@@ -50,11 +50,11 @@ class DomainAdversarialLoss(nn.Module):
     def forward(self, f_s, f_t):
         f_s = self.grl(f_s)
         d_s = self.domain_discriminator(f_s)
-        d_label_s = torch.ones((f_s.size(0), 1)).cuda()
+        d_label_s = torch.ones((f_s.size(0), 1)).to(f_s.device)
 
         f_t = self.grl(f_t)
         d_t = self.domain_discriminator(f_t)
-        d_label_t = torch.zeros((f_t.size(0), 1)).cuda()
+        d_label_t = torch.zeros((f_t.size(0), 1)).to(f_t.device)
 
         self.grl.step()
         self.domain_discriminator_accuracy = 0.5 * (binary_accuracy(d_s, d_label_s) + binary_accuracy(d_t, d_label_t))

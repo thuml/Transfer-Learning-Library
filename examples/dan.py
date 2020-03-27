@@ -75,11 +75,8 @@ def main(args):
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes).cuda()
 
-    all_parameters = classifier.get_parameters()
-    classifier = torch.nn.DataParallel(classifier).cuda()
-
     # define optimizer and lr scheduler
-    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
 
     # define loss function
@@ -135,8 +132,11 @@ def train(train_source_iter, train_target_iter, model, mkmmd_loss, optimizer,
         labels_t = labels_t.cuda()
 
         # compute output
-        y_s, f_s = model(x_s)
-        y_t, f_t = model(x_t)
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
         cls_loss = F.cross_entropy(y_s, labels_s)
         transfer_loss = mkmmd_loss(f_s, f_t)
         loss = cls_loss + transfer_loss * args.trade_off
@@ -229,7 +229,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')

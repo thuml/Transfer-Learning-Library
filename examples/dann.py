@@ -79,9 +79,6 @@ def main(args):
                     args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
 
-    classifier = torch.nn.DataParallel(classifier).cuda()
-    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
-
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).cuda()
 
@@ -127,15 +124,17 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
         x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
-        if args.gpu is not None:
-            x_s = x_s.cuda()
-            x_t = x_t.cuda()
-            labels_s = labels_s.cuda()
+        x_s = x_s.cuda()
+        x_t = x_t.cuda()
+        labels_s = labels_s.cuda()
 
         # compute output
-        y_s, f_s = model(x_s)
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
         cls_loss = F.cross_entropy(y_s, labels_s)
-        _, f_t = model(x_t)
         transfer_loss = domain_adv(f_s, f_t)
         domain_acc = domain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
@@ -226,7 +225,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')

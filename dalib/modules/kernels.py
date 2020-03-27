@@ -51,7 +51,7 @@ class GaussianKernel(nn.Module):
     """
     def __init__(self, sigma=None, momentum=0.1, track_running_stats=True, alpha=1.):
         super(GaussianKernel, self).__init__()
-        self.sigma_square = torch.tensor(sigma * sigma).cuda() if sigma is not None else None
+        self.sigma_square = torch.tensor(sigma * sigma) if sigma is not None else None
         self.momentum = momentum
         self.track_running_stats = track_running_stats
         self.alpha = alpha
@@ -63,7 +63,7 @@ class GaussianKernel(nn.Module):
             if self.sigma_square is None:
                 self.sigma_square = self.alpha * torch.mean(l2_distance_square.detach())
             else:
-                self.sigma_square = (1. - self.momentum) * self.sigma_square \
+                self.sigma_square = (1. - self.momentum) * self.sigma_square.to(X.device) \
                                     + self.momentum * self.alpha * torch.mean(l2_distance_square.detach())
 
         return torch.exp(-l2_distance_square / (2 * self.sigma_square))

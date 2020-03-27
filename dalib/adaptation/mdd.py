@@ -109,7 +109,7 @@ class ImageClassifier(nn.Module):
     def __init__(self, backbone, num_classes, bottleneck_dim=1024, width=1024):
         super(ImageClassifier, self).__init__()
         self.backbone = backbone
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=True)
+        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=False)
 
         self.bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
@@ -147,6 +147,9 @@ class ImageClassifier(nn.Module):
         features_adv = self.grl_layer(features)
         outputs_adv = self.adv_head(features_adv)
         return outputs, outputs_adv
+
+    def step(self):
+        self.grl_layer.step()
 
     def get_parameters(self):
         """

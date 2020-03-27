@@ -41,14 +41,14 @@ def main(args):
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize(256),
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize
     ])
     val_tranform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -79,10 +79,6 @@ def main(args):
     # the learning rate is fixed according to origin paper
     optimizer_g = torch.optim.SGD(G.parameters(), lr=args.lr, weight_decay=0.0005)
     optimizer_f = torch.optim.SGD(F1.get_parameters()+F2.get_parameters(), momentum=0.9, lr=args.lr, weight_decay=0.0005)
-
-    G = torch.nn.DataParallel(G).cuda()
-    F1 = torch.nn.DataParallel(F1).cuda()
-    F2 = torch.nn.DataParallel(F2).cuda()
 
     # start training
     best_acc1 = 0.
@@ -136,9 +132,13 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
         # Step A train all networks to minimize loss on source domain
         optimizer_g.zero_grad()
         optimizer_f.zero_grad()
-        g_s, g_t = G(x_s), G(x_t)
-        y1_s, y2_s = F1(g_s), F2(g_s)
-        y1_t, y2_t = F1(g_t), F2(g_t)
+
+        x = torch.cat((x_s, x_t), dim=0)
+        g = G(x)
+        y_1 = F1(g)
+        y_2 = F2(g)
+        y1_s, y1_t = y_1.chunk(2, dim=0)
+        y2_s, y2_t = y_2.chunk(2, dim=0)
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
                0.01 * (entropy(y1_t) + entropy(y2_t))
@@ -149,9 +149,13 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
         # Step B train classifier to maximize discrepancy
         optimizer_g.zero_grad()
         optimizer_f.zero_grad()
-        g_s, g_t = G(x_s), G(x_t)
-        y1_s, y2_s = F1(g_s), F2(g_s)
-        y1_t, y2_t = F1(g_t), F2(g_t)
+
+        x = torch.cat((x_s, x_t), dim=0)
+        g = G(x)
+        y_1 = F1(g)
+        y_2 = F2(g)
+        y1_s, y1_t = y_1.chunk(2, dim=0)
+        y2_s, y2_t = y_2.chunk(2, dim=0)
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
                0.01 * (entropy(y1_t) + entropy(y2_t)) - classifier_discrepancy(y1_t, y2_t)
@@ -253,7 +257,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
