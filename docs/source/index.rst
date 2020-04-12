@@ -12,6 +12,4 @@ Welcome to dalib's documentation!
     dalib.adaptation
     dalib.vision.datasets
     dalib.vision.models
-    dalib.text.datasets
-    dalib.text.models
 

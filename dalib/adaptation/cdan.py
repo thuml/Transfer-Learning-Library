@@ -7,7 +7,7 @@ from dalib.modules.classifier import Classifier as ClassifierBase
 from ._util import binary_accuracy
 
 
-__all__ = ['DomainDiscriminator', 'ConditionalDomainAdversarialLoss', 'ImageClassifier']
+__all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']
 
 
 class ConditionalDomainAdversarialLoss(nn.Module):
@@ -54,6 +54,7 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         - Output: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(minibatch, )`.
 
     Examples::
+        >>> from dalib.modules.domain_discriminator import DomainDiscriminator
         >>> num_classes = 2
         >>> feature_dim = 1024
         >>> batch_size = 10
@@ -69,7 +70,7 @@ class ConditionalDomainAdversarialLoss(nn.Module):
                  num_classes=-1, features_dim=-1, randomized_dim=1024, reduction='mean'):
         super(ConditionalDomainAdversarialLoss, self).__init__()
         self.domain_discriminator = domain_discriminator
-        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000)
+        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
         self.entropy_conditioning = entropy_conditioning
 
         if randomized:
@@ -83,45 +84,20 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         self.domain_discriminator_accuracy = None
 
     def forward(self, g_s, f_s, g_t, f_t):
-        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
-        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
-        self.grl.step()
-        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
-        return 0.5 * (trans_loss_s + trans_loss_t)
-
-    def _single_domain_forward(self, logits, features, domain=1):
-        """Perform forward on a single domain.
-        domain = 1 means source domain, domain = 0 means target domain
-        """
-        f = features
-        g = F.softmax(logits, dim=1).detach()
+        f = torch.cat((f_s, f_t), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g = F.softmax(g,dim=1).detach()
         h = self.grl(self.map(f, g))
         d = self.domain_discriminator(h)
-        d_label = torch.ones((f.size(0), 1)).to(logits.device) * domain
+        d_label = torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
         weight = 1.0 + torch.exp(-entropy(g))
         batch_size = f.size(0)
         weight = weight / torch.sum(weight) * batch_size
-        return self.bce(d, d_label, weight.view_as(d)), binary_accuracy(d, d_label)
-
-
-class DomainDiscriminator(nn.Module):
-    r"""Domain discriminator model. See class:`dalib.adaptation.dann.DomainDiscriminator` for details.
-    """
-    def __init__(self, in_feature, hidden_size):
-        super(DomainDiscriminator, self).__init__()
-        self.layer1 = nn.Linear(in_feature, hidden_size)
-        self.relu1 = nn.ReLU()
-        self.dropout1 = nn.Dropout(0.5)
-        self.layer2 = nn.Linear(hidden_size, 1)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        x = self.dropout1(self.relu1(self.layer1(x)))
-        y = self.sigmoid(self.layer2(x))
-        return y
-
-    def get_parameters(self):
-        return [{"params": self.parameters(), "lr_mult": 1.}]
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        return self.bce(d, d_label, weight.view_as(d))
 
 
 class RandomizedMultiLinearMap(nn.Module):
@@ -190,32 +166,4 @@ class ImageClassifier(ClassifierBase):
         )
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
 
-
-class SentenceClassifier(ClassifierBase):
-    def __init__(self, backbone, num_classes, config, bottleneck_dim=256):
-        bottleneck = nn.Sequential(
-            nn.Linear(backbone.out_features, bottleneck_dim),
-            nn.BatchNorm1d(bottleneck_dim),
-            nn.ReLU()
-        )
-        head = nn.Sequential(
-            nn.Dropout(config.hidden_dropout_prob),
-            nn.Linear(bottleneck_dim, num_classes)
-        )
-        super(SentenceClassifier, self).__init__(backbone, num_classes, bottleneck=bottleneck, head=head, bottleneck_dim=bottleneck_dim)
-
-    def get_parameters(self):
-        """
-        :return: A parameters list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
-        """
-        no_decay = ["bias", "LayerNorm.weight"]
-        params = [
-            {"params": [p for n, p in self.backbone.named_parameters() if not any(nd in n for nd in no_decay)], "lr_mult": 0.1},
-            {"params": [p for n, p in self.backbone.named_parameters() if any(nd in n for nd in no_decay)],
-             "lr_mult": 0.1, "weight_decay": 0.0},
-            {"params": self.bottleneck.parameters(), "lr_mult": 1.},
-            {"params": self.head.parameters(), "lr_mult": 1.},
-        ]
-        return params
 

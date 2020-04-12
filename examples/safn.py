@@ -14,7 +14,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
 from dalib.adaptation.afn import StepwiseAdaptiveFeatureNorm, ImageClassifier
 import dalib.vision.datasets as datasets
@@ -23,7 +23,6 @@ import dalib.vision.models as models
 from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
 from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
-
 
 def main(args):
     if args.seed is not None:
@@ -41,15 +40,24 @@ def main(args):
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-        ResizeImage(256),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize
-    ])
+    if args.center_crop:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.CenterCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
+    else:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.RandomCrop((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
     val_tranform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize((256, 256)),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -74,11 +82,8 @@ def main(args):
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes).cuda()
 
-    all_parameters = classifier.get_parameters()
-    classifier = torch.nn.DataParallel(classifier).cuda()
-
     # define optimizer
-    optimizer = SGD(all_parameters, args.lr, weight_decay=args.wd)
+    optimizer = SGD(classifier.get_parameters(), args.lr, weight_decay=args.wd)
 
     # define loss function
     safn = StepwiseAdaptiveFeatureNorm(delta_r=args.delta_r)
@@ -223,7 +228,7 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
@@ -245,12 +250,9 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--delta_r', type=float, default=1., help='step increase of radius(R)')
+    parser.add_argument('--center_crop', default=False, action='store_true')
 
     args = parser.parse_args()
-    # # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 

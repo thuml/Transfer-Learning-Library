@@ -18,9 +18,10 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
-from dalib.adaptation.dann import DomainDiscriminator, DomainAdversarialLoss, ImageClassifier
+from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
@@ -286,10 +287,6 @@ if __name__ == '__main__':
                         help='Number of iterations per epoch')
 
     args = parser.parse_args()
-    # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 

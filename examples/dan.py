@@ -14,7 +14,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
 from dalib.adaptation.mmd import MultipleKernelMaximumMeanDiscrepancy, ImageClassifier
 from dalib.modules.kernels import GaussianKernel
@@ -80,7 +80,7 @@ def main(args):
     lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
 
     # define loss function
-    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(*[GaussianKernel(alpha=2 ** k, momentum=1.) for k in range(-3, 2)])
+    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(*[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)])
 
     # start training
     best_acc1 = 0.
@@ -132,10 +132,8 @@ def train(train_source_iter, train_target_iter, model, mkmmd_loss, optimizer,
         labels_t = labels_t.cuda()
 
         # compute output
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        y_s, f_s = model(x_s)
+        y_t, f_t = model(x_t)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
         transfer_loss = mkmmd_loss(f_s, f_t)
@@ -250,14 +248,10 @@ if __name__ == '__main__':
                         help='GPU id(s) to use.')
     parser.add_argument('--trade_off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
+    parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
                         help='Number of iterations per epoch')
 
     args = parser.parse_args()
-    # # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 

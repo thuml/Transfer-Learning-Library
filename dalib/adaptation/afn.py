@@ -54,17 +54,17 @@ class ImageClassifier(ClassifierBase):
     def __init__(self, backbone, num_classes, bottleneck_dim=1000, dropout_p=0.5):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
-            nn.BatchNorm1d(bottleneck_dim),
-            nn.ReLU(),
+            nn.BatchNorm1d(bottleneck_dim, affine=True),
+            nn.ReLU(inplace=True),
             L2PreservedDropout(dropout_p)
         )
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
 
     def get_parameters(self):
         params = [
-            {"params": self.backbone.parameters(), "momentum": 0.},
-            {"params": self.bottleneck.parameters(), "momentum": 0.9},
-            {"params": self.head.parameters(), "momentum": 0.9},
+            {"params": self.backbone.parameters(), "momentum": 0., 'lr_mult': 1.},
+            {"params": self.bottleneck.parameters(), "momentum": 0.9, 'lr_mult': 1.},
+            {"params": self.head.parameters(), "momentum": 0.9, 'lr_mult': 1.},
         ]
         return params
 

@@ -14,9 +14,10 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
-from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier, DomainDiscriminator
+from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
@@ -75,7 +76,6 @@ def main(args):
     classifier = ImageClassifier(backbone, num_classes).cuda()
     classifier_feature_dim = classifier.features_dim
 
-    # domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024, num_layers=args.num_layers, use_dropout=True).cuda()
     domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).cuda()
 
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
@@ -262,10 +262,6 @@ if __name__ == '__main__':
     parser.add_argument('-E', default=False, action='store_true', help='use entropy conditioning')
 
     args = parser.parse_args()
-    # # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 

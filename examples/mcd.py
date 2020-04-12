@@ -14,7 +14,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
 from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
 import dalib.vision.datasets as datasets
@@ -22,7 +22,7 @@ import dalib.vision.models as models
 
 from tools.utils import AverageMeter, ProgressMeter, accuracy, create_exp_dir, ForeverDataIterator
 from tools.transforms import ResizeImage
-
+from tools.lr_scheduler import StepwiseLR
 
 def main(args):
     if args.seed is not None:
@@ -40,15 +40,24 @@ def main(args):
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize
-    ])
+    if args.center_crop:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.CenterCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
+    else:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
     val_tranform = transforms.Compose([
-        transforms.Resize(256),
+        ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -128,17 +137,19 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
         x_t = x_t.cuda()
         labels_s = labels_s.cuda()
         labels_t = labels_t.cuda()
+        x = torch.cat((x_s, x_t), dim=0)
+        assert x.requires_grad is False
 
         # Step A train all networks to minimize loss on source domain
         optimizer_g.zero_grad()
         optimizer_f.zero_grad()
 
-        x = torch.cat((x_s, x_t), dim=0)
         g = G(x)
         y_1 = F1(g)
         y_2 = F2(g)
         y1_s, y1_t = y_1.chunk(2, dim=0)
         y2_s, y2_t = y_2.chunk(2, dim=0)
+
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
                0.01 * (entropy(y1_t) + entropy(y2_t))
@@ -150,7 +161,6 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
         optimizer_g.zero_grad()
         optimizer_f.zero_grad()
 
-        x = torch.cat((x_s, x_t), dim=0)
         g = G(x)
         y_1 = F1(g)
         y_2 = F2(g)
@@ -158,18 +168,20 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
         y2_s, y2_t = y_2.chunk(2, dim=0)
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
-               0.01 * (entropy(y1_t) + entropy(y2_t)) - classifier_discrepancy(y1_t, y2_t)
+               0.01 * (entropy(y1_t) + entropy(y2_t)) - classifier_discrepancy(y1_t, y2_t) * args.trade_off
         loss.backward()
         optimizer_f.step()
 
         # Step C train genrator to minimize discrepancy
         for k in range(args.num_k):
             optimizer_g.zero_grad()
-            optimizer_f.zero_grad()
-            g_t = G(x_t)
-            y1_t, y2_t = F1(g_t), F2(g_t)
+            g = G(x)
+            y_1 = F1(g)
+            y_2 = F2(g)
+            y1_s, y1_t = y_1.chunk(2, dim=0)
+            y2_s, y2_t = y_2.chunk(2, dim=0)
             y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
-            mcd_loss = classifier_discrepancy(y1_t, y2_t)
+            mcd_loss = classifier_discrepancy(y1_t, y2_t) * args.trade_off
             mcd_loss.backward()
             optimizer_g.step()
 
@@ -277,12 +289,10 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck_dim', default=1024, type=int)
-
+    parser.add_argument('--center_crop', default=False, action='store_true')
+    parser.add_argument('--trade_off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
     args = parser.parse_args()
-    # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 

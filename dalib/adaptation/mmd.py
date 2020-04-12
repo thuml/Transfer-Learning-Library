@@ -25,16 +25,6 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} k(z_i^{t}, z_j^{t}) \\
         &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} k(z_i^{s}, z_j^{t}). \\
 
-    For linear computation complexity, we use the unbiased estimate of MK-MMD as follows,
-
-    .. math::
-        \hat{D}_{\mathcal{L}}(P, Q) &= \dfrac{2}{n} \sum_{i=1}^{n/2} \left( k(z_{2i-1}^{s}, z_{2i}^{s})
-         + k(z_{2i-1}^{t}, z_{2i}^{t}) \right)\\
-         &- \dfrac{2}{n} \sum_{i=1}^{n/2} \left( k(z_{2i-1}^{s}, z_{2i}^{t})
-         + k(z_{2i-1}^{t}, z_{2i}^{s}) \right),\\
-
-    where :math:`n` is the batch size.
-
     Parameters:
         - **kernels** (tuple(`nn.Module`)): kernel functions.
 
@@ -72,7 +62,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         batch_size = int(z_s.size(0))
         self.index_matrix = _update_index_matrix(batch_size, self.index_matrix).to(z_s.device)
         kernel_matrix = sum([kernel(features) for kernel in self.kernels])   # Add up the matrix of each kernel
-        loss = (kernel_matrix * self.index_matrix).sum() / float(batch_size)  # Use quad-tuple for linear complexity
+        loss = (kernel_matrix * self.index_matrix).sum()
         return loss
 
 
@@ -92,16 +82,6 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         \dfrac{1}{n_s^2} \sum_{i=1}^{n_s}\sum_{j=1}^{n_s} \prod_{l\in\mathcal{L}} k^l(z_i^{sl}, z_j^{sl}) \\
         &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{tl}, z_j^{tl}) \\
         &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{sl}, z_j^{tl}). \\
-
-    For linear computation complexity, we use the unbiased estimate as follows,
-
-     .. math::
-        \hat{D}_{\mathcal{L}}(P, Q) &= \dfrac{2}{n} \sum_{i=1}^{n/2} \left( \prod_{l \in \mathcal{L}} k^l(z_{2i-1}^{sl}, z_{2i}^{sl})
-         + \prod_{l \in \mathcal{L}} k^l(z_{2i-1}^{tl}, z_{2i}^{tl}) \right)\\
-         &- \dfrac{2}{n} \sum_{i=1}^{n/2} \left( \prod_{l \in \mathcal{L}} k^l(z_{2i-1}^{sl}, z_{2i}^{tl})
-         + \prod_{l \in \mathcal{L}} k^l(z_{2i-1}^{tl}, z_{2i}^{sl}) \right),\\
-
-    where :math:`n` is the batch size.
 
     Parameters:
         - **kernels** (tuple(tuple(`nn.Module`))): kernel functions, where `kernels[r]` corresponds to kernel :math:`k^{\mathcal{L}[r]}`.
@@ -146,7 +126,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
             layer_features = torch.cat([layer_z_s, layer_z_t], dim=0)
             kernel_matrix *= sum([kernel(layer_features) for kernel in layer_kernels])  # Add up the matrix of each kernel
 
-        loss = (kernel_matrix * self.index_matrix).sum() / float(batch_size)  # Use quad-tuple for linear complexity
+        loss = (kernel_matrix * self.index_matrix).sum()
         return loss
 
 
@@ -155,23 +135,18 @@ def _update_index_matrix(batch_size, index_matrix=None):
     Update the `index_matrix` which convert `kernel_matrix` to loss.
     If `index_matrix` is a tensor with shape (2 x batch_size, 2 x batch_size), then return `index_matrix`.
     Else return a new tensor with shape (2 x batch_size, 2 x batch_size).
-    E.g. when batch_size = 3, index_matrix is
-            [[ 0.,  1.,  0.,  0., -1., -1.],
-            [ 0.,  0.,  1., -1.,  0., -1.],
-            [ 1.,  0.,  0., -1., -1.,  0.],
-            [ 0.,  0.,  0.,  0.,  1.,  0.],
-            [ 0.,  0.,  0.,  0.,  0.,  1.],
-            [ 0.,  0.,  0.,  1.,  0.,  0.]]
     """
     if index_matrix is None or index_matrix.size(0) != batch_size * 2:
         index_matrix = torch.zeros(2 * batch_size, 2 * batch_size)
         for i in range(batch_size):
-            s1, s2 = i, (i + 1) % batch_size
-            t1, t2 = s1 + batch_size, s2 + batch_size
-            index_matrix[s1, s2] = 1.
-            index_matrix[t1, t2] = 1.
-            index_matrix[s1, t2] = -1.
-            index_matrix[s2, t1] = -1.
+            for j in range(batch_size):
+                if i != j:
+                    index_matrix[i][j] = 1. / float(batch_size * (batch_size-1))
+                    index_matrix[i+batch_size][j+batch_size] = 1. / float(batch_size * (batch_size-1))
+        for i in range(batch_size):
+            for j in range(batch_size):
+                index_matrix[i][j+batch_size] = -1. / float(batch_size * batch_size)
+                index_matrix[i+batch_size][j] = -1. / float(batch_size * batch_size)
     return index_matrix
 
 

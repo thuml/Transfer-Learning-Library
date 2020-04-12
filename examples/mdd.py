@@ -15,7 +15,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-sys.path.append('.')  # TODO remove this when published
+sys.path.append('.')
 
 from dalib.adaptation.mdd import MarginDisparityDiscrepancy, ImageClassifier
 import dalib.vision.datasets as datasets
@@ -154,7 +154,7 @@ def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
         # compute margin disparity discrepancy between domains
         transfer_loss = mdd(y_s, y_s_adv, y_t, y_t_adv)
         loss = cls_loss + transfer_loss * args.trade_off
-        classifier.module.step()
+        classifier.step()
 
         cls_acc = accuracy(y_s, labels_s)[0]
         tgt_acc = accuracy(y_t, labels_t)[0]
@@ -271,11 +271,6 @@ if __name__ == '__main__':
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('--lr_gamma', default=0.0002, type=float)
     args = parser.parse_args()
-
-    # TODO remove this when published
     print(args)
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
     main(args)
 
