@@ -110,7 +110,8 @@ To prepare models for training, you need to
     from dalib.vision.models.resnet import resnet50
     backbone = resnet50(pretrained=True)
 
-    from dalib.adaptation.dann import DomainDiscriminator, DomainAdversarialLoss, ImageClassifier
+    from dalib.modules.domain_discriminator import DomainDiscriminator
+    from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
     # classifier has a backbone (pretrained resnet50), a bottleneck layer
     # and a head layer (nn.Linear)
     classifier = ImageClassifier(backbone, train_source_dataset.num_classes).cuda()
@@ -268,11 +269,20 @@ After the training is finished, we can visualize the representations of task A â
     plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap(["r", "b"]), s=2)
     plt.show()
 
-Figure shows the visualization results.
-The source and target are not aligned well with ResNet, better aligned with DANN but categories are not discriminated well.
+Figures below shows the T-SNE visualization results of Aâ†’W on ResNet50 and DANN.
+
+.. image:: _images/resnet_A2W.pdf
+    :width: 300
+
+
+.. image:: _images/dann_A2W.pdf
+    :width: 300
+
+
+The source and target are not aligned well with ResNet, better aligned with DANN.
 For better alignment, you are encouraged to replace DANN with CDAN.
 
-Runnable code can be found in `Tutorial <https://github.com/thuml/Domain-Adaptation-Lib/blob/master/examples/tutorial.py>`_. The following script is expected to achieve ~89% accuracy.
+Runnable code can be found in `Tutorial <https://github.com/thuml/Domain-Adaptation-Lib/blob/master/examples/tutorial.py>`_. The following script is expected to achieve ~86% accuracy.
 
 .. code-block:: bash
 

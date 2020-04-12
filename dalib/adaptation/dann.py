@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from dalib.modules.grl import WarmStartGradientReverseLayer
-from ._util import binary_accuracy
 from dalib.modules.classifier import Classifier as ClassifierBase
+from ._util import binary_accuracy
 
-__all__ = ['DomainDiscriminator', 'DomainAdversarialLoss']
+__all__ = ['DomainAdversarialLoss']
 
 
 class DomainAdversarialLoss(nn.Module):
@@ -34,6 +34,7 @@ class DomainAdversarialLoss(nn.Module):
         - Outputs: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(N, )`.
 
     Examples::
+        >>> from dalib.modules.domain_discriminator import DomainDiscriminator
         >>> discriminator = DomainDiscriminator(in_feature=1024, hidden_size=1024)
         >>> loss = DomainAdversarialLoss(discriminator, reduction='mean')
         >>> # features from source domain and target domain
@@ -42,59 +43,19 @@ class DomainAdversarialLoss(nn.Module):
     """
     def __init__(self, domain_discriminator, reduction='mean'):
         super(DomainAdversarialLoss, self).__init__()
-        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000)
+        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
         self.domain_discriminator = domain_discriminator
         self.bce = nn.BCELoss(reduction=reduction)
         self.domain_discriminator_accuracy = None
 
     def forward(self, f_s, f_t):
-        f_s = self.grl(f_s)
-        d_s = self.domain_discriminator(f_s)
+        f = self.grl(torch.cat((f_s, f_t), dim=0))
+        d = self.domain_discriminator(f)
+        d_s, d_t = d.chunk(2, dim=0)
         d_label_s = torch.ones((f_s.size(0), 1)).to(f_s.device)
-
-        f_t = self.grl(f_t)
-        d_t = self.domain_discriminator(f_t)
         d_label_t = torch.zeros((f_t.size(0), 1)).to(f_t.device)
-
-        self.grl.step()
         self.domain_discriminator_accuracy = 0.5 * (binary_accuracy(d_s, d_label_s) + binary_accuracy(d_t, d_label_t))
         return 0.5 * (self.bce(d_s, d_label_s) + self.bce(d_t, d_label_t))
-
-
-class DomainDiscriminator(nn.Module):
-    r"""Domain discriminator model from
-    `"Domain-Adversarial Training of Neural Networks" <https://arxiv.org/abs/1505.07818>`_
-
-    Distinguish whether the input features come from the source domain or the target domain.
-    The source domain label is 1 and the target domain label is 0.
-
-    Parameters:
-        - **in_feature** (int): dimension of the input feature
-        - **hidden_size** (int): dimension of the hidden features
-
-    Shape:
-        - Inputs: :math:`(N, F)`
-        - Outputs: :math:`(N, 1)`
-    """
-    def __init__(self, in_feature, hidden_size):
-        super(DomainDiscriminator, self).__init__()
-        self.layer1 = nn.Linear(in_feature, hidden_size)
-        self.bn1 = nn.BatchNorm1d(hidden_size)
-        self.relu1 = nn.ReLU()
-        self.layer2 = nn.Linear(hidden_size, hidden_size)
-        self.bn2 = nn.BatchNorm1d(hidden_size)
-        self.relu2 = nn.ReLU()
-        self.layer3 = nn.Linear(hidden_size, 1)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        x = self.relu1(self.bn1(self.layer1(x)))
-        x = self.relu2(self.bn2(self.layer2(x)))
-        y = self.sigmoid(self.layer3(x))
-        return y
-
-    def get_parameters(self):
-        return [{"params": self.parameters(), "lr_mult": 1.}]
 
 
 class ImageClassifier(ClassifierBase):

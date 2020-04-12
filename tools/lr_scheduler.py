@@ -26,6 +26,8 @@ class StepwiseLR:
         """Increase iteration number `i` by 1 and update learning rate in `optimizer`"""
         lr = self.init_lr * (1 + self.gamma * self.iter_num) ** (-self.decay_rate)
         for param_group in self.optimizer.param_groups:
+            if 'lr_mult' not in param_group:
+                param_group['lr_mult'] = 1.
             param_group['lr'] = lr * param_group['lr_mult']
 
         self.iter_num += 1

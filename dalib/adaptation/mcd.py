@@ -1,8 +1,6 @@
 import torch.nn as nn
 import torch
 
-from dalib.modules.grl import WarmStartGradientReverseLayer
-
 
 def classifier_discrepancy(predictions1, predictions2):
     # type: (Tensor, Tensor) -> Tensor
@@ -50,7 +48,6 @@ class ImageClassifierHead(nn.Module):
     """
     def __init__(self, in_features, num_classes, bottleneck_dim=1024):
         super(ImageClassifierHead, self).__init__()
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=True)
         self.head = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(in_features, bottleneck_dim),

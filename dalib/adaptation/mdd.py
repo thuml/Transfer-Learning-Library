@@ -23,7 +23,7 @@ class MarginDisparityDiscrepancy(nn.Module):
     You can see more details in `Bridging Theory and Algorithm for Domain Adaptation <https://arxiv.org/abs/1904.05801>`_.
 
     Parameters:
-        - **margin** (float): margin :math:`\gamma`. Default: 2
+        - **margin** (float): margin :math:`\gamma`. Default: 4
         - **reduction** (string, optional): Specifies the reduction to apply to the output:
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
@@ -44,14 +44,14 @@ class MarginDisparityDiscrepancy(nn.Module):
     Examples::
         >>> num_classes = 2
         >>> batch_size = 10
-        >>> loss = MarginDisparityDiscrepancy(margin=2.)
+        >>> loss = MarginDisparityDiscrepancy(margin=4.)
         >>> # logits output from source domain and target domain
         >>> y_s, y_t = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
         >>> # adversarial logits output from source domain and target domain
         >>> y_s_adv, y_t_adv = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
     """
-    def __init__(self, margin=2, reduction='mean'):
+    def __init__(self, margin=4, reduction='mean'):
         super(MarginDisparityDiscrepancy, self).__init__()
         self.margin = margin
         self.reduction = reduction
@@ -95,6 +95,13 @@ class ImageClassifier(nn.Module):
         The first classifier head is used for final predictions.
         The adversarial classifier head is only used when calculating MarginDisparityDiscrepancy.
 
+    .. note::
+        Remember to call function `step()` after function `forward()` **during training phase**! For instance,
+
+        >>> # x is inputs, classifier is an ImageClassifier
+        >>> outputs, outputs_adv = classifier(x)
+        >>> classifier.step()
+
     Inputs:
         - **x** (Tensor): input data
 
@@ -105,6 +112,7 @@ class ImageClassifier(nn.Module):
     Shapes:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, C)`, where C means the number of classes.
+
     """
     def __init__(self, backbone, num_classes, bottleneck_dim=1024, width=1024):
         super(ImageClassifier, self).__init__()
@@ -149,6 +157,9 @@ class ImageClassifier(nn.Module):
         return outputs, outputs_adv
 
     def step(self):
+        """Call step() each iteration during training.
+        Will increase :math:`\lambda` in GRL layer.
+        """
         self.grl_layer.step()
 
     def get_parameters(self):

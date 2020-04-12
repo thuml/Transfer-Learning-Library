@@ -8,6 +8,12 @@ Classifier
     :show-inheritance:
     :members:
 
+Domain Discriminator
+-------------------------------
+.. autoclass:: dalib.modules.domain_discriminator.DomainDiscriminator
+    :show-inheritance:
+    :members:
+
 GRL
 ------------------------
 .. autoclass:: dalib.modules.grl.WarmStartGradientReverseLayer

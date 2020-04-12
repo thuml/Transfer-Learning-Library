@@ -71,9 +71,6 @@ DANN
 .. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
     :show-inheritance:
 
-.. autoclass:: dalib.adaptation.dann.DomainDiscriminator
-    :show-inheritance:
-
 
 DAN
 ----
@@ -92,9 +89,6 @@ CDAN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
-    :show-inheritance:
-
-.. autoclass:: dalib.adaptation.cdan.DomainDiscriminator
     :show-inheritance:
 
 .. autoclass:: dalib.adaptation.cdan.RandomizedMultiLinearMap

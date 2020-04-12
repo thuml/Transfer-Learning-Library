@@ -4,13 +4,13 @@ __all__ = ['Classifier']
 
 
 class Classifier(nn.Module):
-    """A generic Classifier class for domain adaptation in image classification.
+    """A generic Classifier class for domain adaptation.
 
     Parameters:
         - **backbone** (class:`nn.Module` object): Any backbone to extract 1-d features from data
         - **num_classes** (int): Number of classes
         - **bottleneck** (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: 256
+        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: -1
         - **head** (class:`nn.Module` object, optional): Any classifier head. Use `nn.Linear` by default
 
     .. note::
@@ -72,29 +72,6 @@ class Classifier(nn.Module):
         """
         params = [
             {"params": self.backbone.parameters(), "lr_mult": 0.1},
-            {"params": self.bottleneck.parameters(), "lr_mult": 1.},
-            {"params": self.head.parameters(), "lr_mult": 1.},
-        ]
-        return params
-
-
-class SentenceClassifier(Classifier):
-    def __init__(self, backbone, num_classes, config):
-        head = nn.Sequential(
-            nn.Dropout(config.hidden_dropout_prob),
-            nn.Linear(config.hidden_size, num_classes)
-        )
-        super(SentenceClassifier, self).__init__(backbone, num_classes, bottleneck=None, head=head)
-
-    def get_parameters(self):
-        """A parameters list which decides optimization hyper-parameters,
-        such as the relative learning rate of each layer
-        """
-        no_decay = ["bias", "LayerNorm.weight"]
-        params = [
-            {"params": [p for n, p in self.backbone.named_parameters() if not any(nd in n for nd in no_decay)], "lr_mult": 1.},
-            {"params": [p for n, p in self.backbone.named_parameters() if any(nd in n for nd in no_decay)],
-             "lr_mult": 1., "weight_decay": 0.0},
             {"params": self.bottleneck.parameters(), "lr_mult": 1.},
             {"params": self.head.parameters(), "lr_mult": 1.},
         ]
