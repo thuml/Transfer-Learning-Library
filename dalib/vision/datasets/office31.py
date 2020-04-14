@@ -16,6 +16,19 @@ class Office31(ImageList):
             transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            amazon/
+                images/
+                    backpack/
+                        *.jpg
+                        ...
+            dslr/
+            webcam/
+            image_list/
+                amazon.txt
+                dslr.txt
+                webcam.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/1f5646f39aeb4d7389b9/?dl=1"),

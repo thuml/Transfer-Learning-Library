@@ -16,6 +16,19 @@ class OfficeHome(ImageList):
             transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            Art/
+                Alarm_Clock/*.jpg
+                ...
+            Clipart/
+            Product/
+            Real_World/
+            image_list/
+                Art.txt
+                Clipart.txt
+                Product.txt
+                Real_World.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/ee615d5ad5e146278a80/?dl=1"),

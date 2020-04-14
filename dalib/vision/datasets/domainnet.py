@@ -19,6 +19,17 @@ class DomainNet(ImageList):
             transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            clipart/
+            infograph/
+            painting/
+            quickdraw/
+            real/
+            sketch/
+            image_list/
+                clipart.txt
+                ...
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/73489ae10aea45d58194/?dl=1"),

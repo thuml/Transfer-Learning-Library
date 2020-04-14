@@ -7,6 +7,7 @@ Tutorial
 **Authors**: Junguang Jiang
 
 In this tutorial, you will learn how to use domain adaptation in image classification.
+If you want to know more about domain adaptation or transfer learning, please refer to `A Survey on Transfer Learning <https://www.cse.ust.hk/~qyang/Docs/2009/tkde_transfer_learning.pdf>`_ or `DANN <https://arxiv.org/abs/1505.07818>`_
 
 ----------
 Load Data
@@ -95,7 +96,7 @@ We will use DANN as an instance. You can find the usage of other adaptation algo
 
 DANN introduces a minimax game into domain adaptation, where a domain discriminator attempts to distinguish the source from the target, while a feature extractor tries to fool the domain discriminator.
 
-.. image:: _images/DANN.png
+.. image:: /_static/images/DANN.png
     :alt: The architecture of DANN
 
 To prepare models for training, you need to
@@ -269,17 +270,16 @@ After the training is finished, we can visualize the representations of task A �
     plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap(["r", "b"]), s=2)
     plt.show()
 
-Figures below shows the T-SNE visualization results of A→W on ResNet50 and DANN.
+Figures below shows the T-SNE visualization results of A → W on ResNet50 (source only) and DANN.
 
-.. image:: _images/resnet_A2W.pdf
+.. image:: /_static/images/resnet_A2W.png
+    :width: 300
+
+.. image:: /_static/images/dann_A2W.png
     :width: 300
 
 
-.. image:: _images/dann_A2W.pdf
-    :width: 300
-
-
-The source and target are not aligned well with ResNet, better aligned with DANN.
+The source and target are not aligned well with ResNet (source only), better aligned with DANN.
 For better alignment, you are encouraged to replace DANN with CDAN.
 
 Runnable code can be found in `Tutorial <https://github.com/thuml/Domain-Adaptation-Lib/blob/master/examples/tutorial.py>`_. The following script is expected to achieve ~86% accuracy.

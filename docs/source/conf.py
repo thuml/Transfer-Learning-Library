@@ -21,8 +21,8 @@ print(sys.path)
 # -- Project information -----------------------------------------------------
 
 project = 'dalib'
-copyright = '2020, jiangjunguang, fubo'
-author = 'jiangjunguang, fubo'
+copyright = '2020, Junguang Jiang, Bo Fu'
+author = 'Junguang Jiang, Bo Fu'
 
 # The short X.Y version
 version = ''

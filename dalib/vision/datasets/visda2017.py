@@ -15,6 +15,16 @@ class VisDA2017(ImageList):
             transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            train/
+                aeroplance/
+                    *.png
+                    ...
+            validation/
+            image_list/
+                train.txt
+                validation.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/58034129e0204ef6b840/?dl=1"),

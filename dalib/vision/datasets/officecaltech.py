@@ -17,6 +17,21 @@ class OfficeCaltech(DatasetFolder):
             transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            amazon/
+                images/
+                    backpack/
+                        *.jpg
+                        ...
+            dslr/
+            webcam/
+            caltech/
+            image_list/
+                amazon.txt
+                dslr.txt
+                webcam.txt
+                caltech.txt
     """
     directories = {
         "A": "amazon",

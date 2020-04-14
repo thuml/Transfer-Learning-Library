@@ -1,17 +1,24 @@
 from setuptools import setup, find_packages
+import re
+from os import path
 
+here = path.abspath(path.dirname(__file__))
+
+# Get the version string
+with open(path.join(here, 'dalib', '__init__.py')) as f:
+    version = re.search(r'__version__ = \'(.*?)\'', f.read()).group(1)
 
 if __name__ == '__main__':
     setup(
         name="dalib", # Replace with your own username
-        version="0.0.3",
+        version=version,
         author="THUML",
         author_email="JiangJunguang1123@outlook.com",
         keywords="domain adaptation, transfer learning, deep learning, pytorch",
         description="A Library for Deep Domain Adaptation",
         long_description=open('README.md', encoding='utf8').read(),
         long_description_content_type="text/markdown",
-        url="https://github.com/thuml/Domain-Adaptation-Lib",
+        url="https://github.com/JunguangJiang/DALIB",
         packages=find_packages(exclude=['docs', 'examples', 'tools']),
         classifiers=[
             # How mature is this project? Common values are
@@ -34,7 +41,7 @@ if __name__ == '__main__':
         python_requires='>=3.6',
         install_requires=[  # 添加了依赖的 package
             'torch>=1.4.0',
-            'torchvision',
+            'torchvision>=0.5.0',
             'numpy'
         ],
         extras_require={
