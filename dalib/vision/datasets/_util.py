@@ -1,5 +1,7 @@
 import os
+import shutil
 from torchvision.datasets.utils import download_and_extract_archive
+from six.moves import urllib
 
 
 def download(root, file_name, archive_name, url_link):
@@ -16,7 +18,15 @@ def download(root, file_name, archive_name, url_link):
     """
     if not os.path.exists(os.path.join(root, file_name)):
         print("Downloading {}".format(file_name))
-        download_and_extract_archive(url_link, download_root=root, filename=archive_name, remove_finished=True)
+        if os.path.exists(os.path.join(root, archive_name)):
+            os.remove(os.path.join(root, archive_name))
+        try:
+            download_and_extract_archive(url_link, download_root=root, filename=archive_name, remove_finished=True)
+        except Exception:
+            print("Fail to download {} from url link {}".format(archive_name, url_link))
+            print('Please check you internet connection or '
+                  "reinstall DALIB by 'pip install --upgrade dalib'")
+            exit(0)
 
 
 def check_exits(root, file_name):

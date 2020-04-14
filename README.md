@@ -70,7 +70,7 @@ or describe your problem in Issues.
 If you use this toolbox or benchmark in you research, please cite this project. 
 
 ```latex
-@misc{tianshou,
+@misc{dalib,
   author = {Junguang Jiang, Bo Fu, Mingsheng Long},
   title = {DALIB},
   year = {2020},
