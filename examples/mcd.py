@@ -282,7 +282,7 @@ if __name__ == '__main__':
                         help='how many steps to repeat the generator update')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 10)')
-    parser.add_argument('--seed', default=None, type=int,
+    parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--gpu', default='0', type=str,
                         help='GPU id(s) to use.')
