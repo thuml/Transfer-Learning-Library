@@ -24,7 +24,7 @@ import dalib.vision.models as models
 from tools.utils import AverageMeter, ProgressMeter, accuracy, create_exp_dir, ForeverDataIterator
 from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
-
+from PIL import Image
 
 def main(args):
     if args.seed is not None:
@@ -44,7 +44,7 @@ def main(args):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize(256, interpolation=Image.NEAREST),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -52,14 +52,14 @@ def main(args):
         ])
     else:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize(256, interpolation=Image.NEAREST),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
     val_tranform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize(256, interpolation=Image.NEAREST),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
