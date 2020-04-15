@@ -18,6 +18,7 @@ class DomainDiscriminator(nn.Module):
         - Inputs: (minibatch, `in_feature`)
         - Outputs: :math:`(minibatch, 1)`
     """
+
     def __init__(self, in_feature, hidden_size):
         super(DomainDiscriminator, self).__init__()
         self.layer1 = nn.Linear(in_feature, hidden_size)

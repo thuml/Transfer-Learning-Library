@@ -44,7 +44,9 @@ class OfficeCaltech(DatasetFolder):
         if download:
             for dir in self.directories.values():
                 if not os.path.exists(os.path.join(root, dir)):
-                    download_and_extract_archive(url="https://cloud.tsinghua.edu.cn/f/bc427c57459c4194baf0/?dl=1", download_root=os.path.join(root, 'download'), filename="officecaltech.tgz", remove_finished=False, extract_root=root)
+                    download_and_extract_archive(url="https://cloud.tsinghua.edu.cn/f/bc427c57459c4194baf0/?dl=1",
+                                                 download_root=os.path.join(root, 'download'),
+                                                 filename="officecaltech.tgz", remove_finished=False, extract_root=root)
                     break
         else:
             list(map(lambda dir, _: check_exits(root, dir), self.directories.values()))
@@ -57,4 +59,3 @@ class OfficeCaltech(DatasetFolder):
     def num_classes(self):
         """Number of classes"""
         return self._num_classes
-

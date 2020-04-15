@@ -54,4 +54,3 @@ class OfficeHome(ImageList):
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
         super(OfficeHome, self).__init__(root, num_classes=65, data_list_file=data_list_file, **kwargs)
-

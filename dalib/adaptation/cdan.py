@@ -6,7 +6,6 @@ from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.modules.classifier import Classifier as ClassifierBase
 from ._util import binary_accuracy
 
-
 __all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']
 
 
@@ -66,6 +65,7 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         >>> g_s, g_t = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
         >>> output = loss(g_s, f_s, g_t, f_t)
     """
+
     def __init__(self, domain_discriminator, entropy_conditioning=False, randomized=False,
                  num_classes=-1, features_dim=-1, randomized_dim=1024, reduction='mean'):
         super(ConditionalDomainAdversarialLoss, self).__init__()
@@ -79,14 +79,15 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         else:
             self.map = MultiLinearMap()
 
-        self.bce = lambda input, target, weight: F.binary_cross_entropy(input, target, weight, reduction=reduction) if self.entropy_conditioning \
+        self.bce = lambda input, target, weight: F.binary_cross_entropy(input, target, weight,
+                                                                        reduction=reduction) if self.entropy_conditioning \
             else F.binary_cross_entropy(input, target, reduction=reduction)
         self.domain_discriminator_accuracy = None
 
     def forward(self, g_s, f_s, g_t, f_t):
         f = torch.cat((f_s, f_t), dim=0)
         g = torch.cat((g_s, g_t), dim=0)
-        g = F.softmax(g,dim=1).detach()
+        g = F.softmax(g, dim=1).detach()
         h = self.grl(self.map(f, g))
         d = self.domain_discriminator(h)
         d_label = torch.cat((
@@ -121,6 +122,7 @@ class RandomizedMultiLinearMap(nn.Module):
         - g: (minibatch, num_classes)
         - Outputs: (minibatch, output_dim)
     """
+
     def __init__(self, features_dim, num_classes, output_dim=1024):
         super(RandomizedMultiLinearMap, self).__init__()
         self.Rf = torch.randn(features_dim, output_dim)
@@ -142,6 +144,7 @@ class MultiLinearMap(nn.Module):
         - g: (minibatch, C)
         - Outputs: (minibatch, F * C)
     """
+
     def __init__(self):
         super(MultiLinearMap, self).__init__()
 
@@ -165,5 +168,3 @@ class ImageClassifier(ClassifierBase):
             nn.ReLU()
         )
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
-
-

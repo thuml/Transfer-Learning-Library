@@ -13,6 +13,7 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 
 class ResNet(models.ResNet):
     """ResNets without fully connected layer"""
+
     def __init__(self, *args, **kwargs):
         super(ResNet, self).__init__(*args, **kwargs)
         self._out_features = self.fc.in_features

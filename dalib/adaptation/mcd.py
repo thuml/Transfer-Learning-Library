@@ -16,7 +16,7 @@ def classifier_discrepancy(predictions1, predictions2):
         - **predictions1** (tensor): Classifier predictions :math:`p_1`. Expected to contain raw, normalized scores for each class
         - **predictions2** (tensor): Classifier predictions :math:`p_2`
     """
-    return torch.mean(torch.abs(predictions1-predictions2))
+    return torch.mean(torch.abs(predictions1 - predictions2))
 
 
 def entropy(predictions):
@@ -46,6 +46,7 @@ class ImageClassifierHead(nn.Module):
         - Inputs: :math:`(minibatch, F)` where F = `in_features`.
         - Output: :math:`(minibatch, C)` where C = `num_classes`.
     """
+
     def __init__(self, in_features, num_classes, bottleneck_dim=1024):
         super(ImageClassifierHead, self).__init__()
         self.head = nn.Sequential(
@@ -65,13 +66,10 @@ class ImageClassifierHead(nn.Module):
 
     def get_parameters(self):
         """
-        :return: A parameters list which decides optimization hyper-parameters,
+        :return: A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer
         """
         params = [
             {"params": self.head.parameters()},
         ]
         return params
-
-
-

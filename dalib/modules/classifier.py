@@ -36,6 +36,7 @@ class Classifier(nn.Module):
         - features: (minibatch, `features_dim`)
 
     """
+
     def __init__(self, backbone, num_classes, bottleneck=None, bottleneck_dim=-1, head=None):
         super(Classifier, self).__init__()
         self.backbone = backbone
@@ -67,7 +68,7 @@ class Classifier(nn.Module):
         return predictions, f
 
     def get_parameters(self):
-        """A parameters list which decides optimization hyper-parameters,
+        """A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer
         """
         params = [
@@ -76,4 +77,3 @@ class Classifier(nn.Module):
             {"params": self.head.parameters(), "lr_mult": 1.},
         ]
         return params
-

@@ -60,4 +60,3 @@ class DomainNet(ImageList):
             list(map(lambda args: check_exits(root, args[0]), self.download_list))
 
         super(DomainNet, self).__init__(root, num_classes=345, data_list_file=data_list_file, **kwargs)
-

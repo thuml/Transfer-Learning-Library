@@ -11,7 +11,7 @@ The adaptation subpackage contains definitions for the following domain adaptati
 -  `AFN`_
 -  `MDD`_
 
-Besides specific algorithms     this package also provides a recommended image classifier for each algorithms.
+Besides specific algorithms, this package also provides a recommended image classifier for each algorithms.
 
 We provide benchmarks of different domain adaptation algorithms on *Office-31*, *Office-Home* and *VisDA-2017* as follows.
 Note that `Origin` means the accuracy reported by the original paper, while `Avg` is the accuracy reported by DALIB.

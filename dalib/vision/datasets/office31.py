@@ -53,4 +53,3 @@ class Office31(ImageList):
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
         super(Office31, self).__init__(root, num_classes=31, data_list_file=data_list_file, **kwargs)
-

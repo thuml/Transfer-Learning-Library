@@ -1,7 +1,5 @@
 import os
-import shutil
 from torchvision.datasets.utils import download_and_extract_archive
-from six.moves import urllib
 
 
 def download(root, file_name, archive_name, url_link):

@@ -52,6 +52,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         >>> z_s, z_t = torch.randn(batch_size, feature_dim), torch.randn(batch_size, feature_dim)
         >>> output = loss(z_s, z_t)
     """
+
     def __init__(self, *kernels):
         super(MultipleKernelMaximumMeanDiscrepancy, self).__init__()
         self.kernels = kernels
@@ -61,7 +62,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         features = torch.cat([z_s, z_t], dim=0)
         batch_size = int(z_s.size(0))
         self.index_matrix = _update_index_matrix(batch_size, self.index_matrix).to(z_s.device)
-        kernel_matrix = sum([kernel(features) for kernel in self.kernels])   # Add up the matrix of each kernel
+        kernel_matrix = sum([kernel(features) for kernel in self.kernels])  # Add up the matrix of each kernel
         loss = (kernel_matrix * self.index_matrix).sum()
         return loss
 
@@ -112,6 +113,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         >>> z2_s, z2_t = torch.randn(batch_size, feature_dim), torch.randn(batch_size, feature_dim)
         >>> output = loss((z1_s, z2_s), (z1_t, z2_t))
     """
+
     def __init__(self, *kernels):
         super(JointMultipleKernelMaximumMeanDiscrepancy, self).__init__()
         self.kernels = kernels
@@ -124,7 +126,8 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         kernel_matrix = torch.ones_like(self.index_matrix)
         for layer_z_s, layer_z_t, layer_kernels in zip(z_s, z_t, self.kernels):
             layer_features = torch.cat([layer_z_s, layer_z_t], dim=0)
-            kernel_matrix *= sum([kernel(layer_features) for kernel in layer_kernels])  # Add up the matrix of each kernel
+            kernel_matrix *= sum(
+                [kernel(layer_features) for kernel in layer_kernels])  # Add up the matrix of each kernel
 
         loss = (kernel_matrix * self.index_matrix).sum()
         return loss
@@ -141,12 +144,12 @@ def _update_index_matrix(batch_size, index_matrix=None):
         for i in range(batch_size):
             for j in range(batch_size):
                 if i != j:
-                    index_matrix[i][j] = 1. / float(batch_size * (batch_size-1))
-                    index_matrix[i+batch_size][j+batch_size] = 1. / float(batch_size * (batch_size-1))
+                    index_matrix[i][j] = 1. / float(batch_size * (batch_size - 1))
+                    index_matrix[i + batch_size][j + batch_size] = 1. / float(batch_size * (batch_size - 1))
         for i in range(batch_size):
             for j in range(batch_size):
-                index_matrix[i][j+batch_size] = -1. / float(batch_size * batch_size)
-                index_matrix[i+batch_size][j] = -1. / float(batch_size * batch_size)
+                index_matrix[i][j + batch_size] = -1. / float(batch_size * batch_size)
+                index_matrix[i + batch_size][j] = -1. / float(batch_size * batch_size)
     return index_matrix
 
 
@@ -163,5 +166,3 @@ class ImageClassifier(ClassifierBase):
         head.weight.data.normal_(0, 0.01)
         head.bias.data.fill_(0.0)
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, head)
-
-

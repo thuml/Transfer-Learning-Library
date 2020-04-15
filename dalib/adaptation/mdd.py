@@ -51,6 +51,7 @@ class MarginDisparityDiscrepancy(nn.Module):
         >>> y_s_adv, y_t_adv = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
     """
+
     def __init__(self, margin=4, reduction='mean'):
         super(MarginDisparityDiscrepancy, self).__init__()
         self.margin = margin
@@ -60,7 +61,7 @@ class MarginDisparityDiscrepancy(nn.Module):
         _, prediction_s = y_s.max(dim=1)
         _, prediction_t = y_t.max(dim=1)
         return self.margin * F.cross_entropy(y_s_adv, prediction_s, reduction=self.reduction) \
-               + F.nll_loss(shift_log(1.-F.softmax(y_t_adv, dim=1)), prediction_t, reduction=self.reduction)
+               + F.nll_loss(shift_log(1. - F.softmax(y_t_adv, dim=1)), prediction_t, reduction=self.reduction)
 
 
 def shift_log(x, offset=1e-6):
@@ -114,6 +115,7 @@ class ImageClassifier(nn.Module):
         - outputs, outputs_adv: :math:`(minibatch, C)`, where C means the number of classes.
 
     """
+
     def __init__(self, backbone, num_classes, bottleneck_dim=1024, width=1024):
         super(ImageClassifier, self).__init__()
         self.backbone = backbone

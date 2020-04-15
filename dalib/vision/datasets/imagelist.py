@@ -69,5 +69,3 @@ class ImageList(datasets.VisionDataset):
     def num_classes(self):
         """Number of classes"""
         return self._num_classes
-
-

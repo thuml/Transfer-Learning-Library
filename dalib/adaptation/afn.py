@@ -22,6 +22,7 @@ class StepwiseAdaptiveFeatureNorm(nn.Module):
         >>> features= torch.randn(10, 1024)
         >>> output = loss(feautures)
     """
+
     def __init__(self, delta_r=1.):
         super(StepwiseAdaptiveFeatureNorm, self).__init__()
         self.detal_r = delta_r
@@ -39,6 +40,7 @@ class L2PreservedDropout(nn.Module):
     with probability :math:`p` by samples.
     In the evaluation phase, scale the output by a factor of :math:`\dfrac{1}{\sqrt{1-p}}`.
     """
+
     def __init__(self, *args, **kwargs):
         super(L2PreservedDropout, self).__init__()
         self.dropout = nn.Dropout(*args, **kwargs)
@@ -67,4 +69,3 @@ class ImageClassifier(ClassifierBase):
             {"params": self.head.parameters(), "momentum": 0.9, 'lr_mult': 1.},
         ]
         return params
-

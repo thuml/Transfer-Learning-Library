@@ -41,6 +41,7 @@ class DomainAdversarialLoss(nn.Module):
         >>> f_s, f_t = torch.randn(20, 1024), torch.randn(20, 1024)
         >>> output = loss(f_s, f_t)
     """
+
     def __init__(self, domain_discriminator, reduction='mean'):
         super(DomainAdversarialLoss, self).__init__()
         self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
@@ -66,4 +67,3 @@ class ImageClassifier(ClassifierBase):
             nn.ReLU()
         )
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
-

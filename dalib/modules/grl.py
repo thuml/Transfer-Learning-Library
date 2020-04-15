@@ -49,6 +49,7 @@ class WarmStartGradientReverseLayer(nn.Module):
             - **auto_step** (bool, optional): If True, increase :math:`i` each time `forward` is called.
               Otherwise use function `step` to increase :math:`i`. Default: False
         """
+
     def __init__(self, alpha=1.0, lo=0.0, hi=1., max_iters=1000., auto_step=False):
         super(WarmStartGradientReverseLayer, self).__init__()
         self.alpha = alpha

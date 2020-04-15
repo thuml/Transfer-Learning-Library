@@ -38,6 +38,7 @@ class GaussianKernel(nn.Module):
         - Inputs: :math:`(minibatch, F)` where F means the dimension of input features.
         - Outputs: :math:`(minibatch, minibatch)`
     """
+
     def __init__(self, sigma=None, track_running_stats=True, alpha=1.):
         super(GaussianKernel, self).__init__()
         assert track_running_stats or sigma is not None
@@ -52,5 +53,3 @@ class GaussianKernel(nn.Module):
             self.sigma_square = self.alpha * torch.mean(l2_distance_square.detach())
 
         return torch.exp(-l2_distance_square / (2 * self.sigma_square))
-
-

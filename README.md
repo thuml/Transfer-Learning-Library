@@ -1,5 +1,7 @@
 ## Introduction
-DALIB is a domain adaptation library based on pure PyTorch with high performance and friendly API. The supported algorithms currently include:
+DALIB is a domain adaptation library based on pure PyTorch with high performance and friendly API. 
+
+On April 20th, 2020, we released the v0.1 (preview version). The supported algorithms currently include:
 
 - [Domain-Adversarial Training of Neural Networks 
 (DANN)](https://arxiv.org/abs/1505.07818)
@@ -11,12 +13,13 @@ DALIB is a domain adaptation library based on pure PyTorch with high performance
 - [Adaptive Feature Norm (AFN)](https://arxiv.xilesou.top/abs/1811.07456)
 - [ Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
+
 ## Installation
 
 DALIB is currently hosted on [PyPI](https://pypi.org/project/dalib/). It requires Python >= 3.6. You can simply install dalib with the following command:
 
 ```bash
-    pip install -i https://test.pypi.org/simple/ dalib
+pip install -i https://test.pypi.org/simple/ dalib
 ```
 
 You can also install with the newest version through GitHub:
@@ -25,21 +28,21 @@ You can also install with the newest version through GitHub:
 pip install git+https://github.com/JunguangJiang/DALIB.git@master
 ```
 
-After installation, open your python console and type
+After installation, open your python console and type the following. If no error occurs, you have successfully installed DALIB.
 
 ```python
 import dalib 
 print(dalib.__version__)
 ```
 
-If no error occurs, you have successfully installed DALIB.
-    
+For flexible use and modification, git clone the library is also a good choice. 
+
 ## Documentation
 You can find the tutorial and API documentation on the website: [DALIB API](https://dalib.readthedocs.io/en/latest/index.html)
 
-Also, we examples in the directory `examples`. A typical usage is 
+Also, we have examples in the directory `examples`. A typical usage is 
 ```shell script
-# Train a DANN on Office-31 Amazon->Webcam task using ResNet 50.
+# Train a DANN on Office-31 Amazon -> Webcam task using ResNet 50.
 # Assume you have put the datasets under the path `data/office-31`, 
 # or you are glad to download the datasets automatically from the Internet to this path
 python examples/dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20
@@ -58,7 +61,7 @@ If you're a dataset owner and wish to update any part of it (description, citati
 
 
 ## Contact
-If you have any problem about our code, feel free to contact 
+If you have any problem about our code or have some suggestions, feel free to contact 
 - Junguang Jiang (JiangJunguang1123@outlook.com)
 - Bo Fu (fb1121@qq.vip.com)
 - Mingsheng Long (longmingsheng@gmail.com)
