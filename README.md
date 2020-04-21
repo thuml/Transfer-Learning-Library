@@ -19,13 +19,13 @@ On April 20th, 2020, we released the v0.1 (preview version). The supported algor
 DALIB is currently hosted on [PyPI](https://pypi.org/project/dalib/). It requires Python >= 3.6. You can simply install dalib with the following command:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ dalib
+pip install dalib
 ```
 
 You can also install with the newest version through GitHub:
 
 ```bash
-pip install git+https://github.com/JunguangJiang/DALIB.git@master
+pip install git+https://github.com/thuml/Domain-Adaptation-Lib.git@master
 ```
 
 After installation, open your python console and type the following. If no error occurs, you have successfully installed DALIB.
