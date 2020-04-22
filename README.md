@@ -1,7 +1,8 @@
 ## Introduction
-DALIB is a domain adaptation library based on pure PyTorch with high performance and friendly API. 
+*Trans-Learn* is a Transfer Learning library based on pure PyTorch with high performance and friendly API. 
+Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or easily apply existing algorithms..
 
-On April 20th, 2020, we released the v0.1 (preview version). The supported algorithms currently include:
+On April 24th, 2020, we released the v0.1 (preview version), the first sub-library is for Domain Adaptation (DALIB). The supported algorithms currently include:
 
 - [Domain-Adversarial Training of Neural Networks 
 (DANN)](https://arxiv.org/abs/1505.07818)
@@ -11,7 +12,7 @@ On April 20th, 2020, we released the v0.1 (preview version). The supported algor
 (CDAN)](https://arxiv.org/abs/1705.10667)
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
 - [Adaptive Feature Norm (AFN)](https://arxiv.xilesou.top/abs/1811.07456)
-- [ Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
+- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
 
 ## Installation
@@ -25,7 +26,7 @@ pip install dalib
 You can also install with the newest version through GitHub:
 
 ```bash
-pip install git+https://github.com/thuml/Domain-Adaptation-Lib.git@master
+pip install git+https://github.com/thuml/Transfer-Learning-library.git@master
 ```
 
 After installation, open your python console and type the following. If no error occurs, you have successfully installed DALIB.
@@ -61,12 +62,12 @@ If you're a dataset owner and wish to update any part of it (description, citati
 
 
 ## Contact
-If you have any problem with our code or have some suggestions, feel free to contact 
+If you have any problem with our code or have some suggestions, including the future feature, feel free to contact 
 - Junguang Jiang (JiangJunguang1123@outlook.com)
 - Bo Fu (fb1121@qq.vip.com)
 - Mingsheng Long (longmingsheng@gmail.com)
 
-or describe your problem in Issues.
+or describe it in Issues.
 
 ## Citation
 
@@ -75,10 +76,10 @@ If you use this toolbox or benchmark in your research, please cite this project.
 ```latex
 @misc{dalib,
   author = {Junguang Jiang, Bo Fu, Mingsheng Long},
-  title = {DALIB},
+  title = {Transfer-Learning-library},
   year = {2020},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/thuml/DALIB}},
+  howpublished = {\url{https://github.com/thuml/Transfer-Learning-library}},
 }
 ```
