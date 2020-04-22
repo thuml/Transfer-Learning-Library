@@ -26,7 +26,7 @@ pip install dalib
 You can also install with the newest version through GitHub:
 
 ```bash
-pip install git+https://github.com/thuml/Transfer-Learning-library.git@master
+pip install git+https://github.com/thuml/Transfer-Learning-Library.git@master
 ```
 
 After installation, open your python console and type the following. If no error occurs, you have successfully installed DALIB.
@@ -80,6 +80,6 @@ If you use this toolbox or benchmark in your research, please cite this project.
   year = {2020},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/thuml/Transfer-Learning-library}},
+  howpublished = {\url{https://github.com/thuml/Transfer-Learning-Library}},
 }
 ```
