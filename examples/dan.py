@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 sys.path.append('.')
 
-from dalib.adaptation.mmd import MultipleKernelMaximumMeanDiscrepancy, ImageClassifier
+from dalib.adaptation.dan import MultipleKernelMaximumMeanDiscrepancy, ImageClassifier
 from dalib.modules.kernels import GaussianKernel
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
@@ -37,7 +37,6 @@ def main(args):
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    print("Use GPU: {} for training".format(args.gpu))
     cudnn.benchmark = True
 
     # Data loading code
@@ -80,7 +79,10 @@ def main(args):
     lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
 
     # define loss function
-    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(*[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)])
+    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(
+        kernels=[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+        linear=not args.non_linear, quadratic_program=args.quadratic_program
+    )
 
     # start training
     best_acc1 = 0.
@@ -176,8 +178,7 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            if args.gpu is not None:
-                images = images.cuda()
+            images = images.cuda()
             target = target.cuda()
 
             # compute output
@@ -244,12 +245,14 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--gpu', default='0', type=str,
-                        help='GPU id(s) to use.')
     parser.add_argument('--trade_off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('--non_linear', default=False, action='store_true',
+                        help='whether not use the linear version')
+    parser.add_argument('--quadratic_program', default=False, action='store_true',
+                        help='whether use quadratic program to solve beta')
 
     args = parser.parse_args()
     print(args)

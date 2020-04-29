@@ -1,5 +1,9 @@
 import torch
 import torch.nn as nn
+from numpy import array, dot
+import numpy as np
+from qpsolvers import solve_qp
+
 
 __all__ = ['GaussianKernel']
 
@@ -53,3 +57,29 @@ class GaussianKernel(nn.Module):
             self.sigma_square = self.alpha * torch.mean(l2_distance_square.detach())
 
         return torch.exp(-l2_distance_square / (2 * self.sigma_square))
+
+
+def optimal_kernel_combinations(kernel_values):
+    # use quadratic program to get optimal kernel
+    num_kernel = len(kernel_values)
+    kernel_values_numpy = array([float(k.detach().cpu().data.item()) for k in kernel_values])
+    if np.all(kernel_values_numpy <= 0):
+        beta = solve_qp(
+            P=-np.eye(num_kernel),
+            q=np.zeros(num_kernel),
+            A=kernel_values_numpy,
+            b=np.array([-1.]),
+            G=-np.eye(num_kernel),
+            h=np.zeros(num_kernel),
+        )
+    else:
+        beta = solve_qp(
+            P=np.eye(num_kernel),
+            q=np.zeros(num_kernel),
+            A=kernel_values_numpy,
+            b=np.array([1.]),
+            G=-np.eye(num_kernel),
+            h=np.zeros(num_kernel),
+        )
+    beta = beta / beta.sum(axis=0) * num_kernel  # normalize
+    return sum([k * b for (k, b) in zip(kernel_values, beta)])

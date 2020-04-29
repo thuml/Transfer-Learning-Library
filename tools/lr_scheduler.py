@@ -22,9 +22,13 @@ class StepwiseLR:
         self.optimizer = optimizer
         self.iter_num = 0
 
+    def get_lr(self):
+        lr = self.init_lr * (1 + self.gamma * self.iter_num) ** (-self.decay_rate)
+        return lr
+
     def step(self):
         """Increase iteration number `i` by 1 and update learning rate in `optimizer`"""
-        lr = self.init_lr * (1 + self.gamma * self.iter_num) ** (-self.decay_rate)
+        lr = self.get_lr()
         for param_group in self.optimizer.param_groups:
             if 'lr_mult' not in param_group:
                 param_group['lr_mult'] = 1.

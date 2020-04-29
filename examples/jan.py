@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 sys.path.append('.')
 
-from dalib.adaptation.mmd import JointMultipleKernelMaximumMeanDiscrepancy, ImageClassifier
+from dalib.adaptation.jan import JointMultipleKernelMaximumMeanDiscrepancy, ImageClassifier, Theta
 from dalib.modules.kernels import GaussianKernel
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
@@ -37,7 +37,6 @@ def main(args):
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    print("Use GPU: {} for training".format(args.gpu))
     cudnn.benchmark = True
 
     # Data loading code
@@ -75,15 +74,26 @@ def main(args):
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes).cuda()
 
-    # define optimizer
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
-
     # define loss function
+    if args.adversarial:
+        thetas = [Theta(dim).cuda() for dim in (classifier.features_dim, num_classes)]
+    else:
+        thetas = None
     jmmd_loss = JointMultipleKernelMaximumMeanDiscrepancy(
-        [GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
-        (GaussianKernel(sigma=0.92, track_running_stats=False),)
+        kernels=(
+            [GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+            (GaussianKernel(sigma=0.92, track_running_stats=False),)
+        ),
+        linear=args.linear, thetas=thetas
+    ).cuda()
+
+    # define optimizer
+    optimizer = SGD(
+        classifier.get_parameters() +
+        [{"params": theta.parameters(), 'lr_mult': 0.1} for theta in thetas],
+        args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True
     )
+    lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
 
     # start training
     best_acc1 = 0.
@@ -135,8 +145,10 @@ def train(train_source_iter, train_target_iter, model, jmmd_loss, optimizer,
         labels_t = labels_t.cuda()
 
         # compute output
-        y_s, f_s = model(x_s)
-        y_t, f_t = model(x_t)
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
         transfer_loss = jmmd_loss(
@@ -182,8 +194,7 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            if args.gpu is not None:
-                images = images.cuda()
+            images = images.cuda()
             target = target.cuda()
 
             # compute output
@@ -250,12 +261,14 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--gpu', default='0', type=str,
-                        help='GPU id(s) to use.')
     parser.add_argument('--trade_off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('--linear', default=False, action='store_true',
+                        help='whether use the linear version')
+    parser.add_argument('--adversarial', default=False, action='store_true',
+                        help='whether use adversarial theta')
 
     args = parser.parse_args()
     print(args)
