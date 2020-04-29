@@ -16,13 +16,11 @@ import torch.nn.functional as F
 
 sys.path.append('.')
 
-from dalib.adaptation.jan import JointMultipleKernelMaximumMeanDiscrepancy, ImageClassifier, Theta
-from dalib.modules.kernels import GaussianKernel
+from dalib.modules.classifier import Classifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 
 from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
-from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
 
 
@@ -37,19 +35,20 @@ def main(args):
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
+    print("Use GPU: {} for training".format(args.gpu))
     cudnn.benchmark = True
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize(256),
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize
     ])
     val_tranform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -59,47 +58,27 @@ def main(args):
     train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
-    train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
-                                     shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
-    train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = ImageClassifier(backbone, num_classes).cuda()
+    classifier = Classifier(backbone, num_classes).cuda()
 
-    # define loss function
-    if args.adversarial:
-        thetas = [Theta(dim).cuda() for dim in (classifier.features_dim, num_classes)]
-    else:
-        thetas = None
-    jmmd_loss = JointMultipleKernelMaximumMeanDiscrepancy(
-        kernels=(
-            [GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
-            (GaussianKernel(sigma=0.92, track_running_stats=False),)
-        ),
-        linear=args.linear, thetas=thetas
-    ).cuda()
-
-    parameters = classifier.get_parameters()
-    if thetas is not None:
-        parameters += [{"params": theta.parameters(), 'lr_mult': 0.1} for theta in thetas]
-
-    # define optimizer
-    optimizer = SGD(parameters, args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    # define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
+        print(lr_sheduler.get_lr())
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, jmmd_loss, optimizer,
+        train(train_source_iter, classifier, optimizer,
               lr_sheduler, epoch, args)
 
         # evaluate on validation set
@@ -111,59 +90,43 @@ def main(args):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
 
-def train(train_source_iter, train_target_iter, model, jmmd_loss, optimizer,
+def train(train_source_iter, model, optimizer,
           lr_sheduler, epoch, args):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    trans_losses = AverageMeter('Trans Loss', ':5.4f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
+        [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    jmmd_loss.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_sheduler.step()
+        if lr_sheduler is not None:
+            lr_sheduler.step()
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         x_s, labels_s = next(train_source_iter)
-        x_t, labels_t = next(train_target_iter)
-
         x_s = x_s.cuda()
-        x_t = x_t.cuda()
         labels_s = labels_s.cuda()
-        labels_t = labels_t.cuda()
 
         # compute output
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        y_s, f_s = model(x_s)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = jmmd_loss(
-            (f_s, F.softmax(y_s, dim=1)),
-            (f_t, F.softmax(y_t, dim=1))
-        )
-        loss = cls_loss + transfer_loss * args.trade_off
+        loss = cls_loss
 
         cls_acc = accuracy(y_s, labels_s)[0]
-        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_t.size(0))
-        trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -194,7 +157,8 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            images = images.cuda()
+            if args.gpu is not None:
+                images = images.cuda()
             target = target.cuda()
 
             # compute output
@@ -251,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', default=0.003, type=float,
+    parser.add_argument('--lr', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
@@ -261,16 +225,14 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--trade_off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--gpu', default='0', type=str,
+                        help='GPU id(s) to use.')
     parser.add_argument('-i', '--iters_per_epoch', default=500, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('--linear', default=False, action='store_true',
-                        help='whether use the linear version')
-    parser.add_argument('--adversarial', default=False, action='store_true',
-                        help='whether use adversarial theta')
 
     args = parser.parse_args()
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     print(args)
     main(args)
 

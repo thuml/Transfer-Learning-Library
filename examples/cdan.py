@@ -37,7 +37,6 @@ def main(args):
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    print("Use GPU: {} for training".format(args.gpu))
     cudnn.benchmark = True
 
     # Data loading code
@@ -184,8 +183,7 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            if args.gpu is not None:
-                images = images.cuda()
+            images = images.cuda()
             target = target.cuda()
 
             # compute output
@@ -253,8 +251,6 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--gpu', default='0', type=str,
-                        help='GPU id(s) to use.')
     parser.add_argument('--trade_off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,

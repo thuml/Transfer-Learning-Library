@@ -78,13 +78,13 @@ DANN
 DAN
 ----
 
-.. autoclass:: dalib.adaptation.mmd.MultipleKernelMaximumMeanDiscrepancy
+.. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
     :show-inheritance:
 
 
 JAN
 ---------------------------
-.. autoclass:: dalib.adaptation.mmd.JointMultipleKernelMaximumMeanDiscrepancy
+.. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
     :show-inheritance:
 
 
