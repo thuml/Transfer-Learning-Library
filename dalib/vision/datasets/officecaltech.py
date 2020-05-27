@@ -39,6 +39,8 @@ class OfficeCaltech(DatasetFolder):
         "W": "webcam",
         "C": "caltech"
     }
+    CLASSES = ['back_pack', 'bike', 'calculator', 'headphones', 'keyboard',
+               'laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
 
     def __init__(self, root, task, download=False, **kwargs):
         if download:

@@ -40,8 +40,11 @@ class Office31(ImageList):
         "A": "image_list/amazon.txt",
         "D": "image_list/dslr.txt",
         "W": "image_list/webcam.txt"
-
     }
+    CLASSES = ['back_pack', 'bike', 'bike_helmet', 'bookcase', 'bottle', 'calculator', 'desk_chair', 'desk_lamp',
+               'desktop_computer', 'file_cabinet', 'headphones', 'keyboard', 'laptop_computer', 'letter_tray',
+               'mobile_phone', 'monitor', 'mouse', 'mug', 'paper_notebook', 'pen', 'phone', 'printer', 'projector',
+               'punchers', 'ring_binder', 'ruler', 'scissors', 'speaker', 'stapler', 'tape_dispenser', 'trash_can']
 
     def __init__(self, root, task, download=True, **kwargs):
         assert task in self.image_list

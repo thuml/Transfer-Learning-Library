@@ -35,6 +35,8 @@ class VisDA2017(ImageList):
         "T": "image_list/train.txt",
         "V": "image_list/validation.txt"
     }
+    CLASSES = ['aeroplane', 'bicycle', 'bus', 'car', 'horse', 'knife',
+               'motorcycle', 'person', 'plant', 'skateboard', 'train', 'truck']
 
     def __init__(self, root, task, download=False, **kwargs):
         assert task in self.image_list

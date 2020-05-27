@@ -71,6 +71,11 @@ def main(args):
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    if args.data == 'DomainNet':
+        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_tranform)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    else:
+        test_loader = val_loader
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
@@ -100,10 +105,18 @@ def main(args):
 
         # remember best acc@1 and save checkpoint
         if max(results) > best_acc1:
+            best_G, best_F1, best_F2 = G.state_dict(), F1.state_dict(), F2.state_dict()
             best_acc1 = max(results)
             best_results = results
 
     print("best_acc1 = {:3.1f}, results = {}".format(best_acc1, best_results))
+
+    # evaluate on test set
+    G.load_state_dict(best_G)
+    F1.load_state_dict(best_F1)
+    F2.load_state_dict(best_F2)
+    results = validate(val_loader, G, F1, F2, args)
+    print("test_acc1 = {:3.1f}".format(max(results)))
 
 
 def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimizer_f, epoch, args):

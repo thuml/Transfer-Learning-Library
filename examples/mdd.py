@@ -43,7 +43,7 @@ def main(args):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            transforms.Resize(256, interpolation=Image.NEAREST),
+            ResizeImage(256),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -51,14 +51,14 @@ def main(args):
         ])
     else:
         train_transform = transforms.Compose([
-            transforms.Resize(256, interpolation=Image.NEAREST),
+            ResizeImage(256),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
     val_tranform = transforms.Compose([
-        transforms.Resize(256, interpolation=Image.NEAREST),
+        ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -73,6 +73,11 @@ def main(args):
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    if args.data == 'DomainNet':
+        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_tranform)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    else:
+        test_loader = val_loader
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
@@ -101,10 +106,16 @@ def main(args):
         acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
+        if acc1 > best_acc1:
+            best_model = classifier.state_dict()
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
+    # evaluate on test set
+    classifier.load_state_dict(best_model)
+    acc1 = validate(test_loader, classifier, args)
+    print("test_acc1 = {:3.1f}".format(acc1))
 
 def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
           lr_scheduler, epoch, args):
