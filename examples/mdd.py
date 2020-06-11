@@ -3,6 +3,7 @@ import time
 import warnings
 import sys
 import argparse
+import copy
 
 import torch
 import torch.nn.parallel
@@ -97,6 +98,7 @@ def main(args):
 
     # start training
     best_acc1 = 0.
+    best_model = classifier.state_dict()
     for epoch in range(args.epochs):
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
@@ -107,7 +109,7 @@ def main(args):
 
         # remember best acc@1 and save checkpoint
         if acc1 > best_acc1:
-            best_model = classifier.state_dict()
+            best_model = copy.deepcopy(classifier.state_dict())
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))

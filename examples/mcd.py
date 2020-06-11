@@ -3,6 +3,7 @@ import time
 import warnings
 import sys
 import argparse
+import copy
 
 import torch
 import torch.nn.parallel
@@ -105,7 +106,7 @@ def main(args):
 
         # remember best acc@1 and save checkpoint
         if max(results) > best_acc1:
-            best_G, best_F1, best_F2 = G.state_dict(), F1.state_dict(), F2.state_dict()
+            best_G, best_F1, best_F2 = copy.deepcopy(G.state_dict()), copy.deepcopy(F1.state_dict()), copy.deepcopy(F2.state_dict())
             best_acc1 = max(results)
             best_results = results
 
