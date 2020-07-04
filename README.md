@@ -11,7 +11,6 @@ On April 24th, 2020, we released the v0.1 (preview version), the first sub-libra
 - [Conditional Adversarial Domain Adaptation 
 (CDAN)](https://arxiv.org/abs/1705.10667)
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
-- [Adaptive Feature Norm (AFN)](https://arxiv.xilesou.top/abs/1811.07456)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
 
