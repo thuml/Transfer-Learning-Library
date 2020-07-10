@@ -292,19 +292,19 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--num_k', type=int, default=4, metavar='K',
+    parser.add_argument('--num-k', type=int, default=4, metavar='K',
                         help='how many steps to repeat the generator update')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('-i', '--iters_per_epoch', default=1000, type=int,
+    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('--bottleneck_dim', default=1024, type=int)
-    parser.add_argument('--center_crop', default=False, action='store_true')
-    parser.add_argument('--trade_off', default=1., type=float,
+    parser.add_argument('--bottleneck-dim', default=1024, type=int)
+    parser.add_argument('--center-crop', default=False, action='store_true')
+    parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     args = parser.parse_args()
     print(args)
