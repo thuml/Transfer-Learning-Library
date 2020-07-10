@@ -27,6 +27,10 @@ from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
 from PIL import Image
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def main(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -85,11 +89,11 @@ def main(args):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True).cuda()
+    backbone = models.__dict__[args.arch](pretrained=True).to(device)
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 width=args.bottleneck_dim).cuda()
-    mdd = MarginDisparityDiscrepancy(args.margin).cuda()
+                                 width=args.bottleneck_dim).to(device)
+    mdd = MarginDisparityDiscrepancy(args.margin).to(device)
 
     # define optimizer and lr_scheduler
     # The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
@@ -119,6 +123,7 @@ def main(args):
     acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
 
+
 def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
           lr_scheduler, epoch, args):
     batch_time = AverageMeter('Time', ':3.1f')
@@ -137,7 +142,7 @@ def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
     classifier.train()
     mdd.train()
 
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss().to(device)
 
     end = time.time()
     for i in range(args.iters_per_epoch):
@@ -150,10 +155,10 @@ def train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
         x_s, labels_s = next(train_source_iter)
         x_t, labels_t = next(train_target_iter)
 
-        x_s = x_s.cuda()
-        x_t = x_t.cuda()
-        labels_s = labels_s.cuda()
-        labels_t = labels_t.cuda()
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
+        labels_t = labels_t.to(device)
 
         # compute output
         x = torch.cat((x_s, x_t), dim=0)
@@ -204,8 +209,8 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            images = images.cuda()
-            target = target.cuda()
+            images = images.to(device)
+            target = target.to(device)
 
             # compute output
             output, _ = model(images)

@@ -25,3 +25,25 @@ CUDA_VISIBLE_DEVICES=0 examples/jan.py data/office-home -d OfficeHome -s Rw -t P
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet101  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017_resnet101.txt
 CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet50  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017.txt
+
+# DomainNet
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s i -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s i -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s i -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s i -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s p -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s r -t c -a resnet101  --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s r -t i -a resnet101  --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s r -t p -a resnet101  --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s r -t s -a resnet101  --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0

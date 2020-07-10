@@ -27,6 +27,9 @@ from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def main(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -78,10 +81,10 @@ def main(args):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = ImageClassifier(backbone, num_classes).cuda()
+    classifier = ImageClassifier(backbone, num_classes).to(device)
     classifier_feature_dim = classifier.features_dim
 
-    domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).cuda()
+    domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
 
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
 
@@ -93,7 +96,7 @@ def main(args):
     domain_adv = ConditionalDomainAdversarialLoss(
         domain_discri, entropy_conditioning=args.E,
         num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
-    ).cuda()
+    ).to(device)
 
     # start training
     best_acc1 = 0.
@@ -145,9 +148,9 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
         x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
-        x_s = x_s.cuda()
-        x_t = x_t.cuda()
-        labels_s = labels_s.cuda()
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
 
         # compute output
         x = torch.cat((x_s, x_t), dim=0)
@@ -196,8 +199,8 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            images = images.cuda()
-            target = target.cuda()
+            images = images.to(device)
+            target = target.to(device)
 
             # compute output
             output, _ = model(images)

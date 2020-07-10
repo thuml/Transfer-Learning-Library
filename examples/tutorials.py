@@ -30,6 +30,9 @@ from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def main(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -75,8 +78,8 @@ def main(args):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    classifier = ImageClassifier(backbone, train_source_dataset.num_classes).cuda()
-    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).cuda()
+    classifier = ImageClassifier(backbone, train_source_dataset.num_classes).to(device)
+    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
@@ -84,7 +87,7 @@ def main(args):
     lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
 
     # define loss function
-    domain_adv = DomainAdversarialLoss(domain_discri).cuda()
+    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # start training
     best_acc1 = 0.
@@ -116,8 +119,8 @@ def main(args):
     with torch.no_grad():
         for loader in [source_val_loader, val_loader]:
             for i, (images, target) in enumerate(loader):
-                images = images.cuda()
-                target = target.cuda()
+                images = images.to(device)
+                target = target.to(device)
 
                 # compute output
                 _, f = classifier(images)
@@ -159,9 +162,9 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
         x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
-        x_s = x_s.cuda()
-        x_t = x_t.cuda()
-        labels_s = labels_s.cuda()
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
 
         # compute output
         x = torch.cat((x_s, x_t), dim=0)
@@ -209,8 +212,8 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            images = images.cuda()
-            target = target.cuda()
+            images = images.to(device)
+            target = target.to(device)
 
             # compute output
             output, _ = model(images)

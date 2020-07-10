@@ -25,3 +25,25 @@ CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/office-home -d OfficeHome -s 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet50  --epochs 30 --bottleneck_dim 1024 --seed 0 --center_crop > benchmarks/mdd/VisDA2017_2.txt
 CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet101  --epochs 30 --bottleneck_dim 1024 --seed 0 --center_crop > benchmarks/mdd/VisDA2017_resnet101_3.txt
+
+# DomainNet
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s c -t i -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s c -t p -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s c -t r -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s c -t s -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s i -t c -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s i -t p -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s i -t r -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s i -t s -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s p -t c -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s p -t i -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s p -t r -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s p -t s -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s r -t c -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s r -t i -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s r -t p -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s r -t s -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s s -t c -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s s -t i -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s s -t p -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004
+CUDA_VISIBLE_DEVICES=0 python examples/mdd.py data/domainnet -d DomainNet -s s -t r -a resnet101  --epochs 40 -i 5000 -p 500 --bottleneck_dim 2048 --seed 0 --lr 0.004

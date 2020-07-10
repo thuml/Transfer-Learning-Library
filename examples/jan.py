@@ -27,6 +27,9 @@ from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def main(args):
     if args.seed is not None:
         random.seed(args.seed)
@@ -78,11 +81,11 @@ def main(args):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = ImageClassifier(backbone, num_classes).cuda()
+    classifier = ImageClassifier(backbone, num_classes).to(device)
 
     # define loss function
     if args.adversarial:
-        thetas = [Theta(dim).cuda() for dim in (classifier.features_dim, num_classes)]
+        thetas = [Theta(dim).to(device) for dim in (classifier.features_dim, num_classes)]
     else:
         thetas = None
     jmmd_loss = JointMultipleKernelMaximumMeanDiscrepancy(
@@ -91,7 +94,7 @@ def main(args):
             (GaussianKernel(sigma=0.92, track_running_stats=False),)
         ),
         linear=args.linear, thetas=thetas
-    ).cuda()
+    ).to(device)
 
     parameters = classifier.get_parameters()
     if thetas is not None:
@@ -152,10 +155,10 @@ def train(train_source_iter, train_target_iter, model, jmmd_loss, optimizer,
         x_s, labels_s = next(train_source_iter)
         x_t, labels_t = next(train_target_iter)
 
-        x_s = x_s.cuda()
-        x_t = x_t.cuda()
-        labels_s = labels_s.cuda()
-        labels_t = labels_t.cuda()
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
+        labels_t = labels_t.to(device)
 
         # compute output
         x = torch.cat((x_s, x_t), dim=0)
@@ -207,8 +210,8 @@ def validate(val_loader, model, args):
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
-            images = images.cuda()
-            target = target.cuda()
+            images = images.to(device)
+            target = target.to(device)
 
             # compute output
             output, _ = model(images)
