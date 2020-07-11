@@ -1,7 +1,7 @@
 import torch
 
 
-def binary_accuracy(output, target):
+def binary_accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
     """Computes the accuracy for binary classification"""
     with torch.no_grad():
         batch_size = target.size(0)

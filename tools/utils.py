@@ -2,7 +2,7 @@ import sys
 import torch
 import os
 import shutil
-
+from torch.utils.data.dataloader import DataLoader
 sys.path.append('.')
 
 
@@ -82,7 +82,7 @@ def create_exp_dir(path, scripts_to_save=None):
 
 class ForeverDataIterator:
     """A data iterator that will never stop producing data"""
-    def __init__(self, data_loader):
+    def __init__(self, data_loader: DataLoader):
         self.data_loader = data_loader
         self.iter = iter(self.data_loader)
 

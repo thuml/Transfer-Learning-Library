@@ -1,7 +1,8 @@
+import os
+from typing import Optional
 from torchvision.datasets.folder import DatasetFolder, IMG_EXTENSIONS, default_loader
 from torchvision.datasets.utils import download_and_extract_archive
 from ._util import check_exits
-import os
 
 
 class OfficeCaltech(DatasetFolder):
@@ -42,7 +43,7 @@ class OfficeCaltech(DatasetFolder):
     CLASSES = ['back_pack', 'bike', 'calculator', 'headphones', 'keyboard',
                'laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
 
-    def __init__(self, root, task, download=False, **kwargs):
+    def __init__(self, root: str, task: str, download: Optional[bool] = False, **kwargs):
         if download:
             for dir in self.directories.values():
                 if not os.path.exists(os.path.join(root, dir)):
@@ -55,9 +56,12 @@ class OfficeCaltech(DatasetFolder):
 
         super(OfficeCaltech, self).__init__(
             os.path.join(root, self.directories[task]), default_loader, extensions=IMG_EXTENSIONS, **kwargs)
-        self._num_classes = 10
+        self.classes = OfficeCaltech.classes
+        self.class_to_idx = {cls: idx
+                             for idx, clss in enumerate(self.classes)
+                             for cls in clss}
 
     @property
     def num_classes(self):
         """Number of classes"""
-        return self._num_classes
+        return len(self.classes)

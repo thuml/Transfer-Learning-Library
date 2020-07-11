@@ -1,11 +1,14 @@
+from typing import Optional, Sequence
 import torch
 import torch.nn as nn
 from dalib.modules.classifier import Classifier as ClassifierBase
 from dalib.modules.grl import GradientReverseLayer
+from dalib.modules.kernels import GaussianKernel
 from .dan import _update_index_matrix
 
 
 __all__ = ['JointMultipleKernelMaximumMeanDiscrepancy', 'ImageClassifier']
+
 
 
 class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
@@ -57,7 +60,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         >>> output = loss((z1_s, z2_s), (z1_t, z2_t))
     """
 
-    def __init__(self, kernels, linear=True, thetas=None):
+    def __init__(self, kernels: Sequence[Sequence[nn.Module]], linear: Optional[bool] = True, thetas: Sequence[nn.Module] = None):
         super(JointMultipleKernelMaximumMeanDiscrepancy, self).__init__()
         self.kernels = kernels
         self.index_matrix = None
@@ -67,7 +70,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         else:
             self.thetas = [nn.Identity() for _ in kernels]
 
-    def forward(self, z_s, z_t):
+    def forward(self, z_s: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         batch_size = int(z_s[0].size(0))
         self.index_matrix = _update_index_matrix(batch_size, self.index_matrix, self.linear).to(z_s[0].device)
 
@@ -89,7 +92,7 @@ class Theta(nn.Module):
     maximize loss respect to :math:`\theta`
     minimize loss respect to features
     """
-    def __init__(self, dim):
+    def __init__(self, dim: int):
         super(Theta, self).__init__()
         self.grl1 = GradientReverseLayer()
         self.grl2 = GradientReverseLayer()
@@ -97,13 +100,13 @@ class Theta(nn.Module):
         nn.init.eye_(self.layer1.weight)
         nn.init.zeros_(self.layer1.bias)
 
-    def forward(self, features):
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
         features = self.grl1(features)
         return self.grl2(self.layer1(features))
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),

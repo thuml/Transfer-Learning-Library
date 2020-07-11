@@ -2,7 +2,7 @@ import os
 from torchvision.datasets.utils import download_and_extract_archive
 
 
-def download(root, file_name, archive_name, url_link):
+def download(root: str, file_name: str, archive_name: str, url_link: str):
     """ Download file from internet url link.
     :param root: (string) The directory to put downloaded files.
     :param file_name: (string) The name of the unzipped file.
@@ -27,7 +27,7 @@ def download(root, file_name, archive_name, url_link):
             exit(0)
 
 
-def check_exits(root, file_name):
+def check_exits(root: str, file_name: str):
     """Check whether `file_name` exists under directory `root`. """
     if not os.path.exists(os.path.join(root, file_name)):
         print("Dataset directory {} not found under {}".format(file_name, root))

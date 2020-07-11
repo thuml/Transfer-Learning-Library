@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from .imagelist import ImageList
 from ._util import download as download_data, check_exits
 
@@ -38,7 +39,7 @@ class VisDA2017(ImageList):
     CLASSES = ['aeroplane', 'bicycle', 'bus', 'car', 'horse', 'knife',
                'motorcycle', 'person', 'plant', 'skateboard', 'train', 'truck']
 
-    def __init__(self, root, task, download=False, **kwargs):
+    def __init__(self, root: str, task: str, download: Optional[bool] = False, **kwargs):
         assert task in self.image_list
         data_list_file = os.path.join(root, self.image_list[task])
 
@@ -47,4 +48,4 @@ class VisDA2017(ImageList):
         else:
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
-        super(VisDA2017, self).__init__(root, num_classes=12, data_list_file=data_list_file, **kwargs)
+        super(VisDA2017, self).__init__(root, VisDA2017.CLASSES, data_list_file=data_list_file, **kwargs)

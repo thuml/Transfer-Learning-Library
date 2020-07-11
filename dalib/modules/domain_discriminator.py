@@ -1,4 +1,6 @@
+from typing import List, Dict
 import torch.nn as nn
+import torch
 
 __all__ = ['DomainDiscriminator']
 
@@ -19,7 +21,7 @@ class DomainDiscriminator(nn.Module):
         - Outputs: :math:`(minibatch, 1)`
     """
 
-    def __init__(self, in_feature, hidden_size):
+    def __init__(self, in_feature: int, hidden_size: int):
         super(DomainDiscriminator, self).__init__()
         self.layer1 = nn.Linear(in_feature, hidden_size)
         self.bn1 = nn.BatchNorm1d(hidden_size)
@@ -30,12 +32,12 @@ class DomainDiscriminator(nn.Module):
         self.layer3 = nn.Linear(hidden_size, 1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """"""
         x = self.relu1(self.bn1(self.layer1(x)))
         x = self.relu2(self.bn2(self.layer2(x)))
         y = self.sigmoid(self.layer3(x))
         return y
 
-    def get_parameters(self):
+    def get_parameters(self) -> List[Dict]:
         return [{"params": self.parameters(), "lr_mult": 1.}]

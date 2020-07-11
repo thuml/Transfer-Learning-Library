@@ -1,4 +1,6 @@
+from typing import Tuple, Optional, List, Dict
 import torch.nn as nn
+import torch
 
 __all__ = ['Classifier']
 
@@ -37,7 +39,8 @@ class Classifier(nn.Module):
 
     """
 
-    def __init__(self, backbone, num_classes, bottleneck=None, bottleneck_dim=-1, head=None):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
+                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
@@ -55,11 +58,11 @@ class Classifier(nn.Module):
             self.head = head
 
     @property
-    def features_dim(self):
+    def features_dim(self) -> int:
         """The dimension of features before the final `head` layer"""
         return self._features_dim
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
         f = self.backbone(x)
         f = f.view(-1, self.backbone.out_features)
@@ -67,7 +70,7 @@ class Classifier(nn.Module):
         predictions = self.head(f)
         return predictions, f
 
-    def get_parameters(self):
+    def get_parameters(self) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer
         """

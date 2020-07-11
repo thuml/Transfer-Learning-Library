@@ -6,6 +6,7 @@ import argparse
 import copy
 
 import torch
+import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
@@ -16,12 +17,10 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 
 sys.path.append('.')
-
 from dalib.modules.domain_discriminator import DomainDiscriminator
 from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-
 from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
 from tools.transforms import ResizeImage
 from tools.lr_scheduler import StepwiseLR
@@ -30,7 +29,7 @@ from tools.lr_scheduler import StepwiseLR
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(args):
+def main(args: argparse.Namespace):
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -121,8 +120,9 @@ def main(args):
     print("test_acc1 = {:3.1f}".format(acc1))
 
 
-def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
-          lr_sheduler, epoch, args):
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
+          domain_adv: ConditionalDomainAdversarialLoss, optimizer: SGD,
+          lr_sheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -183,7 +183,7 @@ def train(train_source_iter, train_target_iter, model, domain_adv, optimizer,
             progress.display(i)
 
 
-def validate(val_loader, model, args):
+def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')

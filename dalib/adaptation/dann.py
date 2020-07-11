@@ -1,3 +1,4 @@
+from typing import Optional
 import torch
 import torch.nn as nn
 from dalib.modules.grl import WarmStartGradientReverseLayer
@@ -42,14 +43,14 @@ class DomainAdversarialLoss(nn.Module):
         >>> output = loss(f_s, f_t)
     """
 
-    def __init__(self, domain_discriminator, reduction='mean'):
+    def __init__(self, domain_discriminator: nn.Module, reduction: Optional[str] = 'mean'):
         super(DomainAdversarialLoss, self).__init__()
         self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
         self.domain_discriminator = domain_discriminator
         self.bce = nn.BCELoss(reduction=reduction)
         self.domain_discriminator_accuracy = None
 
-    def forward(self, f_s, f_t):
+    def forward(self, f_s: torch.Tensor, f_t: torch.Tensor) -> torch.Tensor:
         f = self.grl(torch.cat((f_s, f_t), dim=0))
         d = self.domain_discriminator(f)
         d_s, d_t = d.chunk(2, dim=0)
@@ -60,7 +61,7 @@ class DomainAdversarialLoss(nn.Module):
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),

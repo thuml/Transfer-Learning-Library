@@ -1,3 +1,4 @@
+from typing import Optional, List, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
@@ -66,8 +67,10 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         >>> output = loss(g_s, f_s, g_t, f_t)
     """
 
-    def __init__(self, domain_discriminator, entropy_conditioning=False, randomized=False,
-                 num_classes=-1, features_dim=-1, randomized_dim=1024, reduction='mean'):
+    def __init__(self, domain_discriminator: nn.Module, entropy_conditioning: Optional[bool] = False,
+                 randomized: Optional[bool] = False, num_classes: Optional[int] = -1,
+                 features_dim: Optional[int] = -1, randomized_dim: Optional[int] = 1024,
+                 reduction: Optional[str] = 'mean'):
         super(ConditionalDomainAdversarialLoss, self).__init__()
         self.domain_discriminator = domain_discriminator
         self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
@@ -84,7 +87,7 @@ class ConditionalDomainAdversarialLoss(nn.Module):
             else F.binary_cross_entropy(input, target, reduction=reduction)
         self.domain_discriminator_accuracy = None
 
-    def forward(self, g_s, f_s, g_t, f_t):
+    def forward(self, g_s: torch.Tensor, f_s: torch.Tensor, g_t: torch.Tensor, f_t: torch.Tensor) -> torch.Tensor:
         f = torch.cat((f_s, f_t), dim=0)
         g = torch.cat((g_s, g_t), dim=0)
         g = F.softmax(g, dim=1).detach()
@@ -123,13 +126,13 @@ class RandomizedMultiLinearMap(nn.Module):
         - Outputs: (minibatch, output_dim)
     """
 
-    def __init__(self, features_dim, num_classes, output_dim=1024):
+    def __init__(self, features_dim: int, num_classes: int, output_dim: Optional[int] = 1024):
         super(RandomizedMultiLinearMap, self).__init__()
         self.Rf = torch.randn(features_dim, output_dim)
         self.Rg = torch.randn(num_classes, output_dim)
         self.output_dim = output_dim
 
-    def forward(self, f, g):
+    def forward(self, f: torch.Tensor, g: torch.Tensor) -> torch.Tensor:
         f = torch.mm(self.Rf, f)
         g = torch.mm(self.Rg, g)
         output = torch.mul(f, g) / np.sqrt(float(self.output_dim))
@@ -148,20 +151,20 @@ class MultiLinearMap(nn.Module):
     def __init__(self):
         super(MultiLinearMap, self).__init__()
 
-    def forward(self, f, g):
+    def forward(self, f: torch.Tensor, g: torch.Tensor) -> torch.Tensor:
         batch_size = f.size(0)
         output = torch.bmm(g.unsqueeze(2), f.unsqueeze(1))
         return output.view(batch_size, -1)
 
 
-def entropy(predictions):
+def entropy(predictions: torch.Tensor) -> torch.Tensor:
     epsilon = 1e-5
     H = -predictions * torch.log(predictions + epsilon)
     return H.sum(dim=1)
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),

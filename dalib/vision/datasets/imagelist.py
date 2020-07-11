@@ -1,4 +1,5 @@
 import os
+from typing import Optional, Callable, Tuple, Any, List
 import torchvision.datasets as datasets
 from torchvision.datasets.folder import default_loader
 
@@ -8,7 +9,7 @@ class ImageList(datasets.VisionDataset):
 
     Parameters:
         - **root** (str): Root directory of dataset
-        - **num_classes** (int): Number of classes
+        - **classes** (List[str]): The names of all the classes
         - **data_list_file** (str): File to read the image list from.
         - **transform** (callable, optional): A function/transform that  takes in an PIL image \
             and returns a transformed version. E.g, ``transforms.RandomCrop``.
@@ -25,19 +26,23 @@ class ImageList(datasets.VisionDataset):
         If your data_list_file has different formats, please over-ride `parse_data_file`.
     """
 
-    def __init__(self, root, num_classes, data_list_file, transform=None, target_transform=None):
+    def __init__(self, root: str, classes: List[str], data_list_file: str,
+                 transform: Optional[Callable] = None, target_transform: Optional[Callable] = None):
         super().__init__(root, transform=transform, target_transform=target_transform)
-        self._num_classes = num_classes
-        self.data_list = self.parse_data_file(data_list_file)
+        self.data = self.parse_data_file(data_list_file)
+        self.classes = classes
+        self.class_to_idx = {cls: idx
+                             for idx, clss in enumerate(self.classes)
+                             for cls in clss}
         self.loader = default_loader
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[Any, int]:
         """
         Parameters:
             - **index** (int): Index
             - **return** (tuple): (image, target) where target is index of the target class.
         """
-        path, target = self.data_list[index]
+        path, target = self.data[index]
         img = self.loader(path)
         if self.transform is not None:
             img = self.transform(img)
@@ -45,10 +50,10 @@ class ImageList(datasets.VisionDataset):
             target = self.target_transform(target)
         return img, target
 
-    def __len__(self):
-        return len(self.data_list)
+    def __len__(self) -> int:
+        return len(self.data)
 
-    def parse_data_file(self, file_name):
+    def parse_data_file(self, file_name: str) -> List[Tuple[str, int]]:
         """Parse file to data list
 
         Parameters:
@@ -66,6 +71,6 @@ class ImageList(datasets.VisionDataset):
         return data_list
 
     @property
-    def num_classes(self):
+    def num_classes(self) -> int:
         """Number of classes"""
-        return self._num_classes
+        return len(self.classes)

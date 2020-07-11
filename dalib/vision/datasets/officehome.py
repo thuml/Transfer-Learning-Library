@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from .imagelist import ImageList
 from ._util import download as download_data, check_exits
 
@@ -51,7 +52,7 @@ class OfficeHome(ImageList):
                'Calendar', 'Calculator', 'Flowers', 'Lamp_Shade', 'Spoon', 'Candles', 'Clipboards', 'Scissors', 'TV',
                'Curtains', 'Fork', 'Soda', 'Table', 'Knives', 'Oven', 'Refrigerator', 'Marker']
 
-    def __init__(self, root, task, download=False, **kwargs):
+    def __init__(self, root: str, task: str, download: Optional[bool] = False, **kwargs):
         assert task in self.image_list
         data_list_file = os.path.join(root, self.image_list[task])
 
@@ -60,4 +61,4 @@ class OfficeHome(ImageList):
         else:
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
-        super(OfficeHome, self).__init__(root, num_classes=65, data_list_file=data_list_file, **kwargs)
+        super(OfficeHome, self).__init__(root, OfficeHome.CLASSES, data_list_file=data_list_file, **kwargs)

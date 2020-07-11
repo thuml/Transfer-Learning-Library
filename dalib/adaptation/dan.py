@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 import torch
 import torch.nn as nn
 from dalib.modules.classifier import Classifier as ClassifierBase
@@ -64,14 +65,15 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         >>> output = loss(z_s, z_t)
     """
 
-    def __init__(self, kernels, linear=False, quadratic_program=False):
+    def __init__(self, kernels: Sequence[nn.Module], linear: Optional[bool] = False,
+                 quadratic_program: Optional[bool] = False):
         super(MultipleKernelMaximumMeanDiscrepancy, self).__init__()
         self.kernels = kernels
         self.index_matrix = None
         self.linear = linear
         self.quadratic_program = quadratic_program
 
-    def forward(self, z_s, z_t):
+    def forward(self, z_s: torch.Tensor, z_t: torch.Tensor) -> torch.Tensor:
         features = torch.cat([z_s, z_t], dim=0)
         batch_size = int(z_s.size(0))
         self.index_matrix = _update_index_matrix(batch_size, self.index_matrix, self.linear).to(z_s.device)
@@ -87,7 +89,8 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         return loss
 
 
-def _update_index_matrix(batch_size, index_matrix=None, linear=True):
+def _update_index_matrix(batch_size: int, index_matrix: Optional[torch.Tensor] = None,
+                         linear: Optional[bool] = True) -> torch.Tensor:
     r"""
     Update the `index_matrix` which convert `kernel_matrix` to loss.
     If `index_matrix` is a tensor with shape (2 x batch_size, 2 x batch_size), then return `index_matrix`.
@@ -117,7 +120,7 @@ def _update_index_matrix(batch_size, index_matrix=None, linear=True):
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone, num_classes, bottleneck_dim=256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.ReLU(),

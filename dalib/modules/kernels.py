@@ -1,3 +1,4 @@
+from typing import Optional, List
 import torch
 import torch.nn as nn
 from numpy import array, dot
@@ -43,14 +44,15 @@ class GaussianKernel(nn.Module):
         - Outputs: :math:`(minibatch, minibatch)`
     """
 
-    def __init__(self, sigma=None, track_running_stats=True, alpha=1.):
+    def __init__(self, sigma: Optional[float] = None, track_running_stats: Optional[bool] = True,
+                 alpha: Optional[float] = 1.):
         super(GaussianKernel, self).__init__()
         assert track_running_stats or sigma is not None
         self.sigma_square = torch.tensor(sigma * sigma) if sigma is not None else None
         self.track_running_stats = track_running_stats
         self.alpha = alpha
 
-    def forward(self, X):
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
         l2_distance_square = ((X.unsqueeze(0) - X.unsqueeze(1)) ** 2).sum(2)
 
         if self.track_running_stats:
@@ -59,7 +61,7 @@ class GaussianKernel(nn.Module):
         return torch.exp(-l2_distance_square / (2 * self.sigma_square))
 
 
-def optimal_kernel_combinations(kernel_values):
+def optimal_kernel_combinations(kernel_values: List[torch.Tensor]) -> torch.Tensor:
     # use quadratic program to get optimal kernel
     num_kernel = len(kernel_values)
     kernel_values_numpy = array([float(k.detach().cpu().data.item()) for k in kernel_values])

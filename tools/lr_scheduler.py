@@ -1,4 +1,5 @@
-
+from typing import Optional
+from torch.optim.optimizer import Optimizer
 
 class StepwiseLR:
     """
@@ -15,14 +16,15 @@ class StepwiseLR:
         - **gamma** (float, optional): :math:`\gamma`. Default: 0.001
         - **decay_rate** (float, optional): :math:`p` . Default: 0.75
     """
-    def __init__(self, optimizer, init_lr=0.01, gamma=0.001, decay_rate=0.75):
+    def __init__(self, optimizer: Optimizer, init_lr: Optional[float] = 0.01,
+                 gamma: Optional[float] = 0.001, decay_rate: Optional[float] = 0.75):
         self.init_lr = init_lr
         self.gamma = gamma
         self.decay_rate = decay_rate
         self.optimizer = optimizer
         self.iter_num = 0
 
-    def get_lr(self):
+    def get_lr(self) -> float:
         lr = self.init_lr * (1 + self.gamma * self.iter_num) ** (-self.decay_rate)
         return lr
 

@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -52,19 +53,19 @@ class MarginDisparityDiscrepancy(nn.Module):
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
     """
 
-    def __init__(self, margin=4, reduction='mean'):
+    def __init__(self, margin: Optional[int] = 4, reduction: Optional[str] = 'mean'):
         super(MarginDisparityDiscrepancy, self).__init__()
         self.margin = margin
         self.reduction = reduction
 
-    def forward(self, y_s, y_s_adv, y_t, y_t_adv):
+    def forward(self, y_s: torch.Tensor, y_s_adv: torch.Tensor, y_t: torch.Tensor, y_t_adv: torch.Tensor) -> torch.Tensor:
         _, prediction_s = y_s.max(dim=1)
         _, prediction_t = y_t.max(dim=1)
         return self.margin * F.cross_entropy(y_s_adv, prediction_s, reduction=self.reduction) \
                + F.nll_loss(shift_log(1. - F.softmax(y_t_adv, dim=1)), prediction_t, reduction=self.reduction)
 
 
-def shift_log(x, offset=1e-6):
+def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
     r"""
     First shift, then calculate log, which can be described as:
 
@@ -116,7 +117,8 @@ class ImageClassifier(nn.Module):
 
     """
 
-    def __init__(self, backbone, num_classes, bottleneck_dim=1024, width=1024):
+    def __init__(self, backbone: nn.Module, num_classes: int,
+                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024):
         super(ImageClassifier, self).__init__()
         self.backbone = backbone
         self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=False)
@@ -150,7 +152,7 @@ class ImageClassifier(nn.Module):
             self.adv_head[dep * 3].weight.data.normal_(0, 0.01)
             self.adv_head[dep * 3].bias.data.fill_(0.0)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         features = self.backbone(x)
         features = self.bottleneck(features)
         outputs = self.head(features)
@@ -164,7 +166,7 @@ class ImageClassifier(nn.Module):
         """
         self.grl_layer.step()
 
-    def get_parameters(self):
+    def get_parameters(self) -> List[Dict]:
         """
         :return: A parameters list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer

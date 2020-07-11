@@ -1,9 +1,9 @@
+from typing import Optional, List, Dict
 import torch.nn as nn
 import torch
 
 
-def classifier_discrepancy(predictions1, predictions2):
-    # type: (Tensor, Tensor) -> Tensor
+def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tensor) -> torch.Tensor:
     r"""The `Classifier Discrepancy` in `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation <https://arxiv.org/abs/1712.02560>`_.
     The classfier discrepancy between predictions :math:`p_1` and :math:`p_2` can be described as:
 
@@ -19,8 +19,7 @@ def classifier_discrepancy(predictions1, predictions2):
     return torch.mean(torch.abs(predictions1 - predictions2))
 
 
-def entropy(predictions):
-    # type: (Tensor) -> Tensor
+def entropy(predictions: torch.Tensor) -> torch.Tensor:
     r"""Entropy of N predictions :math:`(p_1, p_2, ..., p_N)`.
     The definition is:
 
@@ -47,7 +46,7 @@ class ImageClassifierHead(nn.Module):
         - Output: :math:`(minibatch, C)` where C = `num_classes`.
     """
 
-    def __init__(self, in_features, num_classes, bottleneck_dim=1024):
+    def __init__(self, in_features: int, num_classes: int, bottleneck_dim: Optional[int] = 1024):
         super(ImageClassifierHead, self).__init__()
         self.head = nn.Sequential(
             nn.Dropout(0.5),
@@ -61,10 +60,10 @@ class ImageClassifierHead(nn.Module):
             nn.Linear(bottleneck_dim, num_classes)
         )
 
-    def forward(self, inputs):
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.head(inputs)
 
-    def get_parameters(self):
+    def get_parameters(self) -> List[Dict]:
         """
         :return: A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer

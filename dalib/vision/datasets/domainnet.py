@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from .imagelist import ImageList
 from ._util import download as download_data, check_exits
 
@@ -87,7 +88,7 @@ class DomainNet(ImageList):
                'umbrella', 'underwear', 'van', 'vase', 'violin', 'washing_machine', 'watermelon', 'waterslide',
                'whale', 'wheel', 'windmill', 'wine_bottle', 'wine_glass', 'wristwatch', 'yoga', 'zebra', 'zigzag']
 
-    def __init__(self, root, task, evaluate=False, download=False, **kwargs):
+    def __init__(self, root: str, task: str, evaluate: Optional[bool] = False, download: Optional[float] = False, **kwargs):
         assert task in self.image_list
         phase = "test" if evaluate else "train"
         data_list_file = os.path.join(root, "image_list", "{}_{}.txt".format(self.image_list[task], phase))
@@ -98,4 +99,4 @@ class DomainNet(ImageList):
         else:
             list(map(lambda args: check_exits(root, args[0]), self.download_list))
 
-        super(DomainNet, self).__init__(root, num_classes=345, data_list_file=data_list_file, **kwargs)
+        super(DomainNet, self).__init__(root, DomainNet.CLASSES, data_list_file=data_list_file, **kwargs)

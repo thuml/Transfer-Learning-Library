@@ -37,7 +37,7 @@ class ResNet(models.ResNet):
         return x
 
     @property
-    def out_features(self):
+    def out_features(self) -> int:
         """The dimension of output features"""
         return self._out_features
 

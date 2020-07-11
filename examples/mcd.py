@@ -4,11 +4,14 @@ import warnings
 import sys
 import argparse
 import copy
+from typing import Tuple
 
 import torch
+import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
+from torch.optim import SGD
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
@@ -16,20 +19,17 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 
 sys.path.append('.')
-
 from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-
 from tools.utils import AverageMeter, ProgressMeter, accuracy, create_exp_dir, ForeverDataIterator
 from tools.transforms import ResizeImage
-from tools.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(args):
+def main(args: argparse.Namespace):
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -95,8 +95,8 @@ def main(args):
 
     # define optimizer
     # the learning rate is fixed according to origin paper
-    optimizer_g = torch.optim.SGD(G.parameters(), lr=args.lr, weight_decay=0.0005)
-    optimizer_f = torch.optim.SGD(F1.get_parameters()+F2.get_parameters(), momentum=0.9, lr=args.lr, weight_decay=0.0005)
+    optimizer_g = SGD(G.parameters(), lr=args.lr, weight_decay=0.0005)
+    optimizer_f = SGD(F1.get_parameters()+F2.get_parameters(), momentum=0.9, lr=args.lr, weight_decay=0.0005)
 
     # start training
     best_acc1 = 0.
@@ -124,7 +124,9 @@ def main(args):
     print("test_acc1 = {:3.1f}".format(max(results)))
 
 
-def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimizer_f, epoch, args):
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
+          G: nn.Module, F1: ImageClassifierHead, F2: ImageClassifierHead,
+          optimizer_g: SGD, optimizer_f: SGD, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -218,7 +220,8 @@ def train(train_source_iter, train_target_iter, G, F1, F2, optimizer_g, optimize
             progress.display(i)
 
 
-def validate(val_loader, G, F1, F2, args):
+def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
+             F2: ImageClassifierHead, args: argparse.Namespace) -> Tuple[float, float]:
     batch_time = AverageMeter('Time', ':6.3f')
     top1_1 = AverageMeter('Acc_1', ':6.2f')
     top1_2 = AverageMeter('Acc_2', ':6.2f')
