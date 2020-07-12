@@ -32,8 +32,7 @@ class ImageList(datasets.VisionDataset):
         self.data = self.parse_data_file(data_list_file)
         self.classes = classes
         self.class_to_idx = {cls: idx
-                             for idx, clss in enumerate(self.classes)
-                             for cls in clss}
+                             for idx, cls in enumerate(self.classes)}
         self.loader = default_loader
 
     def __getitem__(self, index: int) -> Tuple[Any, int]:

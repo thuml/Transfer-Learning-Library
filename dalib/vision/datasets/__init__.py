@@ -4,5 +4,6 @@ from .officehome import OfficeHome
 from .visda2017 import VisDA2017
 from .officecaltech import OfficeCaltech
 from .domainnet import DomainNet
+from .partialda import PartialOffice31
 
-__all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet"]
+__all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "PartialOffice31"]
