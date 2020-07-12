@@ -29,7 +29,7 @@ class ImageList(datasets.VisionDataset):
     def __init__(self, root: str, classes: List[str], data_list_file: str,
                  transform: Optional[Callable] = None, target_transform: Optional[Callable] = None):
         super().__init__(root, transform=transform, target_transform=target_transform)
-        self.data = self.parse_data_file(data_list_file)
+        self.samples = self.parse_data_file(data_list_file)
         self.classes = classes
         self.class_to_idx = {cls: idx
                              for idx, cls in enumerate(self.classes)}
@@ -41,7 +41,7 @@ class ImageList(datasets.VisionDataset):
             - **index** (int): Index
             - **return** (tuple): (image, target) where target is index of the target class.
         """
-        path, target = self.data[index]
+        path, target = self.samples[index]
         img = self.loader(path)
         if self.transform is not None:
             img = self.transform(img)
@@ -50,7 +50,7 @@ class ImageList(datasets.VisionDataset):
         return img, target
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.samples)
 
     def parse_data_file(self, file_name: str) -> List[Tuple[str, int]]:
         """Parse file to data list
