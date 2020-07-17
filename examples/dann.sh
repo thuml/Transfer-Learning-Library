@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Office31
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20  > benchmarks/dann/Office31_A2W.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s D -t W -a resnet50  --epochs 20  > benchmarks/dann/Office31_D2W.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s W -t D -a resnet50  --epochs 20  > benchmarks/dann/Office31_W2D.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s A -t D -a resnet50  --epochs 20  > benchmarks/dann/Office31_A2D.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s D -t A -a resnet50  --epochs 20  > benchmarks/dann/Office31_D2A.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s W -t A -a resnet50  --epochs 20  > benchmarks/dann/Office31_W2A.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_A2W.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s D -t W -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_D2W.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s W -t D -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_W2D.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s A -t D -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_A2D.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s D -t A -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_D2A.txt
+CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office31 -d Office31 -s W -t A -a resnet50  --epochs 20  --seed 1 > benchmarks/dann/Office31_W2A.txt
 
 # Office-Home
 CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --epochs 30 > benchmarks/dann/OfficeHome_Ar2Cl.txt

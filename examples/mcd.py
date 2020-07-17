@@ -120,7 +120,7 @@ def main(args: argparse.Namespace):
     G.load_state_dict(best_G)
     F1.load_state_dict(best_F1)
     F2.load_state_dict(best_F2)
-    results = validate(val_loader, G, F1, F2, args)
+    results = validate(test_loader, G, F1, F2, args)
     print("test_acc1 = {:3.1f}".format(max(results)))
 
 
@@ -301,7 +301,7 @@ if __name__ == '__main__':
                         help='how many steps to repeat the generator update')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 10)')
-    parser.add_argument('--seed', default=0, type=int,
+    parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
