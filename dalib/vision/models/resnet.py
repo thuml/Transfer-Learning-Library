@@ -2,9 +2,11 @@
 Modified based on torchvision.models.resnet.
 '''
 import torch
+import torch.nn as nn
 from torchvision import models
 from torchvision.models.utils import load_state_dict_from_url
 from torchvision.models.resnet import BasicBlock, Bottleneck, model_urls
+import copy
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -17,7 +19,6 @@ class ResNet(models.ResNet):
     def __init__(self, *args, **kwargs):
         super(ResNet, self).__init__(*args, **kwargs)
         self._out_features = self.fc.in_features
-        del self.fc
 
     def forward(self, x):
         """"""
@@ -40,6 +41,9 @@ class ResNet(models.ResNet):
     def out_features(self) -> int:
         """The dimension of output features"""
         return self._out_features
+
+    def copy_head(self) -> nn.Module:
+        return copy.deepcopy(self.fc)
 
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):

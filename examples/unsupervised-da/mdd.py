@@ -20,9 +20,11 @@ sys.path.append('.')
 from dalib.adaptation.mdd import MarginDisparityDiscrepancy, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
-from tools.transforms import ResizeImage
-from tools.lr_scheduler import StepwiseLR
+from dalib.vision.transforms import ResizeImage
+from dalib.utils.data import ForeverDataIterator
+from dalib.utils.metric import accuracy
+from dalib.utils.avgmeter import AverageMeter, ProgressMeter
+from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -76,7 +78,7 @@ def main(args: argparse.Namespace):
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_tranform)
+        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_tranform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
@@ -271,7 +273,7 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
-    parser.add_argument('--seed', default=0, type=int,
+    parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')

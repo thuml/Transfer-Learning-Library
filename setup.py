@@ -19,7 +19,7 @@ if __name__ == '__main__':
         long_description=open('README.md', encoding='utf8').read(),
         long_description_content_type="text/markdown",
         url="https://github.com/thuml/Domain-Adaptation-Lib",
-        packages=find_packages(exclude=['docs', 'examples', 'tools']),
+        packages=find_packages(exclude=['docs', 'examples']),
         classifiers=[
             # How mature is this project? Common values are
             #   3 - Alpha

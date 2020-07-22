@@ -33,8 +33,8 @@ class VisDA2017(ImageList):
         ("validation", "validation.tar", "http://csr.bu.edu/ftp/visda17/clf/validation.tar")
     ]
     image_list = {
-        "T": "image_list/train.txt",
-        "V": "image_list/validation.txt"
+        "Synthetic": "image_list/train.txt",
+        "Real": "image_list/validation.txt"
     }
     CLASSES = ['aeroplane', 'bicycle', 'bus', 'car', 'horse', 'knife',
                'motorcycle', 'person', 'plant', 'skateboard', 'train', 'truck']

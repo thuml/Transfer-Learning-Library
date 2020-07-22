@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Office31
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s D -t A -a resnet50  --epochs 20  > benchmarks/jan/Office31_D2A.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s W -t A -a resnet50  --epochs 20  > benchmarks/jan/Office31_W2A.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20  > benchmarks/jan/Office31_A2W.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s A -t D -a resnet50  --epochs 20  > benchmarks/jan/Office31_A2D.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s D -t W -a resnet50  --epochs 20  > benchmarks/jan/Office31_D2W.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office31 -d Office31 -s W -t D -a resnet50  --epochs 20  > benchmarks/jan/Office31_W2D.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s D -t A -a resnet50  --epochs 20  > benchmarks/jan/Office31_D2A.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s W -t A -a resnet50  --epochs 20  > benchmarks/jan/Office31_W2A.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20  > benchmarks/jan/Office31_A2W.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s A -t D -a resnet50  --epochs 20  > benchmarks/jan/Office31_A2D.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s D -t W -a resnet50  --epochs 20  > benchmarks/jan/Office31_D2W.txt
+CUDA_VISIBLE_DEVICES=0 python examples/unsupervised-da/jan.py data/office31 -d Office31 -s W -t D -a resnet50  --epochs 20  > benchmarks/jan/Office31_W2D.txt
 
 
 # Office-Home
@@ -23,8 +23,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/office-home -d OfficeHome -s 
 CUDA_VISIBLE_DEVICES=0 examples/jan.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50  --epochs 20 > benchmarks/jan/OfficeHome_Rw2Pr.txt
 
 # VisDA-2017
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet101  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017_resnet101.txt
-CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s T -t V -a resnet50  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017.txt
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017_resnet101.txt
+CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017.txt
 
 # DomainNet
 CUDA_VISIBLE_DEVICES=0 python examples/jan.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0

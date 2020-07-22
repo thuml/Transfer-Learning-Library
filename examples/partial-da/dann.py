@@ -16,13 +16,17 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 
 sys.path.append('.')
-from dalib.adaptation.dan import MultipleKernelMaximumMeanDiscrepancy, ImageClassifier
-from dalib.modules.kernels import GaussianKernel
+from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
+from dalib.modules.classifier import Classifier
 import dalib.vision.datasets as datasets
+from dalib.vision.datasets.partialda import default_partial as partial
 import dalib.vision.models as models
-from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
-from tools.transforms import ResizeImage
-from tools.lr_scheduler import StepwiseLR
+from dalib.vision.transforms import ResizeImage
+from dalib.utils.data import ForeverDataIterator
+from dalib.utils.metric import accuracy
+from dalib.utils.avgmeter import AverageMeter, ProgressMeter
+from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,16 +62,17 @@ def main(args: argparse.Namespace):
     ])
 
     dataset = datasets.__dict__[args.data]
+    partial_dataset = partial(dataset)
     train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
+    train_target_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_tranform)
+        test_dataset = partial_dataset(root=args.root, task=args.target, split='test', download=True, transform=val_tranform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
@@ -77,26 +82,29 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
-    classifier = ImageClassifier(backbone, num_classes).to(device)
+    backbone = models.__dict__[args.arch](pretrained=True)
+
+    if args.data == 'ImageNetCaltech':
+        classifier = Classifier(backbone, num_classes, head=backbone.copy_head()).to(device)
+    else:
+        classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_sheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.0003, decay_rate=0.75)
+    optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
+                    args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
 
     # define loss function
-    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(
-        kernels=[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
-        linear=not args.non_linear, quadratic_program=args.quadratic_program
-    )
+    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, mkmmd_loss, optimizer,
-              lr_sheduler, epoch, args)
+        train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
+              lr_scheduler, epoch, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
@@ -114,28 +122,27 @@ def main(args: argparse.Namespace):
     print("test_acc1 = {:3.1f}".format(acc1))
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          mkmmd_loss: MultipleKernelMaximumMeanDiscrepancy, optimizer: SGD,
-          lr_sheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':4.2f')
-    data_time = AverageMeter('Data', ':3.1f')
-    losses = AverageMeter('Loss', ':3.2f')
-    trans_losses = AverageMeter('Trans Loss', ':5.4f')
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
+          model: ImageClassifier, domain_adv: DomainAdversarialLoss, optimizer: SGD,
+          lr_scheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':5.2f')
+    data_time = AverageMeter('Data', ':5.2f')
+    losses = AverageMeter('Loss', ':6.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
-
+    domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
+        [batch_time, data_time, losses, cls_accs, tgt_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    mkmmd_loss.train()
+    domain_adv.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_sheduler.step()
+        lr_scheduler.step()
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -149,11 +156,14 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         labels_t = labels_t.to(device)
 
         # compute output
-        y_s, f_s = model(x_s)
-        y_t, f_t = model(x_t)
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = mkmmd_loss(f_s, f_t)
+        transfer_loss = domain_adv(f_s, f_t)
+        domain_acc = domain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, labels_s)[0]
@@ -161,8 +171,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_t.size(0))
-        trans_losses.update(transfer_loss.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_s.size(0))
+        domain_accs.update(domain_acc.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -201,7 +211,7 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1, acc5= accuracy(output, target, topk=(1, 5))
             losses.update(loss.item(), images.size(0))
             top1.update(acc1[0], images.size(0))
             top5.update(acc5[0], images.size(0))
@@ -247,27 +257,26 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-b', '--batch-size', default=32, type=int,
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.003, type=float,
+                        help='mini-batch size (default: 36)')
+    parser.add_argument('--lr', '--learning-rate', default=0.002, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
-                        metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('--wd', '--weight-decay',default=1e-3, type=float,
+                        metavar='W', help='weight decay (default: 1e-3)',
+                        dest='weight_decay')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
-    parser.add_argument('--seed', default=0, type=int,
+    parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
+    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('--non-linear', default=False, action='store_true',
-                        help='whether not use the linear version')
-    parser.add_argument('--quadratic-program', default=False, action='store_true',
-                        help='whether use quadratic program to solve beta')
+    parser.add_argument('--bottleneck-dim', default=256, type=int,
+                        help='Dimension of bottleneck')
 
     args = parser.parse_args()
     print(args)

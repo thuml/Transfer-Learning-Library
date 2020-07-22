@@ -13,7 +13,7 @@ class DomainNet(ImageList):
         - **root** (str): Root directory of dataset
         - **task** (str): The task (domain) to create dataset. Choices include ``'c'``:clipart, \
             ``'i'``: infograph, ``'p'``: painting, ``'q'``: quickdraw, ``'r'``: real, ``'s'``: sketch
-        - **evaluate** (bool, optional): If true, use the test set. Otherwise, use the training set. Default: False
+        - **split** (str, optional): The dataset split, supports ``train``, or ``test``.
         - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
         - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
@@ -88,10 +88,10 @@ class DomainNet(ImageList):
                'umbrella', 'underwear', 'van', 'vase', 'violin', 'washing_machine', 'watermelon', 'waterslide',
                'whale', 'wheel', 'windmill', 'wine_bottle', 'wine_glass', 'wristwatch', 'yoga', 'zebra', 'zigzag']
 
-    def __init__(self, root: str, task: str, evaluate: Optional[bool] = False, download: Optional[float] = False, **kwargs):
+    def __init__(self, root: str, task: str, split: Optional[str] = 'train', download: Optional[float] = False, **kwargs):
         assert task in self.image_list
-        phase = "test" if evaluate else "train"
-        data_list_file = os.path.join(root, "image_list", "{}_{}.txt".format(self.image_list[task], phase))
+        assert split in ['train', 'test']
+        data_list_file = os.path.join(root, "image_list", "{}_{}.txt".format(self.image_list[task], split))
         print("loading {}".format(data_list_file))
 
         if download:
