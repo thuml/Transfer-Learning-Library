@@ -1,3 +1,4 @@
 torch>=1.4.0
-torchvision
+torchvision>=0.5.0
 numpy
+qpsolvers>=1.4.0
