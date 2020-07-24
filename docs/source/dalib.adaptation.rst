@@ -117,29 +117,24 @@ Avg         50.2    21.6    44.3    56.6    41.4    42.8
 
 .. currentmodule:: dalib.adaptation
 
+
 DANN
 ----------------------------
-
 .. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
     :show-inheritance:
 
-
 DAN
-----
-
+----------------------------
 .. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
     :show-inheritance:
 
-
 JAN
----------------------------
+----------------------------
 .. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
     :show-inheritance:
 
-
 CDAN
 ----------------------------
-
 .. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
     :show-inheritance:
 
@@ -160,7 +155,6 @@ MCD
 
 MDD
 ----------------------------
-
 .. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancy
     :show-inheritance:
 

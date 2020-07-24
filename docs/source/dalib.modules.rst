@@ -24,3 +24,4 @@ Kernels
 ------------------------
 .. autoclass:: dalib.modules.kernels.GaussianKernel
     :show-inheritance:
+

@@ -42,3 +42,4 @@ DomainNet
 .. automodule:: dalib.vision.datasets.domainnet
    :members:
    :show-inheritance:
+
