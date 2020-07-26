@@ -1,25 +1,35 @@
-from typing import Union, List, Tuple, Any, Optional, ClassVar
+from typing import Sequence, ClassVar
 from torchvision.datasets import DatasetFolder
 from . import ImageList, Office31, OfficeHome, VisDA2017, ImageNetCaltech, CaltechImageNet, OfficeCaltech
-from ._util import read_list_from_file
 
 
-def partial(dataset_class: ClassVar, kept_classes: Union[List, str]) -> ClassVar:
+def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar:
+    """
+    Convert a dataset into its partial version.
+
+    In other words, those samples which doesn't belong to `partial_classes` will be discarded.
+    Yet `partial` will not change the label space of `dataset_class`.
+
+    Parameters:
+        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` and ``DatasetFolder`` can be partial.
+        - **partial_classes** (sequence[str]): A sequence of which categories need to be kept in the partial dataset.\
+            Each element of `partial_classes` must belong to the `classes` list of `dataset_class`.
+
+    Examples::
+
+    >>> partial_classes = ['back_pack', 'bike', 'calculator', 'headphones', 'keyboard']
+    >>> # create a partial dataset class
+    >>> PartialOffice31 = partial(Office31, partial_classes)
+    >>> # create an instance of the partial dataset
+    >>> dataset = PartialDataset(root="data/office31", task="A")
+
+    """
     if not (issubclass(dataset_class, ImageList) or issubclass(dataset_class, DatasetFolder)):
         raise Exception("Only subclass of ImageList or DatasetFolder can be partial")
-
-    if isinstance(kept_classes, str):
-        kept_classes = read_list_from_file(kept_classes)
 
     class PartialDataset(dataset_class):
         def __init__(self, **kwargs):
             super(PartialDataset, self).__init__(**kwargs)
-            partial_classes = []
-            for c in kept_classes:
-                if isinstance(c, int):
-                    partial_classes.append(self.classes[c])
-                else:
-                    partial_classes.append(c)
             assert all([c in self.classes for c in partial_classes])
             samples = []
             for (path, label) in self.samples:
@@ -28,12 +38,18 @@ def partial(dataset_class: ClassVar, kept_classes: Union[List, str]) -> ClassVar
                     samples.append((path, label))
             self.samples = samples
             self.partial_classes = partial_classes
-            self.partial_classes_idx = [self.class_to_idx[c] for c in partial_classes]
 
     return PartialDataset
 
 
 def default_partial(dataset_class: ClassVar) -> ClassVar:
+    """
+    Default partial used in some paper.
+
+    Parameters:
+        - **dataset_class** (class): Dataset class. Currently, dataset_class must be one of ``Office31``, ``OfficeHome``, ``VisDA2017``,\
+            ``ImageNetCaltech`` and ``CaltechImageNet``.
+    """
     if dataset_class == Office31:
         kept_classes = OfficeCaltech.CLASSES
     elif dataset_class == OfficeHome:

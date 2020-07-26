@@ -9,7 +9,8 @@ class VisDA2017(ImageList):
 
     Parameters:
         - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'T'``: training and ``'V'``: validation.
+        - **task** (str): The task (domain) to create dataset. Choices include ``'Synthetic'``: synthetic images and \
+            ``'Real'``: real-world images.
         - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
         - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \

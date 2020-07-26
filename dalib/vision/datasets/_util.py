@@ -36,6 +36,7 @@ def check_exits(root: str, file_name: str):
 
 
 def read_list_from_file(file_name: str) -> List[str]:
+    """Read data from file and convert each line into an element in the list"""
     result = []
     with open(file_name, "r") as f:
         for line in f.readlines():

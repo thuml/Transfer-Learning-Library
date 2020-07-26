@@ -1,11 +1,38 @@
+from typing import Optional, List, Tuple
+
 from torch.utils.data.dataloader import DataLoader
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from typing import Optional, List, Tuple
 
 
 class AutomaticUpdateClassWeightModule(object):
+    """
+    Calculating class weight based on the output of classifier. See ``ClassWeightModule`` about the details of the calculation.
+    Every N iterations, the class weight is updated automatically.
+
+    Parameters:
+        - **update_steps** (int): N, the number of iterations to update class weight.
+        - **data_loader** (DataLoader): The data loader from which we can collect classification outputs.
+        - **classifier** (nn.Module): Classifier.
+        - **num_classes** (int): Number of classes.
+        - **device** (torch.device): The device to run classifier.
+        - **temperature** (float, optional): T, temperature in ClassWeightModule. Default: 0.1
+        - **partial_classes_index** (list[int], optional): The index of partial classes. Note that this parameter is \
+            just for debugging, since in real-world dataset, we have no access to the index of partial classes. \
+            Default: None.
+
+    Examples::
+        >>> class_weight_module = AutomaticUpdateClassWeightModule(update_steps=500, ...)
+        >>> num_iterations = 10000
+        >>> for _ in range(num_iterations):
+        >>>     class_weight_module.step()
+        >>>     # weight for F.cross_entropy
+        >>>     w_c = class_weight_module.get_class_weight_for_cross_entropy_loss()
+        >>>     # weight for dalib.addaptation.dann.DomainAdversarialLoss
+        >>>     w_s, w_t = class_weight_module.get_class_weight_for_adversarial_loss()
+    """
+
     def __init__(self, update_steps: int, data_loader: DataLoader,
                  classifier: nn.Module, num_classes: int,
                  device: torch.device, temperature: Optional[float] = 0.1,
@@ -26,23 +53,68 @@ class AutomaticUpdateClassWeightModule(object):
         if self.num_steps % self.update_steps == 0:
             all_outputs = collect_classification_results(self.data_loader, self.classifier, self.device)
             self.class_weight = self.class_weight_module(all_outputs)
-            print("class weight", self.class_weight)
 
     def get_class_weight_for_cross_entropy_loss(self):
+        """
+        Outputs:
+            - w_c: weight for F.cross_entropy
+
+        Shape:
+            - w_c: :math:`(C, )` where C means the number of classes.
+        """
         return self.class_weight
 
     def get_class_weight_for_adversarial_loss(self, source_labels: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Outputs: (w_s, w_t)
+            - w_s: source weight for dalib.addaptation.dann.DomainAdversarialLoss
+            - w_t: target weight for dalib.addaptation.dann.DomainAdversarialLoss
+
+        Shape:
+            - w_s: :math:`(minibatch, )`
+            - w_t: :math:`(minibatch, )`
+        """
         class_weight_adv_source = self.class_weight[source_labels]
         class_weight_adv_target = torch.ones_like(class_weight_adv_source) * class_weight_adv_source.mean()
-        # class_weight_adv = class_weight_adv / torch.max(class_weight_adv)
         return class_weight_adv_source, class_weight_adv_target
 
     def get_partial_classes_weight(self):
+        """
+        Get class weight averaged on the partial classes and non-partial classes respectively.
+        Note that this function is just for debugging, since in real-world dataset, we have no access to the index of \
+        partial classes and this function will throw an error when `partial_classes_index` is None.
+        """
         assert self.partial_classes_index is not None
-        return torch.mean(self.class_weight[self.partial_classes_index]), torch.mean(self.class_weight[self.non_partial_classes_index])
+        return torch.mean(self.class_weight[self.partial_classes_index]), torch.mean(
+            self.class_weight[self.non_partial_classes_index])
 
 
 class ClassWeightModule(nn.Module):
+    """
+    Calculating class weight based on the output of classifier.
+    Introduced by `"Partial Adversarial Domain Adaptation" <https://arxiv.org/abs/1808.04205>`_
+
+    Given classification logits outputs :math:`\{\hat{y}_i\}_{i=1}^n`, where :math:`n` is the dataset size,
+    the weight indicating the contribution of each class to the training can be calculated as
+    follows
+
+    .. math::
+        \mathcal{\gamma} = \dfrac{1}{n} \sum_{i=1}^{n}softmax( \hat{y}_i / T),
+
+    where :math:`\mathcal{\gamma}` is a :math:`|\mathcal{C}|`-dimensional weight vector quantifying the contribution
+    of each class and T is a hyper-parameters called temperature.
+
+    In practice, it's possible that some of the weights are very small, thus, we normalize weight :math:`\mathcal{\gamma}`
+    by dividing its largest element, i.e. :math:`\mathcal{\gamma} \leftarrow \mathcal{\gamma} / max(\mathcal{\gamma})`
+
+    Parameters:
+        - **temperature** (float, optional): T. Default: 0.1
+
+    Shape:
+        - Inputs: (minibatch, :math:`|\mathcal{C}|`)
+        - Outputs: (:math:`|\mathcal{C}|`,)
+    """
+
     def __init__(self, temperature: Optional[float] = 0.1):
         super(ClassWeightModule, self).__init__()
         self.temperature = temperature
@@ -58,6 +130,7 @@ class ClassWeightModule(nn.Module):
 
 def collect_classification_results(data_loader: DataLoader, classifier: nn.Module,
                                    device: torch.device) -> torch.Tensor:
+    """Fetch data from `data_loader`, and then use `classifier` to collect classification results"""
     classifier.eval()
     all_outputs = []
     with torch.no_grad():

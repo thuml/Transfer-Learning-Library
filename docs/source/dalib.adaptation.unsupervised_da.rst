@@ -1,5 +1,5 @@
-DALIB Algorithms
-===================================
+Unsupervised Domain Adaptation Algorithms
+===============================================
 
 The adaptation subpackage contains definitions for the following domain adaptation algorithms:
 
@@ -168,3 +168,4 @@ MDD
     :show-inheritance:
 
 .. autofunction:: dalib.adaptation.mdd.shift_log
+
