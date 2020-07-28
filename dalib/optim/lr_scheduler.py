@@ -3,7 +3,7 @@ from torch.optim.optimizer import Optimizer
 
 
 class StepwiseLR:
-    """
+    r"""
     A lr_scheduler that update learning rate using the following schedule:
 
     .. math::
