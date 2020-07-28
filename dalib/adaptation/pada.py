@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class AutomaticUpdateClassWeightModule(object):
-    """
+    r"""
     Calculating class weight based on the output of classifier. See ``ClassWeightModule`` about the details of the calculation.
     Every N iterations, the class weight is updated automatically.
 

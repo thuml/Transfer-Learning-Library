@@ -20,33 +20,15 @@ import torch.nn.functional as F
 sys.path.append('.')
 from dalib.modules.classifier import Classifier
 import dalib.vision.datasets as datasets
-from dalib.vision.datasets.opensetda import default_openset as openset
+from dalib.vision.datasets.opensetda import default_open_set as open_set
 import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy, partial_accuracy
+from dalib.utils.metric import accuracy
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter, ClassWiseAccuracyMeter
 from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class ImageClassifier(Classifier):
-    def __init__(self, backbone: nn.Module, num_classes: int):
-        super(ImageClassifier, self).__init__(backbone, num_classes)
-
-    def get_parameters(self) -> List[Dict]:
-        """A parameter list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
-        """
-        params = [
-            {"params": self.backbone.parameters(), "lr_mult": 0.},
-            {"params": self.bottleneck.parameters(), "lr_mult": 1.},
-            {"params": self.head.parameters(), "lr_mult": 1.},
-        ]
-        return params
-
 
 
 def main(args: argparse.Namespace):
@@ -79,8 +61,8 @@ def main(args: argparse.Namespace):
     ])
 
     dataset = datasets.__dict__[args.data]
-    source_dataset = openset(dataset, source=True)
-    target_dataset = openset(dataset, source=False)
+    source_dataset = open_set(dataset, source=True)
+    target_dataset = open_set(dataset, source=False)
     train_source_dataset = source_dataset(root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -97,8 +79,8 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    num_classes = train_source_dataset.num_classes + 1
-    classifier = ImageClassifier(backbone, num_classes).to(device)
+    num_classes = train_source_dataset.num_classes
+    classifier = Classifier(backbone, num_classes).to(device)
     print(val_dataset.classes)
     print(len(val_dataset.classes))
     # define optimizer and lr scheduler
@@ -212,11 +194,13 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
                 progress.display(i)
 
         all_acc = accuracy_meter.average_accuracy(classes)
-        print(' * All {all:.3f} Known {known:.3f} Unknown {unknown:.3f}'
-                .format(all=all_acc, known=accuracy_meter.average_accuracy(classes[:-1]),
-                        unknown=accuracy_meter.accuracy(classes[-1])))
+        known = accuracy_meter.average_accuracy(classes[:-1])
+        unknown = accuracy_meter.accuracy(classes[-1])
+        h_score = 2 * known * unknown / (known + unknown)
+        print(' * All {all:.3f} Known {known:.3f} Unknown {unknown:.3f} H-score {h_score:.3f}'
+                .format(all=all_acc, known=known, unknown=unknown, h_score=h_score))
 
-    return all_acc
+    return h_score
 
 
 if __name__ == '__main__':
@@ -247,9 +231,9 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-b', '--batch-size', default=36, type=int,
+    parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 36)')
+                        help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -262,7 +246,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('--threshold', default=0.5, type=float,
+    parser.add_argument('--threshold', default=0.8, type=float,
                         help='When class confidence is less than the given threshold, '
                              'model will output "unknown" (default: 0.5)')
     args = parser.parse_args()

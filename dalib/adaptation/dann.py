@@ -27,6 +27,7 @@ class DomainAdversarialLoss(nn.Module):
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
           elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+        - **grl** (WarmStartGradientReverseLayer, optional): Default: None.
 
     Inputs: f_s, f_t
         - **f_s** (tensor): feature representations on source domain, :math:`f^s`
@@ -45,9 +46,10 @@ class DomainAdversarialLoss(nn.Module):
         >>> output = loss(f_s, f_t)
     """
 
-    def __init__(self, domain_discriminator: nn.Module, reduction: Optional[str] = 'mean'):
+    def __init__(self, domain_discriminator: nn.Module, reduction: Optional[str] = 'mean',
+                 grl: Optional[WarmStartGradientReverseLayer] = None):
         super(DomainAdversarialLoss, self).__init__()
-        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
+        self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True) if grl is None else grl
         self.domain_discriminator = domain_discriminator
         self.bce = lambda input, target, weight: \
             F.binary_cross_entropy(input, target, weight=weight, reduction=reduction)

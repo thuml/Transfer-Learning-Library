@@ -22,7 +22,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/office-home -d Of
 CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 5 --seed 0 > benchmarks/partial_dann/OfficeHome_Rw2Pr.txt
 
 # VisDA-2017
-CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --epochs 30 --seed 0 > benchmarks/partial_dann/VisDA2017_S2R.txt
+CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --epochs 5 --seed 0 > benchmarks/partial_dann/VisDA2017_S2R.txt
+CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/visda-2017 -d VisDA2017 -s Real -t Synthetic -a resnet50 --epochs 5 --seed 0 > benchmarks/partial_dann/VisDA2017_R2S.txt
 
 # ImageNet-Caltech
 CUDA_VISIBLE_DEVICES=0 python examples/partial-da/dann.py data/ImageNetCaltech -d ImageNetCaltech -s I -t C -a resnet50  --epochs 5 --seed 0 > benchmarks/partial_dann/I2C.txt

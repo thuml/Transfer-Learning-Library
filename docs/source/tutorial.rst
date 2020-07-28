@@ -88,6 +88,11 @@ If you want to implement your own datasets, you can inherit class from `torchvis
 
 After constructing `Office31PDA` you can use the same data loading code as described above.
 
+.. note::
+    We provide a function (refer to `dalib.vision.datasets.partialda.partial`) to convert a Dataset class into its
+    partial version.
+    The above is just an example on how to build your dataset.
+
 -----------------------------------------
 Parepare models and adaptation algorithms
 -----------------------------------------

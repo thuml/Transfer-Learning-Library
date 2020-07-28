@@ -1,4 +1,4 @@
-Vision Datasets
+dalib.vision.datasets
 =============================
 
 ImageList

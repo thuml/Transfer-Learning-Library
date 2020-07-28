@@ -43,6 +43,7 @@ class ResNet(models.ResNet):
         return self._out_features
 
     def copy_head(self) -> nn.Module:
+        """Copy the origin fully connected layer"""
         return copy.deepcopy(self.fc)
 
 

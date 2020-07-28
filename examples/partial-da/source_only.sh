@@ -23,6 +23,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/partial-da/source_only.py data/office-hom
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples/partial-da/source_only.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50  --epochs 10 -i 500 --seed 0 > benchmarks/partial_source_only/VisDA2017_S2R.txt
+CUDA_VISIBLE_DEVICES=0 python examples/partial-da/source_only.py data/visda-2017 -d VisDA2017 -s Real -t Synthetic -a resnet50  --epochs 10 -i 500 --seed 0 > benchmarks/partial_source_only/VisDA2017_R2S.txt
 
 # ImageNet-Caltech
 CUDA_VISIBLE_DEVICES=0 python examples/partial-da/source_only.py data/ImageNetCaltech -d ImageNetCaltech -s I -t C -a resnet50  --epochs 20 --seed 0 -i 2000 > benchmarks/partial_source_only/I2C.txt

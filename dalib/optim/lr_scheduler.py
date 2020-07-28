@@ -1,12 +1,13 @@
 from typing import Optional
 from torch.optim.optimizer import Optimizer
 
+
 class StepwiseLR:
     """
     A lr_scheduler that update learning rate using the following schedule:
 
     .. math::
-        \text{lr} = \text{init_lr} \times \text{lr_mult} \times (1+\gamma i)^{-p},
+        lr = \\text{init_lr} \\times \\text{lr_mult} \\times (1+\gamma i)^{-p},
 
     where `i` is the iteration steps.
 
@@ -25,6 +26,7 @@ class StepwiseLR:
         self.iter_num = 0
 
     def get_lr(self) -> float:
+        """Get current learning rate"""
         lr = self.init_lr * (1 + self.gamma * self.iter_num) ** (-self.decay_rate)
         return lr
 
