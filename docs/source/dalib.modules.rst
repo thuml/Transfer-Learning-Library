@@ -1,4 +1,4 @@
-Basic Modules
+dalib.modules
 =====================
 
 
@@ -24,3 +24,4 @@ Kernels
 ------------------------
 .. autoclass:: dalib.modules.kernels.GaussianKernel
     :show-inheritance:
+

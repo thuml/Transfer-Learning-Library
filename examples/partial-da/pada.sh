@@ -23,7 +23,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/partial-da/pada.py data/office-home -d Of
 
 
 # VisDA-2017
-CUDA_VISIBLE_DEVICES=0 python examples/partial-da/pada.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --epochs 20 --seed 0 --lr 0.001 --temperature 0.1 -u 2000 -i 2000 > benchmarks/pada/VisDA2017_S2R.txt
+CUDA_VISIBLE_DEVICES=0 python examples/partial-da/pada.py data/visda-2017 -d VisDA2017 -s Real -t Synthetic -a resnet50 --epochs 20 --seed 0 --temperature 0.1 -u 500 -i 500 -w 2000 --center-crop > benchmarks/pada/VisDA2017_R2S.txt
+CUDA_VISIBLE_DEVICES=0 python examples/partial-da/pada.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --epochs 20 --seed 0 --temperature 0.1 -u 500 -i 500 -w 2000 --center-crop --trade-off 0.4 > benchmarks/pada/VisDA2017_S2R.txt
 
 # ImageNet-Caltech
 CUDA_VISIBLE_DEVICES=0 python examples/partial-da/pada.py data/ImageNetCaltech -d ImageNetCaltech -s I -t C -a resnet50  --epochs 20 --seed 0 --lr 0.003 --temperature 0.01 -u 2000 -i 2000 > benchmarks/pada/I2C.txt

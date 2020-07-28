@@ -1,7 +1,7 @@
 from typing import Optional, ClassVar, Sequence
 from copy import deepcopy
 from torchvision.datasets import DatasetFolder
-from . import ImageList, Office31, OfficeHome, VisDA2017, OfficeCaltech
+from . import ImageList, Office31, OfficeHome, VisDA2017, OfficeCaltech, ImageNetCaltech, CaltechImageNet, ImageNetCaltechUniversal, CaltechImageNetUniversal
 
 
 def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
@@ -68,6 +68,12 @@ def default_open_set(dataset_class: ClassVar, source: bool) -> ClassVar:
             private_classes = ()
         else:
             private_classes = Office31.CLASSES[20:]
+    elif dataset_class == OfficeHome:
+        public_classes = sorted(OfficeHome.CLASSES)[:25]
+        if source:
+            private_classes = ()
+        else:
+            private_classes = sorted(OfficeHome.CLASSES)[25:]
     elif dataset_class == VisDA2017:
         public_classes = ('bicycle', 'bus', 'car', 'motorcycle', 'train', 'truck')
         if source:

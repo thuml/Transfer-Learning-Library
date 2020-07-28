@@ -1,4 +1,4 @@
-Unsupervised Domain Adaptation Algorithms
+Unsupervised Domain Adaptation
 ===============================================
 
 The adaptation subpackage contains definitions for the following domain adaptation algorithms:
@@ -8,15 +8,17 @@ The adaptation subpackage contains definitions for the following domain adaptati
 -  `JAN`_
 -  `CDAN`_
 -  `MCD`_
--  `AFN`_
 -  `MDD`_
 
-Besides specific algorithms, this package also provides a recommended image classifier for each algorithms.
+-----------
+Benchmarks
+-----------
 
 We provide benchmarks of different domain adaptation algorithms on *Office-31*, *Office-Home* and *VisDA-2017* as follows.
 Note that `Origin` means the accuracy reported by the original paper, while `Avg` is the accuracy reported by DALIB.
 
-*Office-31* accuracy on ResNet-50
+Office-31 accuracy on ResNet-50
+---------------------------------
 
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 Methods         Origin  Avg     A → W   D → W   W → D   A → D   D → A   W → A
@@ -29,7 +31,8 @@ MDD             88.9    89.2    94.1    98.5    100.0   93.0    76.4    73.0
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 
 
-*Office-Home* accuracy on ResNet-50
+Office-Home accuracy on ResNet-50
+-----------------------------------
 
 =========== ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 Methods     Origin  Avg     Ar → Cl Ar → Pr Ar → Rw Cl → Ar Cl → Pr Cl → Rw Pr → Ar Pr → Cl Pr → Rw Rw → Ar Rw → Cl Rw → Pr
@@ -41,7 +44,8 @@ CDAN        65.8    68.8    55.2    72.4    77.6    62.0    69.7    70.9    62.4
 MDD         68.1    69.6    56.4    75.3    78.4    63.2    73.1    73.3    63.9    54.8    79.7    73.2    60.7    83.7
 =========== ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
-*VisDA-2017* accuracy on ResNet-50 and ResNet-101
+VisDA-2017 accuracy on ResNet-50 and ResNet-101
+-----------------------------------------------
 
 =========== ==========  ==========  ==========  ==========
 Methods     Origin      DALIB       Origin      DALIB
@@ -55,7 +59,9 @@ MCD         69.2        69.1        71.9            77.3
 MDD         74.6        74.9        /               78.5
 =========== ==========  ==========  ==========  ==========
 
-*DomainNet* accuracy on ResNet-101
+
+DomainNet accuracy on ResNet-101
+-----------------------------------------------
 
 =========== ======  ======  ======  ======  ======  ======
 Source Only clp	    inf	    pnt	    real    skt     Avg
@@ -112,10 +118,13 @@ Avg         50.2    21.6    44.3    56.6    41.4    42.8
 .. _JAN: https://arxiv.org/abs/1605.06636
 .. _CDAN: https://arxiv.org/abs/1705.10667
 .. _MCD: https://arxiv.org/abs/1712.02560
-.. _AFN: https://arxiv.xilesou.top/abs/1811.07456
 .. _MDD: https://arxiv.org/abs/1904.05801
 
 .. currentmodule:: dalib.adaptation
+
+-----------
+Algorithms
+-----------
 
 DANN
 ----------------------------

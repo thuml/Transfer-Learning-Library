@@ -38,6 +38,7 @@ def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar
                     samples.append((path, label))
             self.samples = samples
             self.partial_classes = partial_classes
+            self.partial_classes_idx = [self.class_to_idx[c] for c in partial_classes]
 
     return PartialDataset
 

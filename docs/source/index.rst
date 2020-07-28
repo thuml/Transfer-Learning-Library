@@ -8,9 +8,12 @@ Welcome to dalib's documentation!
 
 .. toctree::
     tutorial
-    dalib.modules
     dalib.adaptation.unsupervised_da
     dalib.adaptation.partial_da
+    dalib.adaptation.open_set_da
+    dalib.modules
     dalib.vision.datasets
     dalib.vision.models
+    dalib.optim
+    dalib.utils
 
