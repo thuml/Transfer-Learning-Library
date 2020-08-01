@@ -13,6 +13,7 @@ On July 24th, 2020, we released the v0.1 (preview version), the first sub-librar
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
+The performance of those algorithms can be found [here](https://dalib.readthedocs.io/en/latest/dalib.adaptation.html).
 
 ## Installation
 
