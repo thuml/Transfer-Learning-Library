@@ -1,18 +1,18 @@
 ## Introduction
-*Trans-Learn* is a Transfer Learning library based on pure PyTorch with high performance and friendly API. 
-Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or easily apply existing algorithms..
+*Trans-Learn* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
-On July 24th, 2020, we released the v0.1 (preview version), the first sub-library is for Domain Adaptation (DALIB). The supported algorithms currently include:
+On July 24th, 2020, we released the v0.1 (preview version), the first sub-library is for Domain Adaptation (DALIB). The currently supported algorithms include:
 
-- [Domain-Adversarial Training of Neural Networks 
+- [Domain Adversarial Neural Network 
 (DANN)](https://arxiv.org/abs/1505.07818)
-- [Deep Adaptation Networks (DAN)](https://arxiv.org/abs/1502.02791)
-- [Joint Adaptation Networks (JAN)](https://arxiv.org/abs/1605.06636)
-- [Conditional Adversarial Domain Adaptation 
+- [Deep Adaptation Network (DAN)](https://arxiv.org/abs/1502.02791)
+- [Joint Adaptation Network (JAN)](https://arxiv.org/abs/1605.06636)
+- [Conditional Domain Adversarial Network 
 (CDAN)](https://arxiv.org/abs/1705.10667)
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
+The performance of these algorithms were fairly evaluated in this [benchmark](https://dalib.readthedocs.io/en/latest/dalib.adaptation.html).
 
 ## Installation
 
