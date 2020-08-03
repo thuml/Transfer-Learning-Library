@@ -8,7 +8,6 @@ The adaptation subpackage contains definitions for the following domain adaptati
 -  `JAN`_
 -  `CDAN`_
 -  `MCD`_
--  `AFN`_
 -  `MDD`_
 
 Besides specific algorithms, this package also provides a recommended image classifier for each algorithms.
