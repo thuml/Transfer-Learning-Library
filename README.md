@@ -82,3 +82,8 @@ If you use this toolbox or benchmark in your research, please cite this project.
   howpublished = {\url{https://github.com/thuml/Transfer-Learning-Library}},
 }
 ```
+
+## Acknowledgment
+
+We would like to thank School of Software, Tsinghua University and The National Engineering Laboratory for Big Data Software for providing such an excellent ML research platform.
+
