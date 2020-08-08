@@ -51,7 +51,7 @@ def main(args: argparse.Namespace):
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = transforms.Compose([
+    val_transform = transforms.Compose([
         ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),

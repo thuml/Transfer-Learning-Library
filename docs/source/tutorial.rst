@@ -29,7 +29,7 @@ Load Data
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = transforms.Compose([
+    val_transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
