@@ -47,7 +47,7 @@ Load Data
     train_source_loader = DataLoader(train_source_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     train_target_dataset = Office31(root=data_dir, task=target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_dataset = Office31(root=data_dir, task=target, download=True, transform=val_tranform)
+    val_dataset = Office31(root=data_dir, task=target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
