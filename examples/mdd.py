@@ -73,10 +73,10 @@ def main(args: argparse.Namespace):
     train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_tranform)
+        test_dataset = dataset(root=args.root, task=args.target, evaluate=True, download=True, transform=val_transform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
