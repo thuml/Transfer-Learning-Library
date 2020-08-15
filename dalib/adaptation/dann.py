@@ -43,7 +43,9 @@ class DomainAdversarialLoss(nn.Module):
         >>> loss = DomainAdversarialLoss(discriminator, reduction='mean')
         >>> # features from source domain and target domain
         >>> f_s, f_t = torch.randn(20, 1024), torch.randn(20, 1024)
-        >>> output = loss(f_s, f_t)
+        >>> # If you want to assign different weights to each instance, you should pass in w_s and w_t
+        >>> w_s, w_t = torch.randn(20), torch.randn(20)
+        >>> output = loss(f_s, f_t, w_s, w_t)
     """
 
     def __init__(self, domain_discriminator: nn.Module, reduction: Optional[str] = 'mean',

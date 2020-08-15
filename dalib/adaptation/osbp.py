@@ -36,7 +36,7 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
         self.t = t
 
     def forward(self, y):
-        # x : N x (C+1)
+        # y : N x (C+1)
         softmax_output = F.softmax(y, dim=1)
         unknown_class_prob = softmax_output[:, -1].contiguous().view(-1, 1)
         known_class_prob = 1. - unknown_class_prob
