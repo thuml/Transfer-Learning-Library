@@ -9,11 +9,13 @@ import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
+from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+from PIL import Image
 
 sys.path.append('.')
 from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -23,11 +25,9 @@ from dalib.adaptation.pada import AutomaticUpdateClassWeightModule
 import dalib.vision.datasets as datasets
 from dalib.vision.datasets.partialda import default_partial as partial
 import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,7 +50,7 @@ def main(args: argparse.Namespace):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -58,14 +58,14 @@ def main(args: argparse.Namespace):
         ])
     else:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
-    val_tranform = transforms.Compose([
-        ResizeImage(256),
+    val_transform = transforms.Compose([
+        transforms.Resize((256, 256), Image.CUBIC),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -79,10 +79,10 @@ def main(args: argparse.Namespace):
     train_target_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = partial_dataset(root=args.root, task=args.target, split='test', download=True, transform=val_tranform)
+        test_dataset = partial_dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
@@ -106,17 +106,14 @@ def main(args: argparse.Namespace):
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
                     args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
-    from dalib.modules.grl import WarmStartGradientReverseLayer
-    grl = WarmStartGradientReverseLayer(lo=0.0, hi=args.hi, max_iters=args.warm_up_iters, auto_step=True)
-    domain_adv = DomainAdversarialLoss(domain_discri, grl=grl).to(device)
+    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
-        print(lr_scheduler.get_lr())
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, domain_adv, class_weight_module,
               optimizer, lr_scheduler, epoch, args)
@@ -139,7 +136,7 @@ def main(args: argparse.Namespace):
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
           domain_adv: DomainAdversarialLoss, class_weight_module: AutomaticUpdateClassWeightModule,
-          optimizer: SGD, lr_scheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
+          optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -160,8 +157,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_scheduler.step()
-
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -201,6 +196,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -285,6 +281,8 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 36)')
     parser.add_argument('--lr', '--learning-rate', default=0.002, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay',default=1e-3, type=float,
@@ -305,10 +303,6 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--center-crop', default=False, action='store_true')
-    parser.add_argument('-w', '--warm-up-iters', default=1000, type=int,
-                        help='Number of warm up iterations')
-    parser.add_argument('--hi', default=1., type=float,
-                        help='Hi value for grl')
     args = parser.parse_args()
     print(args)
     main(args)

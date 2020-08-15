@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional
 import torch.nn as nn
 import torch
 
@@ -62,13 +62,3 @@ class ImageClassifierHead(nn.Module):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.head(inputs)
-
-    def get_parameters(self) -> List[Dict]:
-        """
-        :return: A parameter list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
-        """
-        params = [
-            {"params": self.head.parameters()},
-        ]
-        return params

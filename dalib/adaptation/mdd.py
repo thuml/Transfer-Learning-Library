@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -118,7 +118,7 @@ class ImageClassifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int,
-                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024):
+                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
         super(ImageClassifier, self).__init__()
         self.backbone = backbone
         self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=False)
@@ -151,8 +151,9 @@ class ImageClassifier(nn.Module):
             self.head[dep * 3].bias.data.fill_(0.0)
             self.adv_head[dep * 3].weight.data.normal_(0, 0.01)
             self.adv_head[dep * 3].bias.data.fill_(0.0)
+        self.finetune = finetune
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         features = self.backbone(x)
         features = self.bottleneck(features)
         outputs = self.head(features)
@@ -172,9 +173,9 @@ class ImageClassifier(nn.Module):
             such as the relative learning rate of each layer
         """
         params = [
-            {"params": self.backbone.parameters(), "lr_mult": 0.1},
-            {"params": self.bottleneck.parameters(), "lr_mult": 1.},
-            {"params": self.head.parameters(), "lr_mult": 1.},
-            {"params": self.adv_head.parameters(), "lr_mult": 1}
+            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
+            {"params": self.bottleneck.parameters(), "lr": 1.},
+            {"params": self.head.parameters(), "lr": 1.},
+            {"params": self.adv_head.parameters(), "lr": 1.}
         ]
         return params

@@ -52,15 +52,12 @@ CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_on
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s A -t C -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_A2C.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s A -t D -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_A2D.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s A -t W -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_A2W.txt
-
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s C -t A -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_C2A.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s C -t D -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_C2D.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s C -t W -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_C2W.txt
-
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s D -t A -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_D2A.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s D -t W -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_D2W.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s D -t C -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_D2C.txt
-
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s W -t A -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_W2A.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s W -t C -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_W2C.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/unsupervised-da/source_only.py data/office-caltech -d OfficeCaltech -s W -t D -a resnet50  --epochs 5 > benchmarks/baseline/OfficeCaltech_W2D.txt

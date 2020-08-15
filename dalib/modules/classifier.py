@@ -14,6 +14,7 @@ class Classifier(nn.Module):
         - **bottleneck** (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
         - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: -1
         - **head** (class:`nn.Module` object, optional): Any classifier head. Use `nn.Linear` by default
+        - **finetune** (bool): Whether finetune the classifier or train from scratch. Default: True
 
     .. note::
         Different classifiers are used in different domain adaptation algorithms to achieve better accuracy
@@ -40,7 +41,7 @@ class Classifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None):
+                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
@@ -56,6 +57,7 @@ class Classifier(nn.Module):
             self.head = nn.Linear(self._features_dim, num_classes)
         else:
             self.head = head
+        self.finetune = finetune
 
     @property
     def features_dim(self) -> int:
@@ -75,8 +77,8 @@ class Classifier(nn.Module):
             such as the relative learning rate of each layer
         """
         params = [
-            {"params": self.backbone.parameters(), "lr_mult": 0.1},
-            {"params": self.bottleneck.parameters(), "lr_mult": 1.},
-            {"params": self.head.parameters(), "lr_mult": 1.},
+            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
+            {"params": self.bottleneck.parameters(), "lr": 1.},
+            {"params": self.head.parameters(), "lr": 1.},
         ]
         return params

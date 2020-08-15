@@ -29,7 +29,7 @@ Load Data
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = transforms.Compose([
+    val_transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
@@ -47,7 +47,7 @@ Load Data
     train_source_loader = DataLoader(train_source_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     train_target_dataset = Office31(root=data_dir, task=target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_dataset = Office31(root=data_dir, task=target, download=True, transform=val_tranform)
+    val_dataset = Office31(root=data_dir, task=target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
 
@@ -133,13 +133,14 @@ To prepare models for training, you need to
     from tools.lr_scheduler import StepwiseLR
     optimizer = SGD(classifier.get_parameters() + domain_discriminator.get_parameters(),
                     lr=0.01, momentum=0.9, weight_decay=1e-3, nesterov=True)
+
     # learning rate will drop from 0.01 each step
-    lr_scheduler = StepwiseLR(optimizer, init_lr=0.01, gamma=0.001, decay_rate=0.75)
+    from torch.optim.lr_scheduler import LambdaLR
+    lr_scheduler = LambdaLR(optimizer, lambda x:  0.01 * (1. + 0.001 * float(x)) ** (-0.75))
+
 
 .. note::
-    We will use some functions from tools, such as `StepwiseLR` and `ForeverDataIterator` for clearer code.
-    We will only explain their functionality. Please refer to
-    `Tutorial <https://github.com/thuml/Domain-Adaptation-Lib/blob/master/examples/tutorial.py>`_ for runnable code.
+    Please refer to `Tutorial <https://github.com/thuml/Domain-Adaptation-Lib/blob/master/examples/tutorial.py>`_ for runnable code.
 
 ------------------
 Training the model
@@ -247,7 +248,7 @@ After the training is finished, we can visualize the representations of task A â
     classifier.eval()
 
     features, domains = [], []
-    source_val_dataset = dataset(root=data_dir, task=source, download=True, transform=val_tranform)
+    source_val_dataset = dataset(root=data_dir, task=source, download=True, transform=val_transform)
     source_val_loader = DataLoader(source_val_dataset, batch_size=batch_size, shuffle=False)
 
     with torch.no_grad():

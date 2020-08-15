@@ -17,16 +17,15 @@ from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+from PIL import Image
 
 sys.path.append('.')
 from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,7 +48,7 @@ def main(args: argparse.Namespace):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -57,14 +56,14 @@ def main(args: argparse.Namespace):
         ])
     else:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
-    val_tranform = transforms.Compose([
-        ResizeImage(256),
+    val_transform = transforms.Compose([
+        transforms.Resize((256, 256), Image.CUBIC),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -77,10 +76,10 @@ def main(args: argparse.Namespace):
     train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_tranform)
+        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
@@ -99,7 +98,10 @@ def main(args: argparse.Namespace):
     # define optimizer
     # the learning rate is fixed according to origin paper
     optimizer_g = SGD(G.parameters(), lr=args.lr, weight_decay=0.0005)
-    optimizer_f = SGD(F1.get_parameters()+F2.get_parameters(), momentum=0.9, lr=args.lr, weight_decay=0.0005)
+    optimizer_f = SGD([
+        {"params": F1.parameters()},
+        {"params": F2.parameters()},
+    ], momentum=0.9, lr=args.lr, weight_decay=0.0005)
 
     # start training
     best_acc1 = 0.

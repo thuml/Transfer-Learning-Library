@@ -40,4 +40,4 @@ class DomainDiscriminator(nn.Module):
         return y
 
     def get_parameters(self) -> List[Dict]:
-        return [{"params": self.parameters(), "lr_mult": 1.}]
+        return [{"params": self.parameters(), "lr": 1.}]

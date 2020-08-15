@@ -10,21 +10,21 @@ import torch.nn.parallel
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
+from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+from PIL import Image
 
 sys.path.append('.')
 from dalib.adaptation.mdd import MarginDisparityDiscrepancy, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-from dalib.optim.lr_scheduler import StepwiseLR
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ def main(args: argparse.Namespace):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -55,14 +55,14 @@ def main(args: argparse.Namespace):
         ])
     else:
         train_transform = transforms.Compose([
-            ResizeImage(256),
+            transforms.Resize((256, 256), Image.CUBIC),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
-    val_tranform = transforms.Compose([
-        ResizeImage(256),
+    val_transform = transforms.Compose([
+        transforms.Resize((256, 256), Image.CUBIC),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -75,10 +75,10 @@ def main(args: argparse.Namespace):
     train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_tranform)
+        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
@@ -97,7 +97,7 @@ def main(args: argparse.Namespace):
     # define optimizer and lr_scheduler
     # The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=args.lr_gamma, decay_rate=0.75)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # start training
     best_acc1 = 0.
@@ -125,7 +125,7 @@ def main(args: argparse.Namespace):
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
           classifier: ImageClassifier, mdd: MarginDisparityDiscrepancy, optimizer: SGD,
-          lr_scheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
+          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -146,7 +146,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_scheduler.step()
         optimizer.zero_grad()
 
         # measure data loading time
@@ -184,6 +183,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # compute gradient and do SGD step
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -268,6 +268,8 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.004, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--lr-gamma', default=0.0002, type=float)
+    parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
@@ -282,7 +284,6 @@ if __name__ == '__main__':
     parser.add_argument('--center-crop', default=False, action='store_true')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('--lr-gamma', default=0.0002, type=float)
     args = parser.parse_args()
     print(args)
     main(args)

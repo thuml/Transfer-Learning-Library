@@ -21,6 +21,7 @@ CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/office-home -
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50  --epochs 20 --seed 0 > benchmarks/jan/OfficeHome_Rw2Ar.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50  --epochs 20 --seed 0 > benchmarks/jan/OfficeHome_Rw2Cl.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50  --epochs 20 --seed 0 > benchmarks/jan/OfficeHome_Rw2Pr.txt
+
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017_resnet101.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/jan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50  --epochs 20 -i 500 --seed 0 > benchmarks/jan/VisDA2017.txt

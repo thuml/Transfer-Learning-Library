@@ -1,5 +1,4 @@
 from typing import Sequence, ClassVar
-from torchvision.datasets import DatasetFolder
 from . import ImageList, Office31, OfficeHome, VisDA2017, ImageNetCaltech, CaltechImageNet, OfficeCaltech
 
 
@@ -11,7 +10,7 @@ def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar
     Yet `partial` will not change the label space of `dataset_class`.
 
     Parameters:
-        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` and ``DatasetFolder`` can be partial.
+        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` can be partial.
         - **partial_classes** (sequence[str]): A sequence of which categories need to be kept in the partial dataset.\
             Each element of `partial_classes` must belong to the `classes` list of `dataset_class`.
 
@@ -24,8 +23,8 @@ def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar
     >>> dataset = PartialDataset(root="data/office31", task="A")
 
     """
-    if not (issubclass(dataset_class, ImageList) or issubclass(dataset_class, DatasetFolder)):
-        raise Exception("Only subclass of ImageList or DatasetFolder can be partial")
+    if not (issubclass(dataset_class, ImageList)):
+        raise Exception("Only subclass of ImageList can be partial")
 
     class PartialDataset(dataset_class):
         def __init__(self, **kwargs):

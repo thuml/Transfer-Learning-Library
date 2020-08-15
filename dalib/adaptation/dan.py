@@ -120,10 +120,10 @@ def _update_index_matrix(batch_size: int, index_matrix: Optional[torch.Tensor] =
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, None)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)

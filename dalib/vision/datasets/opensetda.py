@@ -1,7 +1,6 @@
 from typing import Optional, ClassVar, Sequence
 from copy import deepcopy
-from torchvision.datasets import DatasetFolder
-from . import ImageList, Office31, OfficeHome, VisDA2017, OfficeCaltech, ImageNetCaltech, CaltechImageNet, ImageNetCaltechUniversal, CaltechImageNetUniversal
+from . import ImageList, Office31, OfficeHome, VisDA2017
 
 
 def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
@@ -14,7 +13,7 @@ def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
     Be aware that `open_set` will change the label number of each category.
 
     Parameters:
-        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` and ``DatasetFolder`` can be open-set.
+        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` can be open-set.
         - **public_classes** (sequence[str]): A sequence of which categories need to be kept in the open-set dataset.\
             Each element of `public_classes` must belong to the `classes` list of `dataset_class`.
         - **private_classes** (sequence[str], optional): A sequence of which categories need to be marked as "unknown" \
@@ -32,8 +31,8 @@ def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
     >>> dataset = OpenSetDataset(root="data/office31", task="A")
 
     """
-    if not (issubclass(dataset_class, ImageList) or issubclass(dataset_class, DatasetFolder)):
-        raise Exception("Only subclass of ImageList or DatasetFolder can be openset")
+    if not (issubclass(dataset_class, ImageList)):
+        raise Exception("Only subclass of ImageList can be openset")
 
     class OpenSetDataset(dataset_class):
         def __init__(self, **kwargs):

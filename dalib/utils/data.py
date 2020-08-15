@@ -1,7 +1,4 @@
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.data.dataset import Dataset
-from collections import Counter
-from typing import Dict
 
 
 class ForeverDataIterator:
@@ -21,16 +18,4 @@ class ForeverDataIterator:
     def __len__(self):
         return len(self.data_loader)
 
-
-def get_frequency_by_category(dataset: Dataset) -> Dict[int, int]:
-    r"""
-    Get the frequency for each category in a certain dataset.
-
-    Output:
-        - **freq** (dict[int, int]): Frequencies of each category appearing in the dataset
-
-    """
-    labels = [label for (data, label) in dataset]
-    freq = Counter(labels)
-    return freq
 

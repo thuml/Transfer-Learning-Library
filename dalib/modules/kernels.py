@@ -1,7 +1,7 @@
 from typing import Optional, List
 import torch
 import torch.nn as nn
-from numpy import array, dot
+from numpy import array
 import numpy as np
 from qpsolvers import solve_qp
 

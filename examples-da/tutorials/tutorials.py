@@ -13,20 +13,22 @@ import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
+from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+from PIL import Image
 
 sys.path.append('.')
 from dalib.modules.domain_discriminator import DomainDiscriminator
 from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
-from tools.utils import AverageMeter, ProgressMeter, accuracy, ForeverDataIterator
-from tools.transforms import ResizeImage
-from tools.lr_scheduler import StepwiseLR
+from dalib.utils.data import ForeverDataIterator
+from dalib.utils.metric import accuracy
+from dalib.utils.avgmeter import AverageMeter, ProgressMeter
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -48,14 +50,14 @@ def main(args: argparse.Namespace):
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
-        ResizeImage(256),
+        transforms.Resize((256, 256), Image.CUBIC),
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize
     ])
-    val_tranform = transforms.Compose([
-        ResizeImage(256),
+    val_transform = transforms.Compose([
+        transforms.Resize((256, 256), Image.CUBIC),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -68,7 +70,7 @@ def main(args: argparse.Namespace):
     train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_tranform)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
@@ -83,7 +85,7 @@ def main(args: argparse.Namespace):
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
                     args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler = StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
@@ -112,7 +114,7 @@ def main(args: argparse.Namespace):
     classifier.eval()
 
     features, labels, domains = [], [], []
-    source_val_dataset = dataset(root=args.root, task=args.source, download=True, transform=val_tranform)
+    source_val_dataset = dataset(root=args.root, task=args.source, download=True, transform=val_transform)
     source_val_loader = DataLoader(source_val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     with torch.no_grad():
@@ -137,7 +139,7 @@ def main(args: argparse.Namespace):
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
           model: ImageClassifier, domain_adv: DomainAdversarialLoss, optimizer: SGD,
-          lr_scheduler: StepwiseLR, epoch: int, args: argparse.Namespace):
+          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -154,8 +156,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_scheduler.step()
-
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -187,6 +187,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -271,6 +272,8 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,

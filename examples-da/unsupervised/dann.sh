@@ -8,18 +8,18 @@ CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office31 -d 
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office31 -d Office31 -s W -t A -a resnet50  --epochs 20 --seed 1 > benchmarks/dann/Office31_W2A.txt
 
 # Office-Home
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Cl.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50  --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Pr.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Rw.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Ar.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Pr.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Rw.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Ar.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Cl.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Rw.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Ar.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Cl.txt
-CUDA_VISIBLE_DEVICES=0 python examples/dann.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Pr.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Cl.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50  --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Pr.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Ar2Rw.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Ar.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Pr.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Cl2Rw.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Ar.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Cl.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Pr2Rw.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Ar.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Cl.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/OfficeHome_Rw2Pr.txt
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/dann.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --epochs 30 --seed 0 > benchmarks/dann/VisDA2017.txt

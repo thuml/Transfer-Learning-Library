@@ -112,9 +112,7 @@ class ImageNetCaltechUniversal(ImageList):
                   "since ImageNet-1K is no longer publicly accessible.".format(root))
             exit(-1)
 
-        super(ImageNetCaltechUniversal, self).__init__(root, CLASSES + ["unknown"],
-                                                     data_list_file=data_list_file,
-                                                     **kwargs)
+        super(ImageNetCaltechUniversal, self).__init__(root, CLASSES + ["unknown"], data_list_file=data_list_file, **kwargs)
 
 
 download_list = [

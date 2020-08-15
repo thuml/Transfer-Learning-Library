@@ -48,7 +48,7 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
@@ -59,7 +59,7 @@ class ImageClassifier(ClassifierBase):
             nn.ReLU(),
             nn.Dropout()
         )
-        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)
         self.grl = GradientReverseLayer()
 
     def forward(self, x: torch.Tensor, grad_reverse: Optional[bool] = False):
