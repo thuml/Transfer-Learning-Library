@@ -249,7 +249,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.002, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
