@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.modules.classifier import Classifier as ClassifierBase
-from ._util import binary_accuracy
+from ._util import binary_accuracy, entropy
 
 __all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']
 
@@ -156,11 +156,6 @@ class MultiLinearMap(nn.Module):
         output = torch.bmm(g.unsqueeze(2), f.unsqueeze(1))
         return output.view(batch_size, -1)
 
-
-def entropy(predictions: torch.Tensor) -> torch.Tensor:
-    epsilon = 1e-5
-    H = -predictions * torch.log(predictions + epsilon)
-    return H.sum(dim=1)
 
 
 class ImageClassifier(ClassifierBase):

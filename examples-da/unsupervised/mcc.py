@@ -81,11 +81,9 @@ def main(args: argparse.Namespace):
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_source_dataset.num_classes
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
-    classifier_feature_dim = classifier.features_dim
 
-    all_parameters = classifier.get_parameters()
     # define optimizer and lr scheduler
-    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
@@ -147,7 +145,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         x = torch.cat((x_s, x_t), dim=0)
         y, f = model(x)
         y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
         transfer_loss = mcc(y_t)
@@ -264,7 +261,6 @@ if __name__ == '__main__':
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
-    parser.add_argument('--entropy', default=False, action='store_true', help='use entropy conditioning')
     parser.add_argument('--temperature', default=2.0, type=float, help='parameter temperature scaling')
 
     args = parser.parse_args()
