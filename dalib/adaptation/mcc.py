@@ -2,12 +2,9 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.modules.classifier import Classifier as ClassifierBase
-from ._util import binary_accuracy
 
-__all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']
+__all__ = ['MinimumClassConfusionLoss', 'ImageClassifier']
 
 
 class MinimumClassConfusionLoss(nn.Module):
