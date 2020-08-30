@@ -10,29 +10,66 @@ __all__ = ['MinimumClassConfusionLoss', 'ImageClassifier']
 
 
 class MinimumClassConfusionLoss(nn.Module):
-    r"""The `Minimum Class Confusion Loss Loss <https://arxiv.org/abs/1912.03699>`_
+    r"""The `Minimum Class Confusion Loss <https://arxiv.org/abs/1912.03699>`_
 
-        Minimum Class Confusion is a non-adversarial DA method without explicitly deploying domain alignment.
-        It can handle four existing scenarios: Closed-Set, Partial-Set, Multi-Source, and Multi-Target DA by minimizing
-        class confusion on the target domain. Also, it can be used as a general regularizer that is orthogonal and complementary
-        to a variety of existing DA methods.
+    Minimum Class Confusion loss minimizes the class confusion in the target predictions.
+    Given classifier predictions (logits before softmax) :math:`Z`, the definition of MCC loss is
 
-        Parameters:
-            - **temperature** (float): the temperature scaling when calculating predictions.
+    .. math::
+           {\widehat Y_{ij}} = \frac{{\exp \left( {{Z_{ij}}/T} \right)}}{{\sum\nolimits_{j' = 1}^{|{\mathcal{C}}|}
+           {\exp \left( {{Z_{ij'}}/T} \right)} }},
+           where :math:`T` is the temperature for rescaling,
+           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{{\widehat{\mathbf{y}}}_{ \cdot j'}},
+           H(\widehat{\bf y}_{i\cdot})= - { \sum _{j=1 }^{ |{\cal {C}}| }{ { \widehat { Y }  }_{ ij }\
+           log{ \widehat { Y }  }_{ ij } }  },
+           {W_{ii}} = \frac{{B\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i \cdot }}} )} )} \right)}}
+           {{\sum\limits_{i' = 1}^B {\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i' \cdot }}} )} )} \right)} }},
+           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{\mathbf{W}}{{\widehat{\mathbf{y}}}_{ \cdot j'}}.
+           {{{\widetilde{\mathbf C}}}_{jj'}} = \frac{{{{\mathbf{C}}_{jj'}}}}{{\sum\nolimits_{{j''} = 1}^
+           {|{\mathcal{C}}|} {{{\mathbf{C}}_{j{j''}}}} }},
+           {L_{{\rm{MCC}}}} ( {{{\widehat {\mathbf{Y}}}_t}} ) = \frac{1}{|{\cal {C}}|}\sum\limits_{j = 1}^
+           {|{\mathcal{C}}|} {\sum\limits_{j' \ne j}^{|{\mathcal{C}}|} {\left| {{{{\widetilde{\mathbf C}}}_{jj'}}} \right|} }.
 
-        Inputs:
-            - **logits** (tensor): unnormalized classifier predictions on target domain
+    You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation <https://arxiv.org/abs/1912.03699>`
 
-        Shape:
-            - logits: :math:`(minibatch, C)` where C means the number of classes.
-            - Output: scalar by default
+    Parameters:
+        - **temperature** (float) : The temperature for rescaling, the prediction will shrink to vanilla softmax if
+          temperature is 1.0.
 
-        Examples::
-            >>> loss = MinimumClassConfusionLoss(temperature=2.)
-            >>> # logits output from target domain
-            >>> logits = torch.randn(batch_size, num_classes)
-            >>> output = loss(logits)
+    .. note::
+        Make sure that temperature is larger than 0.
+
+    Inputs: g_t
+        - **g_t** (tensor): unnormalized classifier predictions on target domain, :math:`g^t`
+
+    Shape:
+        - g_t: :math:`(minibatch, C)` where C means the number of classes.
+        - Output: scalar.
+
+    Examples::
+        >>> temperature = 2.0
+        >>> loss = MinimumClassConfusionLoss(temperature)
+        >>> # logits output from target domain
+        >>> g_t = torch.randn(batch_size, num_classes)
+        >>> output = loss(g_t)
+
+    MCC can also serve as a regularizer for existing methods.
+    Examples::
+        >>> from dalib.modules.domain_discriminator import DomainDiscriminator
+        >>> num_classes = 2
+        >>> feature_dim = 1024
+        >>> batch_size = 10
+        >>> temperature = 2.0
+        >>> discriminator = DomainDiscriminator(in_feature=feature_dim, hidden_size=1024)
+        >>> cdan_loss = ConditionalDomainAdversarialLoss(discriminator, reduction='mean')
+        >>> mcc_loss = MinimumClassConfusionLoss(temperature)
+        >>> # features from source domain and target domain
+        >>> f_s, f_t = torch.randn(batch_size, feature_dim), torch.randn(batch_size, feature_dim)
+        >>> # logits output from source domain adn target domain
+        >>> g_s, g_t = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
+        >>> total_loss = cdan_loss(g_s, f_s, g_t, f_t) + mcc_loss(g_t)
     """
+
     def __init__(self, temperature: float):
         super(MinimumClassConfusionLoss, self).__init__()
         self.temperature = temperature
@@ -48,6 +85,22 @@ class MinimumClassConfusionLoss(nn.Module):
         mcc_loss = (torch.sum(class_confusion_matrix) - torch.trace(class_confusion_matrix)) / num_classes
         return mcc_loss
 
+
+def entropy(predictions: torch.Tensor) -> torch.Tensor:
+    r"""Entropy of N predictions :math:`(p_1, p_2, ..., p_N)`.
+    The definition is:
+
+    .. math::
+        d(p_1, p_2, ..., p_N) = -\dfrac{1}{K} \sum_{k=1}^K \log \left( \dfrac{1}{N} \sum_{i=1}^N p_{ik} \right)
+
+    where K is number of classes.
+
+    Parameters:
+        - **predictions** (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
+    """
+    epsilon = 1e-5
+    H = -predictions * torch.log(predictions + epsilon)
+    return H.sum(dim=1)
 
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
