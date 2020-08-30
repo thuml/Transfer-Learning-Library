@@ -1,8 +1,10 @@
 from typing import Optional
-import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from dalib.modules.classifier import Classifier as ClassifierBase
+from ._util import entropy
+
 
 __all__ = ['MinimumClassConfusionLoss', 'ImageClassifier']
 
@@ -68,20 +70,19 @@ class MinimumClassConfusionLoss(nn.Module):
         >>> total_loss = cdan_loss(g_s, f_s, g_t, f_t) + mcc_loss(g_t)
     """
 
-    def __init__(self, temperature):
+    def __init__(self, temperature: float):
         super(MinimumClassConfusionLoss, self).__init__()
         self.temperature = temperature
 
-    def forward(self, g_t: torch.Tensor) -> torch.Tensor:
-        train_bs, class_num = g_t.size(0), g_t.size(1)
-        g_t_temp = g_t / self.temperature
-        g_t_temp_softmax = nn.Softmax(dim=1)(g_t_temp)
-        target_entropy_weight = entropy(g_t_temp_softmax).detach()
-        target_entropy_weight = 1 + torch.exp(-target_entropy_weight)
-        target_entropy_weight = train_bs * target_entropy_weight / torch.sum(target_entropy_weight)
-        c_matrix = g_t_temp_softmax.mul(target_entropy_weight.view(-1,1)).transpose(1,0).mm(g_t_temp_softmax)
-        c_matrix = c_matrix / torch.sum(c_matrix, dim=1)
-        mcc_loss = (torch.sum(c_matrix) - torch.trace(c_matrix)) / class_num
+    def forward(self, logits: torch.Tensor) -> torch.Tensor:
+        batch_size, num_classes = logits.shape
+        predictions = F.softmax(logits / self.temperature, dim=1)  # batch_size x num_classes
+        entropy_weight = entropy(predictions).detach()
+        entropy_weight = 1 + torch.exp(-entropy_weight)
+        entropy_weight = (batch_size * entropy_weight / torch.sum(entropy_weight)).unsqueeze(dim=1)  # batch_size x 1
+        class_confusion_matrix = torch.mm((predictions * entropy_weight).transpose(1, 0), predictions) # num_classes x num_classes
+        class_confusion_matrix = class_confusion_matrix / torch.sum(class_confusion_matrix, dim=1)
+        mcc_loss = (torch.sum(class_confusion_matrix) - torch.trace(class_confusion_matrix)) / num_classes
         return mcc_loss
 
 
@@ -100,7 +101,6 @@ def entropy(predictions: torch.Tensor) -> torch.Tensor:
     epsilon = 1e-5
     H = -predictions * torch.log(predictions + epsilon)
     return H.sum(dim=1)
-
 
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):

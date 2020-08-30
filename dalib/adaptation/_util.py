@@ -9,3 +9,9 @@ def binary_accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
         correct = pred.eq(target.view(-1)).float().sum()
         correct.mul_(100. / batch_size)
         return correct
+
+
+def entropy(predictions: torch.Tensor) -> torch.Tensor:
+    epsilon = 1e-5
+    H = -predictions * torch.log(predictions + epsilon)
+    return H.sum(dim=1)
