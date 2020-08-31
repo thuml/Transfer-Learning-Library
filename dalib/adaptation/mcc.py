@@ -16,17 +16,15 @@ class MinimumClassConfusionLoss(nn.Module):
     Given classifier predictions (logits before softmax) :math:`Z`, the definition of MCC loss is
 
     .. math::
-           {\widehat Y_{ij}} = \frac{{\exp \left( {{Z_{ij}}/T} \right)}}{{\sum\nolimits_{j' = 1}^{|{\mathcal{C}}|}
-           {\exp \left( {{Z_{ij'}}/T} \right)} }},
-           where :math:`T` is the temperature for rescaling,
-           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{{\widehat{\mathbf{y}}}_{ \cdot j'}},
-           H(\widehat{\bf y}_{i\cdot})= - { \sum _{j=1 }^{ |{\cal {C}}| }{ { \widehat { Y }  }_{ ij }\
-           log{ \widehat { Y }  }_{ ij } }  },
+           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{\mathbf{W}}{{\widehat{\mathbf{y}}}_{ \cdot j'}},\\
+           where the weighting scheme is
            {W_{ii}} = \frac{{B\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i \cdot }}} )} )} \right)}}
            {{\sum\limits_{i' = 1}^B {\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i' \cdot }}} )} )} \right)} }},
-           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{\mathbf{W}}{{\widehat{\mathbf{y}}}_{ \cdot j'}}.
+           where H denotes the entropy function.\\
+           We adopt entropy function to alleviate class imbalance,
            {{{\widetilde{\mathbf C}}}_{jj'}} = \frac{{{{\mathbf{C}}_{jj'}}}}{{\sum\nolimits_{{j''} = 1}^
            {|{\mathcal{C}}|} {{{\mathbf{C}}_{j{j''}}}} }},
+           MCC aims at minimizing cross-class confusion,
            {L_{{\rm{MCC}}}} ( {{{\widehat {\mathbf{Y}}}_t}} ) = \frac{1}{|{\cal {C}}|}\sum\limits_{j = 1}^
            {|{\mathcal{C}}|} {\sum\limits_{j' \ne j}^{|{\mathcal{C}}|} {\left| {{{{\widetilde{\mathbf C}}}_{jj'}}} \right|} }.
 
