@@ -34,7 +34,7 @@ In the directory `examples`, you can find all the necessary running scripts to r
 ## Contributing
 We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us. 
 
-You can find the latest code on the `dev` branch.
+You can find the latest code on the [dev](https://github.com/thuml/Transfer-Learning-Library/tree/dev) branch.
 
 ## Disclaimer on Datasets
 
