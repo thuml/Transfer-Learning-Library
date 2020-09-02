@@ -16,26 +16,7 @@ The performance of these algorithms were fairly evaluated in this [benchmark](ht
 
 ## Installation
 
-DALIB is currently hosted on [PyPI](https://pypi.org/project/dalib/). It requires Python >= 3.6. You can simply install dalib with the following command:
-
-```bash
-pip install dalib
-```
-
-You can also install with the newest version through GitHub:
-
-```bash
-pip install git+https://github.com/thuml/Transfer-Learning-Library.git@master
-```
-
-After installation, open your python console and type the following. If no error occurs, you have successfully installed DALIB.
-
-```python
-import dalib 
-print(dalib.__version__)
-```
-
-For flexible use and modification, git clone the library is also a good choice. 
+For flexible use and modification, please git clone the library.
 
 ## Documentation
 You can find the tutorial and API documentation on the website: [DALIB API](https://dalib.readthedocs.io/en/latest/index.html)
@@ -51,7 +32,9 @@ python examples/dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epoch
 In the directory `examples`, you can find all the necessary running scripts to reproduce the benchmarks with specified hyper-parameters.
 
 ## Contributing
-We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us.
+We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us. 
+
+You can find the latest code on the `dev` branch.
 
 ## Disclaimer on Datasets
 
