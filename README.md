@@ -51,6 +51,8 @@ If you have any problem with our code or have some suggestions, including the fu
 
 or describe it in Issues.
 
+For Q&A in Chinese, you can choose to ask questions here before sending an email. [迁移学习算法库答疑专区](https://zhuanlan.zhihu.com/p/248104070)
+
 ## Citation
 
 If you use this toolbox or benchmark in your research, please cite this project. 
