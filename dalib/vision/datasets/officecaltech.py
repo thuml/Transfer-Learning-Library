@@ -56,7 +56,7 @@ class OfficeCaltech(DatasetFolder):
 
         super(OfficeCaltech, self).__init__(
             os.path.join(root, self.directories[task]), default_loader, extensions=IMG_EXTENSIONS, **kwargs)
-        self.classes = OfficeCaltech.classes
+        self.classes = OfficeCaltech.CLASSES
         self.class_to_idx = {cls: idx
                              for idx, clss in enumerate(self.classes)
                              for cls in clss}
