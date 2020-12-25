@@ -55,10 +55,12 @@ class ConditionalDomainAdversarialLoss(nn.Module):
 
     Examples::
         >>> from dalib.modules.domain_discriminator import DomainDiscriminator
+        >>> from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss
+        >>> import torch
         >>> num_classes = 2
         >>> feature_dim = 1024
         >>> batch_size = 10
-        >>> discriminator = DomainDiscriminator(in_feature=feature_dim, hidden_size=1024)
+        >>> discriminator = DomainDiscriminator(in_feature=feature_dim * num_classes, hidden_size=1024)
         >>> loss = ConditionalDomainAdversarialLoss(discriminator, reduction='mean')
         >>> # features from source domain and target domain
         >>> f_s, f_t = torch.randn(batch_size, feature_dim), torch.randn(batch_size, feature_dim)
