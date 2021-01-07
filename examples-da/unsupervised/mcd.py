@@ -24,9 +24,9 @@ from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discre
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy
+from dalib.utils.metric import accuracy, ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-
+from dalib.vision.transforms import ResizeImage
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,7 +48,7 @@ def main(args: argparse.Namespace):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
         train_transform = transforms.Compose([
-            transforms.Resize((256, 256), Image.CUBIC),
+            ResizeImage(256),
             transforms.CenterCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -56,14 +56,14 @@ def main(args: argparse.Namespace):
         ])
     else:
         train_transform = transforms.Compose([
-            transforms.Resize((256, 256), Image.CUBIC),
+            ResizeImage(256),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize
         ])
     val_transform = transforms.Compose([
-        transforms.Resize((256, 256), Image.CUBIC),
+        ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -240,6 +240,11 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
     F1.eval()
     F2.eval()
 
+    if args.per_class_eval:
+        confmat = ConfusionMatrix(F1.num_classes)
+    else:
+        confmat = None
+
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
@@ -253,8 +258,10 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
             # measure accuracy and record loss
             acc1, = accuracy(y1, target)
             acc2, = accuracy(y2, target)
-            top1_1.update(acc1[0], images.size(0))
-            top1_2.update(acc2[0], images.size(0))
+            if confmat:
+                confmat.update(target, y1.argmax(1))
+            top1_1.update(acc1.item(), images.size(0))
+            top1_2.update(acc2.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -265,6 +272,8 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
 
         print(' * Acc1 {top1_1.avg:.3f} Acc2 {top1_2.avg:.3f}'
               .format(top1_1=top1_1, top1_2=top1_2))
+        if confmat:
+            print(confmat)
 
     return top1_1.avg, top1_2.avg
 
@@ -311,9 +320,12 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck-dim', default=1024, type=int)
-    parser.add_argument('--center-crop', default=False, action='store_true')
+    parser.add_argument('--center-crop', default=False, action='store_true',
+                        help='whether use center crop during training')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--per-class-eval', action='store_true',
+                        help='whether output per-class accuracy during evaluation')
     args = parser.parse_args()
     print(args)
     main(args)

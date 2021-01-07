@@ -1,5 +1,15 @@
+from ..imagelist import ImageList
+from ..office31 import Office31
+from ..officehome import OfficeHome
+from ..visda2017 import VisDA2017
+from ..officecaltech import OfficeCaltech
+from .imagenet_caltech import ImageNetCaltech
+from .caltech_imagenet import CaltechImageNet
+from dalib.vision.datasets.partial.imagenet_caltech import ImageNetCaltech
 from typing import Sequence, ClassVar
-from . import ImageList, Office31, OfficeHome, VisDA2017, ImageNetCaltech, CaltechImageNet, OfficeCaltech
+
+
+__all__ = ['Office31', 'OfficeHome', "VisDA2017", "CaltechImageNet", "ImageNetCaltech"]
 
 
 def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar:

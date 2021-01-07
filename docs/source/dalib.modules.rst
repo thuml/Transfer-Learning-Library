@@ -1,10 +1,16 @@
-dalib.modules
+DALIB Modules
 =====================
 
 
 Classifier
 -------------------------------
 .. autoclass:: dalib.modules.classifier.Classifier
+    :show-inheritance:
+    :members:
+
+Regressor
+-------------------------------
+.. autoclass:: dalib.modules.regressor.Regressor
     :show-inheritance:
     :members:
 

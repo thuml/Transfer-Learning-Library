@@ -11,9 +11,9 @@ Welcome to dalib's documentation!
     dalib.adaptation.unsupervised_da
     dalib.adaptation.partial_da
     dalib.adaptation.open_set_da
+    dalib.adaptation.regression_da
     dalib.modules
     dalib.vision.datasets
     dalib.vision.models
-    dalib.optim
     dalib.utils
 

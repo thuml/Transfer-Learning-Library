@@ -32,9 +32,9 @@ class ResNet(models.ResNet):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = x.view(-1, self._out_features)
+        # x = self.avgpool(x)
+        # x = torch.flatten(x, 1)
+        # x = x.view(-1, self._out_features)
         return x
 
     @property
@@ -50,9 +50,12 @@ class ResNet(models.ResNet):
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
+        model_dict = model.state_dict()
+        pretrained_dict = load_state_dict_from_url(model_urls[arch],
                                               progress=progress)
-        model.load_state_dict(state_dict, strict=False)
+        # remove keys from pretrained dict that doesn't appear in model dict
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model.load_state_dict(pretrained_dict, strict=False)
     return model
 
 

@@ -10,25 +10,10 @@ __all__ = ['MinimumClassConfusionLoss', 'ImageClassifier']
 
 
 class MinimumClassConfusionLoss(nn.Module):
-    r"""The `Minimum Class Confusion Loss <https://arxiv.org/abs/1912.03699>`_
-
+    r"""
     Minimum Class Confusion loss minimizes the class confusion in the target predictions.
-    Given classifier predictions (logits before softmax) :math:`Z`, the definition of MCC loss is
 
-    .. math::
-           {{\mathbf{C}}_{jj'}} = {\widehat{\mathbf{y}}}_{ \cdot j}^{\sf T}{\mathbf{W}}{{\widehat{\mathbf{y}}}_{ \cdot j'}},\\
-           where the weighting scheme is
-           {W_{ii}} = \frac{{B\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i \cdot }}} )} )} \right)}}
-           {{\sum\limits_{i' = 1}^B {\left( {1 + \exp ( { - H( {{{{\widehat{\bf y}}}_{i' \cdot }}} )} )} \right)} }},
-           where H denotes the entropy function.\\
-           We adopt entropy function to alleviate class imbalance,
-           {{{\widetilde{\mathbf C}}}_{jj'}} = \frac{{{{\mathbf{C}}_{jj'}}}}{{\sum\nolimits_{{j''} = 1}^
-           {|{\mathcal{C}}|} {{{\mathbf{C}}_{j{j''}}}} }},
-           MCC aims at minimizing cross-class confusion,
-           {L_{{\rm{MCC}}}} ( {{{\widehat {\mathbf{Y}}}_t}} ) = \frac{1}{|{\cal {C}}|}\sum\limits_{j = 1}^
-           {|{\mathcal{C}}|} {\sum\limits_{j' \ne j}^{|{\mathcal{C}}|} {\left| {{{{\widetilde{\mathbf C}}}_{jj'}}} \right|} }.
-
-    You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation <https://arxiv.org/abs/1912.03699>`
+    You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation <https://arxiv.org/abs/1912.03699>`_
 
     Parameters:
         - **temperature** (float) : The temperature for rescaling, the prediction will shrink to vanilla softmax if
@@ -100,9 +85,12 @@ def entropy(predictions: torch.Tensor) -> torch.Tensor:
     H = -predictions * torch.log(predictions + epsilon)
     return H.sum(dim=1)
 
+
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU()

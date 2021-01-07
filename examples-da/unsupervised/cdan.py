@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
-from PIL import Image
 
 sys.path.append('.')
 from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -23,8 +22,9 @@ from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassif
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy
+from dalib.utils.metric import accuracy, ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
+from dalib.vision.transforms import ResizeImage
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -45,15 +45,24 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-        transforms.Resize((256, 256), Image.CUBIC),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize
-    ])
+    if args.center_crop:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.CenterCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
+    else:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
     val_transform = transforms.Compose([
-        transforms.Resize((256, 256), Image.CUBIC),
+        ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
@@ -165,8 +174,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         cls_acc = accuracy(y_s, labels_s)[0]
 
         losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_accs.update(domain_acc.item(), x_s.size(0))
+        cls_accs.update(cls_acc, x_s.size(0))
+        domain_accs.update(domain_acc, x_s.size(0))
         trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
@@ -195,6 +204,10 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
 
     # switch to evaluate mode
     model.eval()
+    if args.per_class_eval:
+        confmat = ConfusionMatrix(model.num_classes)
+    else:
+        confmat = None
 
     with torch.no_grad():
         end = time.time()
@@ -208,9 +221,11 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            if confmat:
+                confmat.update(target, output.argmax(1))
             losses.update(loss.item(), images.size(0))
-            top1.update(acc1[0], images.size(0))
-            top5.update(acc5[0], images.size(0))
+            top1.update(acc1.item(), images.size(0))
+            top5.update(acc5.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -221,6 +236,8 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
+        if confmat:
+            print(confmat)
 
     return top1.avg
 
@@ -275,7 +292,10 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--entropy', default=False, action='store_true', help='use entropy conditioning')
-
+    parser.add_argument('--center-crop', default=False, action='store_true',
+                        help='whether use center crop during training')
+    parser.add_argument('--per-class-eval', action='store_true',
+                        help='whether output per-class accuracy during evaluation')
     args = parser.parse_args()
     print(args)
     main(args)

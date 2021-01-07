@@ -1,14 +1,10 @@
-dalib.utils
+DALIB Utils
 ===========================
 
 Average Meter
 ---------------------------------
 
 .. autoclass:: dalib.utils.avgmeter.AverageMeter
-   :members:
-   :show-inheritance:
-
-.. autoclass:: dalib.utils.avgmeter.ClassWiseAccuracyMeter
    :members:
    :show-inheritance:
 
@@ -26,11 +22,8 @@ Data
    :members:
    :show-inheritance:
 
-.. autofunction:: dalib.utils.data.get_frequency_by_category
-
 
 Accuracy
 ---------------------------------
 
 .. autofunction:: dalib.utils.metric.accuracy
-.. autofunction:: dalib.utils.metric.partial_accuracy

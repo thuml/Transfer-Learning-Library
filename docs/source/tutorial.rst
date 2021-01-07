@@ -227,7 +227,7 @@ The evaluation code is similar as in supervised learning.
 
                 # measure accuracy and record loss
                 acc1,  = accuracy(output, target, topk=(1, ))
-                top1.update(acc1[0], images.size(0))
+                top1.update(acc1.item(), images.size(0))
 
             print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
                   .format(top1=top1, top5=top5))

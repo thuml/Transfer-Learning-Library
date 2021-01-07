@@ -1,126 +1,10 @@
 import os
 from typing import Optional
-from .imagelist import ImageList
-from ._util import download as download_data, check_exits
+from dalib.vision.datasets.imagelist import ImageList
+from dalib.vision.datasets._util import download as download_data, check_exits
 
 
-class ImageNetCaltech(ImageList):
-    """ImageNet-Caltech is constructed from `Caltech-256 <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_ and
-    `ImageNet-1K <http://image-net.org/>`_ .
-
-    They share 84 common classes. ImageNet-Caltech keeps all classes of ImageNet-1K.
-    The label is based on the ImageNet-1K (class 0-999) . The private classes of Caltech-256 is discarded.
-
-
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
-            ``'I'``: ImageNet-1K training set.
-        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
-            in root directory. If dataset is already downloaded, it is not downloaded again.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-            transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
-
-    .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
-        since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.
-        In `root`, there will exist following files after downloading.
-        ::
-            train/
-                n01440764/
-                ...
-            val/
-            256_ObjectCategories/
-                001.ak47/
-                ...
-            image_list/
-                caltech_256_list.txt
-                ...
-    """
-    image_list = {
-        "I": "image_list/imagenet_train_1000_list.txt",
-        "C": "image_list/caltech_84_list.txt",
-    }
-
-    def __init__(self, root: str, task: str, download: Optional[bool] = True, **kwargs):
-        assert task in self.image_list
-        data_list_file = os.path.join(root, self.image_list[task])
-
-        if download:
-            list(map(lambda args: download_data(root, *args), download_list))
-        else:
-            list(map(lambda file_name, _: check_exits(root, file_name), download_list))
-
-        if not os.path.exists(os.path.join(root, 'train')):
-            print("Please put train and val directory of ImageNet-1K manually under {} "
-                  "since ImageNet-1K is no longer publicly accessible.".format(root))
-            exit(-1)
-
-        super(ImageNetCaltech, self).__init__(root, CLASSES, data_list_file=data_list_file, **kwargs)
-
-
-class ImageNetCaltechUniversal(ImageList):
-    """ImageNet-Caltech-Universal is constructed from `Caltech-256 <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_
-    and `ImageNet-1K <http://image-net.org/>`_ .
-
-    They share 84 common classes. ImageNet-Caltech keeps all classes of ImageNet-1K.
-    The label is based on the ImageNet-1K (class 0-999) . The private classes of Caltech-256 is grouped into class 1000 ("unknown").
-    Thus, ImageNetCaltechUniversal has 1001 classes in total.
-
-
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
-            ``'I'``: ImageNet-1K training set.
-        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
-            in root directory. If dataset is already downloaded, it is not downloaded again.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-            transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
-
-    .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
-        since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.
-        In `root`, there will exist following files after downloading.
-        ::
-            train/
-                n01440764/
-                ...
-            val/
-            256_ObjectCategories/
-                001.ak47/
-                ...
-            image_list/
-                caltech_256_list.txt
-                ...
-    """
-    image_list = {
-        "I": "image_list/imagenet_train_1000_list.txt",
-        "C": "image_list/caltech_85_list.txt",
-    }
-
-    def __init__(self, root: str, task: str, download: Optional[bool] = True, **kwargs):
-        assert task in self.image_list
-        data_list_file = os.path.join(root, self.image_list[task])
-
-        if download:
-            list(map(lambda args: download_data(root, *args), download_list))
-        else:
-            list(map(lambda file_name, _: check_exits(root, file_name), download_list))
-
-        if not os.path.exists(os.path.join(root, 'train')):
-            print("Please put train and val directory of ImageNet-1K manually under {} "
-                  "since ImageNet-1K is no longer publicly accessible.".format(root))
-            exit(-1)
-
-        super(ImageNetCaltechUniversal, self).__init__(root, CLASSES + ["unknown"], data_list_file=data_list_file, **kwargs)
-
-
-download_list = [
-    ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/904af0171c82403c9a36/?dl=1"),
-    ("256_ObjectCategories", "256_ObjectCategories.tar",
-     "http://www.vision.caltech.edu/Image_Datasets/Caltech256/256_ObjectCategories.tar"),
-]
-CLASSES = [c[0] for c in [('tench', 'Tinca tinca'), ('goldfish', 'Carassius auratus'),
+_CLASSES = [c[0] for c in [('tench', 'Tinca tinca'), ('goldfish', 'Carassius auratus'),
                           ('great white shark', 'white shark', 'man-eater', 'man-eating shark', 'Carcharodon carcharias'),
                           ('tiger shark', 'Galeocerdo cuvieri'), ('hammerhead', 'hammerhead shark'),
                           ('electric ray', 'crampfish', 'numbfish', 'torpedo'), ('stingray',), ('cock',), ('hen',),
@@ -498,3 +382,123 @@ CLASSES = [c[0] for c in [('tench', 'Tinca tinca'), ('goldfish', 'Carassius aura
                           ('hen-of-the-woods', 'hen of the woods', 'Polyporus frondosus', 'Grifola frondosa'),
                           ('bolete',), ('ear', 'spike', 'capitulum'),
                           ('toilet tissue', 'toilet paper', 'bathroom tissue')]]
+
+
+class ImageNetCaltech(ImageList):
+    """ImageNet-Caltech is constructed from `Caltech-256 <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_ and
+    `ImageNet-1K <http://image-net.org/>`_ .
+
+    They share 84 common classes. ImageNet-Caltech keeps all classes of ImageNet-1K.
+    The label is based on the ImageNet-1K (class 0-999) . The private classes of Caltech-256 is discarded.
+
+
+    Parameters:
+        - **root** (str): Root directory of dataset
+        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
+            ``'I'``: ImageNet-1K training set.
+        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, ``transforms.RandomCrop``.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+
+    .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
+        since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.
+        In `root`, there will exist following files after downloading.
+        ::
+            train/
+                n01440764/
+                ...
+            val/
+            256_ObjectCategories/
+                001.ak47/
+                ...
+            image_list/
+                caltech_256_list.txt
+                ...
+    """
+    image_list = {
+        "I": "image_list/imagenet_train_1000_list.txt",
+        "C": "image_list/caltech_84_list.txt",
+    }
+    CLASSES = _CLASSES
+
+    def __init__(self, root: str, task: str, download: Optional[bool] = True, **kwargs):
+        assert task in self.image_list
+        data_list_file = os.path.join(root, self.image_list[task])
+
+        if download:
+            list(map(lambda args: download_data(root, *args), download_list))
+        else:
+            list(map(lambda file_name, _: check_exits(root, file_name), download_list))
+
+        if not os.path.exists(os.path.join(root, 'train')):
+            print("Please put train and val directory of ImageNet-1K manually under {} "
+                  "since ImageNet-1K is no longer publicly accessible.".format(root))
+            exit(-1)
+
+        super(ImageNetCaltech, self).__init__(root, ImageNetCaltech.CLASSES, data_list_file=data_list_file, **kwargs)
+
+
+class ImageNetCaltechUniversal(ImageList):
+    """ImageNet-Caltech-Universal is constructed from `Caltech-256 <http://www.vision.caltech.edu/Image_Datasets/Caltech256/>`_
+    and `ImageNet-1K <http://image-net.org/>`_ .
+
+    They share 84 common classes. ImageNet-Caltech keeps all classes of ImageNet-1K.
+    The label is based on the ImageNet-1K (class 0-999) . The private classes of Caltech-256 is grouped into class 1000 ("unknown").
+    Thus, ImageNetCaltechUniversal has 1001 classes in total.
+
+
+    Parameters:
+        - **root** (str): Root directory of dataset
+        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
+            ``'I'``: ImageNet-1K training set.
+        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, ``transforms.RandomCrop``.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+
+    .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
+        since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.
+        In `root`, there will exist following files after downloading.
+        ::
+            train/
+                n01440764/
+                ...
+            val/
+            256_ObjectCategories/
+                001.ak47/
+                ...
+            image_list/
+                caltech_256_list.txt
+                ...
+    """
+    image_list = {
+        "I": "image_list/imagenet_train_1000_list.txt",
+        "C": "image_list/caltech_85_list.txt",
+    }
+    CLASSES = _CLASSES + ["unknown"]
+
+    def __init__(self, root: str, task: str, download: Optional[bool] = True, **kwargs):
+        assert task in self.image_list
+        data_list_file = os.path.join(root, self.image_list[task])
+
+        if download:
+            list(map(lambda args: download_data(root, *args), download_list))
+        else:
+            list(map(lambda file_name, _: check_exits(root, file_name), download_list))
+
+        if not os.path.exists(os.path.join(root, 'train')):
+            print("Please put train and val directory of ImageNet-1K manually under {} "
+                  "since ImageNet-1K is no longer publicly accessible.".format(root))
+            exit(-1)
+
+        super(ImageNetCaltechUniversal, self).__init__(root, ImageNetCaltechUniversal.CLASSES, data_list_file=data_list_file, **kwargs)
+
+
+download_list = [
+    ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/904af0171c82403c9a36/?dl=1"),
+    ("256_ObjectCategories", "256_ObjectCategories.tar",
+     "http://www.vision.caltech.edu/Image_Datasets/Caltech256/256_ObjectCategories.tar"),
+]

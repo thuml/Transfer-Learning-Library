@@ -9,25 +9,30 @@ The adaptation subpackage contains definitions for the following domain adaptati
 -  `CDAN`_
 -  `MCD`_
 -  `MDD`_
+-  `MCC`_
 
 -----------
 Benchmarks
 -----------
 
-We provide benchmarks of different domain adaptation algorithms on *Office-31*, *Office-Home* and *VisDA-2017* as follows.
+We provide benchmarks of different domain adaptation algorithms on *Office-31*, *Office-Home* , *VisDA-2017* and *DomainNet* as follows.
 Note that `Origin` means the accuracy reported by the original paper, while `Avg` is the accuracy reported by DALIB.
+We found that the accuracies of adversarial methods (including DANN, CDAN, MCD and MDD) are not stable even after the random seed is fixed, thus
+we repeat running adversarial methods on *Office-31* and *VisDA-2017* for three times and report their average accuracy.
 
 Office-31 accuracy on ResNet-50
 ---------------------------------
 
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 Methods         Origin  Avg     A → W   D → W   W → D   A → D   D → A   W → A
-Source Only     76.1    79.9    77.0    96.4    99.2    79.1    64.2    63.5
-DANN            82.2    85.5    89.1    97.9    100.0   84.1    72.9    68.9
-DAN             80.4    83.2    84.0    98.2    100.0   86.1    66.4    64.6
-JAN             84.3    86.8    91.8    98.2    100.0   88.0    71.2    71.4
-CDAN            87.7    88.3    93.1    98.7    100.0    90.4    75.8    71.9
-MDD             88.9    89.2    94.1    98.5    100.0   93.0    76.4    73.0
+Source Only     76.1	79.5	75.8	95.5	99.0	79.3	63.6	63.8
+DANN            82.2	86.1	91.4	97.9	100.0	83.6	73.3	70.4
+DAN             80.4	83.7	84.2	98.4	100.0	87.3	66.9	65.2
+JAN             84.3	87.3	93.7	98.4	100.0	89.4	71.2	71.0
+CDAN            87.7	87.7	93.8	98.5	100.0	89.9	73.4	70.4
+MCD             /       85.4	90.4	98.5	100.0	87.3	68.3	67.6
+MDD             88.9	89.6	95.6	98.6	100.0	94.4	76.6	72.2
+MCC             89.4	89.6	94.1	98.4	99.8	95.6	75.5	74.2
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 
 
@@ -41,24 +46,28 @@ DANN        57.6    65.2    53.8    62.6    74.0    55.8    67.3    67.3    55.8
 DAN         56.3    61.4    45.6    67.7    73.9    57.7    63.8    66.0    54.9    40.0    74.5    66.2    49.1    77.9
 JAN         58.3    65.9    50.8    71.9    76.5    60.6    68.3    68.7    60.5    49.6    76.9    71.0    55.9    80.5
 CDAN        65.8    68.8    55.2    72.4    77.6    62.0    69.7    70.9    62.4    54.3    80.5    75.5    61.0    83.8
-MDD         68.1    69.6    56.4    75.3    78.4    63.2    73.1    73.3    63.9    54.8    79.7    73.2    60.7    83.7
+MCD         /       67.8    51.7    72.2    78.2    63.7    69.5    70.8    61.5    52.8    78.0    74.5    58.4    81.8
+MDD         68.1    69.7    56.2    75.4    79.6    63.5    72.1    73.8    62.5    54.8    79.9    73.5    60.9    84.5
+MCC         /       72.4    58.4    79.6    83.0    67.5    77.0    78.5    66.6    54.8    81.8    74.4    61.4    85.6
 =========== ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
-VisDA-2017 accuracy on ResNet-50 and ResNet-101
+VisDA-2017 accuracy ResNet-101
 -----------------------------------------------
 
-=========== ==========  ==========  ==========  ==========
-Methods     Origin      DALIB       Origin      DALIB
-Backbone    ResNet-50   ResNet-50   ResNet-101  ResNet-101
-Source Only /           55.1        52.4        58.3
-DANN        /           72.6        57.4            72.9
-DAN         /           60.6        61.1            64.8
-JAN         61.6        64.9        /               68.0
-CDAN        66.8        74.6        /               74.5
-MCD         69.2        69.1        71.9            77.3
-MDD         74.6        74.9        /               78.5
-=========== ==========  ==========  ==========  ==========
+Note that `Origin` means the accuracy reported by the original paper,
+`Mean` refers to the accuracy average over classes, while `Avg` refers to accuracy average over samples.
 
+=========== ==========  ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
+Methods     Origin      Mean    plane   bcycl   bus     car     horse   knife   mcycl   person  plant   sktbrd  train   truck   Avg
+Source Only 52.4        51.7    63.6    35.3    50.6    78.2    74.6    18.7    82.1    16.0    84.2    35.5    77.4    4.7     56.9
+DANN        57.4        79.5	93.5	74.3	83.4	50.7	87.2	90.2	89.9	76.1	88.1	91.4	89.7	39.8	74.9
+DAN         61.1        66.4	89.2	37.2	77.7	61.8	81.7	64.3	90.6	61.4	79.9	37.7	88.1	27.4	67.2
+JAN         /           73.4	96.3	66.0	82.0	44.1	86.4	70.3	87.9	74.6	83.0	64.6	84.5	41.3	70.3
+CDAN        /           80.1	94.0	69.2	78.9	57.0	89.8	94.9	91.9	80.3	86.8	84.9	85.0	48.5	76.5
+MCD         71.9        77.7	87.8	75.7	84.2	78.1	91.6	95.3	88.1	78.3	83.4	64.5	84.8	20.9	76.7
+MDD         /           82.0	88.3	62.8	85.2	69.9	91.9	95.1	94.4	81.2	93.8	89.8	84.1	47.9	79.8
+MCC         78.8        83.6	95.3	85.8	77.1	68.0	93.9	92.9	84.5	79.5	93.6	93.7	85.3	53.8	80.4
+=========== ==========  ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
 DomainNet accuracy on ResNet-101
 -----------------------------------------------
@@ -173,8 +182,16 @@ MDD
 .. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancy
     :show-inheritance:
 
+.. autoclass:: dalib.adaptation.mdd.ClassificationMarginDisparityDiscrepancy
+    :show-inheritance:
+
 .. autoclass:: dalib.adaptation.mdd.ImageClassifier
     :show-inheritance:
 
 .. autofunction:: dalib.adaptation.mdd.shift_log
 
+
+MCC
+----------------------------
+.. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss
+    :show-inheritance:

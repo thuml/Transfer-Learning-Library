@@ -4,7 +4,8 @@ from . import mdd
 from . import dan
 from . import jan
 from . import mcd
+from . import mcc
 from . import pada
 from . import osbp
 
-__all__ = ["cdan", "dann", "mdd", "dan", "jan", "mcd", "pada", "osbp"]
+__all__ = ["cdan", "dann", "mdd", "dan", "jan", "mcd", "mcc", "pada", "osbp"]

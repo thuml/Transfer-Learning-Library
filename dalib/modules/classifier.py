@@ -9,7 +9,7 @@ class Classifier(nn.Module):
     """A generic Classifier class for domain adaptation.
 
     Parameters:
-        - **backbone** (class:`nn.Module` object): Any backbone to extract 1-d features from data
+        - **backbone** (class:`nn.Module` object): Any backbone to extract 2-d features from data
         - **num_classes** (int): Number of classes
         - **bottleneck** (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
         - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: -1
@@ -46,7 +46,10 @@ class Classifier(nn.Module):
         self.backbone = backbone
         self.num_classes = num_classes
         if bottleneck is None:
-            self.bottleneck = nn.Identity()
+            self.bottleneck = nn.Sequential(
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten()
+            )
             self._features_dim = backbone.out_features
         else:
             self.bottleneck = bottleneck
@@ -67,7 +70,6 @@ class Classifier(nn.Module):
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
         f = self.backbone(x)
-        f = f.view(-1, self.backbone.out_features)
         f = self.bottleneck(f)
         predictions = self.head(f)
         return predictions, f

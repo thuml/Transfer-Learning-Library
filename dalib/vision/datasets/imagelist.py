@@ -15,7 +15,7 @@ class ImageList(datasets.VisionDataset):
             and returns a transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
 
-    .. note:: In `data_list_file`, each line 2 values in the following format.
+    .. note:: In `data_list_file`, each line has 2 values in the following format.
         ::
             source_dir/dog_xxx.png 0
             source_dir/cat_123.png 1

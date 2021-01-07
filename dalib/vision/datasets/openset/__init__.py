@@ -1,6 +1,13 @@
+from ..imagelist import ImageList
+from ..office31 import Office31
+from ..officehome import OfficeHome
+from ..visda2017 import VisDA2017
+
 from typing import Optional, ClassVar, Sequence
 from copy import deepcopy
-from . import ImageList, Office31, OfficeHome, VisDA2017
+
+
+__all__ = ['Office31', 'OfficeHome', "VisDA2017"]
 
 
 def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
@@ -58,7 +65,7 @@ def default_open_set(dataset_class: ClassVar, source: bool) -> ClassVar:
     Default open-set used in some paper.
 
     Parameters:
-        - **dataset_class** (class): Dataset class. Currently, dataset_class must be one of ``Office31`` and ``VisDA2017``.
+        - **dataset_class** (class): Dataset class. Currently, dataset_class must be one of ``Office31``, ``OfficeHome`` and ``VisDA2017``.
         - **source** (bool): Whether the dataset is used for source domain or not.
     """
     if dataset_class == Office31:
@@ -82,3 +89,4 @@ def default_open_set(dataset_class: ClassVar, source: bool) -> ClassVar:
     else:
         raise NotImplementedError("Unknown openset domain adaptation dataset: {}".format(dataset_class.__name__))
     return open_set(dataset_class, public_classes, private_classes)
+
