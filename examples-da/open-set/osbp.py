@@ -17,16 +17,16 @@ from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
-from PIL import Image
 
 sys.path.append('.')
 from dalib.adaptation.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
-import dalib.vision.datasets as datasets
-from dalib.vision.datasets.opensetda import default_open_set as open_set
+import dalib.vision.datasets.openset as datasets
+from dalib.vision.datasets.openset import default_open_set as open_set
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy
-from dalib.utils.avgmeter import AverageMeter, ProgressMeter, ClassWiseAccuracyMeter
+from dalib.utils.metric import accuracy, ConfusionMatrix
+from dalib.utils.avgmeter import AverageMeter, ProgressMeter
+from dalib.vision.transforms import ResizeImage
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,20 +47,28 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-        transforms.Resize((256, 256), Image.CUBIC),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize
-    ])
+    if args.center_crop:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.CenterCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
+    else:
+        train_transform = transforms.Compose([
+            ResizeImage(256),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize
+        ])
     val_transform = transforms.Compose([
-        transforms.Resize((256, 256), Image.CUBIC),
+        ResizeImage(256),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize
     ])
-
     dataset = datasets.__dict__[args.data]
     source_dataset = open_set(dataset, source=True)
     target_dataset = open_set(dataset, source=False)
@@ -100,7 +108,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args, val_dataset.classes)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
         if acc1 > best_acc1:
@@ -111,7 +119,7 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(best_model)
-    acc1 = validate(test_loader, classifier, args, val_dataset.classes)
+    acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
 
 
@@ -177,10 +185,11 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace, classes: Sequence) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
-    accuracy_meter = ClassWiseAccuracyMeter(classes, ':6.2f')
+    classes = val_loader.dataset.classes
+    confmat = ConfusionMatrix(len(classes))
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, accuracy_meter],
+        [batch_time],
         prefix='Test: ')
 
     # switch to evaluate mode
@@ -196,7 +205,7 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
             output, _ = model(images)
 
             # measure accuracy and record loss
-            accuracy_meter.update(output, target)
+            confmat.update(target, output.argmax(1))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -205,10 +214,13 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
             if i % args.print_freq == 0:
                 progress.display(i)
 
-        all_acc = accuracy_meter.average_accuracy(classes)
-        known = accuracy_meter.average_accuracy(classes[:-1])
-        unknown = accuracy_meter.accuracy(classes[-1])
+        acc_global, accs, iu = confmat.compute()
+        all_acc = torch.mean(accs).item() * 100
+        known = torch.mean(accs[:-1]).item() * 100
+        unknown = accs[-1].item() * 100
         h_score = 2 * known * unknown / (known + unknown)
+        if args.per_class_eval:
+            print(confmat.format(classes))
         print(' * All {all:.3f} Known {known:.3f} Unknown {unknown:.3f} H-score {h_score:.3f}'
                 .format(all=all_acc, known=known, unknown=unknown, h_score=h_score))
 
@@ -262,7 +274,9 @@ if __name__ == '__main__':
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
-
+    parser.add_argument('--center-crop', default=False, action='store_true')
+    parser.add_argument('--per-class-eval', action='store_true',
+                        help='whether output per-class accuracy during evaluation')
     args = parser.parse_args()
     print(args)
     main(args)

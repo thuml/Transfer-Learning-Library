@@ -15,6 +15,13 @@ Progress Meter
    :members:
    :show-inheritance:
 
+Meter
+---------------------------------
+
+.. autoclass:: dalib.utils.avgmeter.Meter
+   :members:
+   :show-inheritance:
+
 Data
 ---------------------------------
 
@@ -27,3 +34,11 @@ Accuracy
 ---------------------------------
 
 .. autofunction:: dalib.utils.metric.accuracy
+
+
+ConfusionMatrix
+---------------------------------
+
+.. autoclass:: dalib.utils.metric.ConfusionMatrix
+   :members:
+   :show-inheritance:

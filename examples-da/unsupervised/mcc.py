@@ -192,7 +192,8 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
     # switch to evaluate mode
     model.eval()
     if args.per_class_eval:
-        confmat = ConfusionMatrix(model.num_classes)
+        classes = val_loader.dataset.classes
+        confmat = ConfusionMatrix(len(classes))
     else:
         confmat = None
 
@@ -224,7 +225,7 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
         if confmat:
-            print(confmat)
+            print(confmat.format(classes))
 
     return top1.avg
 

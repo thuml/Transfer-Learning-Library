@@ -1,8 +1,5 @@
-from typing import Optional, Sequence, Tuple
-import copy
 import torch
-from torch import Tensor
-import numpy as np
+import prettytable
 
 
 def accuracy(output, target, topk=(1,)):
@@ -38,6 +35,13 @@ class ConfusionMatrix(object):
         self.mat = None
 
     def update(self, target, output):
+        """
+        Update confusion matrix.
+
+        Inputs:
+            - **target**: ground truth
+            - **output**: predictions of models
+        """
         n = self.num_classes
         if self.mat is None:
             self.mat = torch.zeros((n, n), dtype=torch.int64, device=target.device)
@@ -50,6 +54,7 @@ class ConfusionMatrix(object):
         self.mat.zero_()
 
     def compute(self):
+        """compute global accuracy, per-class accuracy and per-class IoU"""
         h = self.mat.float()
         acc_global = torch.diag(h).sum() / h.sum()
         acc = torch.diag(h) / h.sum(1)
@@ -75,4 +80,15 @@ class ConfusionMatrix(object):
                 ['{:.1f}'.format(i) for i in (acc * 100).tolist()],
                 ['{:.1f}'.format(i) for i in (iu * 100).tolist()],
                 iu.mean().item() * 100)
+
+    def format(self, classes):
+        """print the accuracy and IoU for each class"""
+        acc_global, acc, iu = self.compute()
+
+        table = prettytable.PrettyTable(["class", "acc", "iou"])
+        for i, class_name, per_acc, per_iu in zip(range(len(classes)), classes, (acc * 100).tolist(), (iu * 100).tolist()):
+            table.add_row([class_name, per_acc, per_acc])
+
+        return 'global correct: {:.1f}\nmean correct:{:.1f}\nmean IoU: {:.1f}\n{}'.format(
+            acc_global.item() * 100, acc.mean().item() * 100, iu.mean().item() * 100, table.get_string())
 

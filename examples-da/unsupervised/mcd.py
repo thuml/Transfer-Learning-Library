@@ -17,7 +17,6 @@ from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
-from PIL import Image
 
 sys.path.append('.')
 from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
@@ -241,7 +240,8 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
     F2.eval()
 
     if args.per_class_eval:
-        confmat = ConfusionMatrix(F1.num_classes)
+        classes = val_loader.dataset.classes
+        confmat = ConfusionMatrix(len(classes))
     else:
         confmat = None
 
@@ -273,7 +273,7 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
         print(' * Acc1 {top1_1.avg:.3f} Acc2 {top1_2.avg:.3f}'
               .format(top1_1=top1_1, top1_2=top1_2))
         if confmat:
-            print(confmat)
+            print(confmat.format(classes))
 
     return top1_1.avg, top1_2.avg
 

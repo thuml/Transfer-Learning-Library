@@ -35,6 +35,7 @@ class AverageMeter(object):
 
 
 class Meter(object):
+    """Computes and stores the current value."""
     def __init__(self, name: str, fmt: Optional[str] = ':f'):
         self.name = name
         self.fmt = fmt
@@ -66,3 +67,5 @@ class ProgressMeter(object):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'
+
+

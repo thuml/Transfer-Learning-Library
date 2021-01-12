@@ -18,11 +18,11 @@ import torch.nn.functional as F
 
 sys.path.append('.')
 from dalib.modules.classifier import Classifier
-import dalib.vision.datasets as datasets
-from dalib.vision.datasets.partialda import default_partial as partial
+import dalib.vision.datasets.partial as datasets
+from dalib.vision.datasets.partial import default_partial as partial
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy
+from dalib.utils.metric import accuracy, ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
 
 
@@ -170,6 +170,11 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
     # switch to evaluate mode
     model.eval()
+    if args.per_class_eval:
+        classes = val_loader.dataset.classes
+        confmat = ConfusionMatrix(len(classes))
+    else:
+        confmat = None
 
     with torch.no_grad():
         end = time.time()
@@ -183,9 +188,11 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            if confmat:
+                confmat.update(target, output.argmax(1))
             losses.update(loss.item(), images.size(0))
-            top1.update(acc1[0], images.size(0))
-            top5.update(acc5[0], images.size(0))
+            top1.update(acc1.item(), images.size(0))
+            top5.update(acc5.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -196,6 +203,8 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
+        if confmat:
+            print(confmat.format(classes))
 
     return top1.avg
 
@@ -245,7 +254,8 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
-
+    parser.add_argument('--per-class-eval', action='store_true',
+                        help='whether output per-class accuracy during evaluation')
     args = parser.parse_args()
     print(args)
     main(args)

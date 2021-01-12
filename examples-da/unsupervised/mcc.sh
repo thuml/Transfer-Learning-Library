@@ -23,3 +23,6 @@ CUDA_VISIBLE_DEVICES=5 python examples-da/unsupervised/mcc.py data/office-home -
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/mcc.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 --epochs 30 --seed 0 --lr 0.002 --per-class-eval --temperature 3.0 --center-crop > benchmarks/da/unsupervised/mcc/VisDA2017.txt
+
+CUDA_VISIBLE_DEVICES=1 python examples-da/unsupervised/mcc.py data/domainnet -d DomainNet -s c -t r -a resnet101  --epochs 30 --seed 0 --temperature 2.5 --bottleneck-dim 2048
+CUDA_VISIBLE_DEVICES=7 python examples-da/unsupervised/mcc.py data/domainnet -d DomainNet -s c -t r -a resnet101  --epochs 30 --seed 0 --temperature 3.0 --bottleneck-dim 2048
