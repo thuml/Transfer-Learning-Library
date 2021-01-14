@@ -25,26 +25,26 @@ CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/offic
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101  --epochs 20 -i 1000 --seed 0 --per-class-eval --center-crop > benchmarks/da/unsupervised/source_only/VisDA2017.txt
 
 # DomainNet
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_c2i.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_c2p.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_c2r.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_c2s.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_i2c.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_i2p.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_i2r.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_i2s.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_p2c.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_p2i.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_p2r.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_p2s.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_r2c.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_r2i.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_r2p.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_r2s.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_s2c.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_s2i.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_s2p.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/cdan/DomainNet_s2r.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_c2i.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_c2p.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_c2r.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_c2s.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_i2c.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_i2p.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_i2r.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_i2s.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_p2c.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_p2i.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_p2r.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_p2s.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_r2c.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_r2i.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_r2p.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_r2s.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2c.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2i.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2p.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2r.txt
 
 # Office-Caltech
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/office-caltech -d OfficeCaltech -s A -t C -a resnet50  --epochs 5 > benchmarks/da/unsupervised/source_only/OfficeCaltech_A2C.txt

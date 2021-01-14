@@ -74,3 +74,8 @@ class ImageList(datasets.VisionDataset):
     def num_classes(self) -> int:
         """Number of classes"""
         return len(self.classes)
+
+    @classmethod
+    def domains(cls):
+        """All possible domain in this dataset"""
+        raise NotImplemented

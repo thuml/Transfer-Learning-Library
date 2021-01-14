@@ -50,3 +50,7 @@ class VisDA2017(ImageList):
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
         super(VisDA2017, self).__init__(root, VisDA2017.CLASSES, data_list_file=data_list_file, **kwargs)
+
+    @classmethod
+    def domains(cls):
+        return list(cls.image_list.keys())

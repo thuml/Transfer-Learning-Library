@@ -142,9 +142,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        # measure data loading time
-        data_time.update(time.time() - end)
-
         x_s, labels_s = next(train_source_iter)
         x_t, labels_t = next(train_target_iter)
 
@@ -152,6 +149,9 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         x_t = x_t.to(device)
         labels_s = labels_s.to(device)
         labels_t = labels_t.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
 
         # compute output
         y_s, _ = model(x_s, grad_reverse=False)

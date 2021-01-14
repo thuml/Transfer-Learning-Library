@@ -15,20 +15,16 @@ from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+from torch.utils.data.dataset import ConcatDataset
 
 sys.path.append('.')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 from dalib.modules.classifier import Classifier
-from dalib.adaptation.pada import AutomaticUpdateClassWeightModule
-import dalib.vision.datasets.partial as datasets
-from dalib.vision.datasets.partial import default_partial as partial
+import dalib.vision.datasets as datasets
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy, ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
 from dalib.vision.transforms import ResizeImage
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -72,51 +68,45 @@ def main(args: argparse.Namespace):
     ])
 
     dataset = datasets.__dict__[args.data]
-    partial_dataset = partial(dataset)
-    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+
+    # If sources is not set,
+    # then use all domains except the target domain.
+    if args.sources is None:
+        args.sources = dataset.domains()
+        args.sources.remove(args.target)
+
+    print("Source: {} Target: {}".format(args.sources, args.target))
+    train_source_dataset = ConcatDataset([
+        dataset(root=args.root, task=source, download=True, transform=train_transform)
+        for source in args.sources])
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
-    train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
-                                     shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     if args.data == 'DomainNet':
-        test_dataset = partial_dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
+        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     else:
         test_loader = val_loader
 
     train_source_iter = ForeverDataIterator(train_source_loader)
-    train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    num_classes = train_source_dataset.num_classes
     backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = val_dataset.num_classes
+    classifier = Classifier(backbone, num_classes).to(device)
 
-    if args.data == 'ImageNetCaltech':
-        classifier = Classifier(backbone, num_classes, head=backbone.copy_head()).to(device)
-    else:
-        classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
-    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
-    class_weight_module = AutomaticUpdateClassWeightModule(args.class_weight_update_steps, train_target_loader,
-                                                           classifier, num_classes, device, args.temperature,
-                                                           train_target_dataset.partial_classes_idx)
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
-                    args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-
-    # define loss function
-    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, domain_adv, class_weight_module,
-              optimizer, lr_scheduler, epoch, args)
+        train(train_source_iter, classifier, optimizer,
+              lr_scheduler, epoch, args)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
@@ -134,63 +124,40 @@ def main(args: argparse.Namespace):
     print("test_acc1 = {:3.1f}".format(acc1))
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          domain_adv: DomainAdversarialLoss, class_weight_module: AutomaticUpdateClassWeightModule,
-          optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':5.2f')
-    data_time = AverageMeter('Data', ':5.2f')
-    losses = AverageMeter('Loss', ':6.2f')
+def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
+          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':4.2f')
+    data_time = AverageMeter('Data', ':3.1f')
+    losses = AverageMeter('Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    domain_accs = AverageMeter('Domain Acc', ':3.1f')
-    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
-    partial_classes_weights = AverageMeter('Partial Weight', ':3.1f')
-    non_partial_classes_weights = AverageMeter('Non-partial Weight', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs, domain_accs, tgt_accs, partial_classes_weights, non_partial_classes_weights],
+        [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    domain_adv.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
-        x_t, labels_t = next(train_target_iter)
-
         x_s = x_s.to(device)
-        x_t = x_t.to(device)
         labels_s = labels_s.to(device)
-        labels_t = labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        y_s, f_s = model(x_s)
 
-        cls_loss = F.cross_entropy(y_s, labels_s, class_weight_module.get_class_weight_for_cross_entropy_loss())
-        w_s, w_t = class_weight_module.get_class_weight_for_adversarial_loss(labels_s)
-        transfer_loss = domain_adv(f_s, f_t, w_s, w_t)
-        class_weight_module.step()
-        partial_classes_weight, non_partial_classes_weight = class_weight_module.get_partial_classes_weight()
-        domain_acc = domain_adv.domain_discriminator_accuracy
-        loss = cls_loss + transfer_loss * args.trade_off
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        loss = cls_loss
 
         cls_acc = accuracy(y_s, labels_s)[0]
-        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_accs.update(domain_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_s.size(0))
-        partial_classes_weights.update(partial_classes_weight.item(), x_s.size(0))
-        non_partial_classes_weights.update(non_partial_classes_weight.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -206,7 +173,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace):
+def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -270,11 +237,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
     parser.add_argument('root', metavar='DIR',
-                        help='root path of source (and target) dataset')
+                        help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
                         help='dataset: ' + ' | '.join(dataset_names) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)')
+    parser.add_argument('-s', '--sources', nargs='+', default=None,
+                        help='source domain(s). Use all domains except the target domain if set None')
     parser.add_argument('-t', '--target', help='target domain(s)')
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,
@@ -285,35 +253,28 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-b', '--batch-size', default=36, type=int,
+    parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 36)')
-    parser.add_argument('--lr', '--learning-rate', default=0.002, type=float,
+                        help='mini-batch size (default: 32)')
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--lr-gamma', default=0.0003, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay',default=1e-3, type=float,
-                        metavar='W', help='weight decay (default: 1e-3)',
-                        dest='weight_decay')
+    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
+                        metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--trade-off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
+    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('-u', '--class-weight-update-steps', default=500, type=int,
-                        help='Number of steps to update class weight once')
-    parser.add_argument('--temperature', default=0.1, type=float,
-                        help='temperature for softmax when calculating class weight')
-    parser.add_argument('--bottleneck-dim', default=256, type=int,
-                        help='Dimension of bottleneck')
-    parser.add_argument('--center-crop', default=False, action='store_true')
+    parser.add_argument('--center-crop', default=False, action='store_true',
+                        help='whether use center crop during training')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
+
     args = parser.parse_args()
     print(args)
     main(args)

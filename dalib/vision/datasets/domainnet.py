@@ -100,3 +100,7 @@ class DomainNet(ImageList):
             list(map(lambda args: check_exits(root, args[0]), self.download_list))
 
         super(DomainNet, self).__init__(root, DomainNet.CLASSES, data_list_file=data_list_file, **kwargs)
+
+    @classmethod
+    def domains(cls):
+        return list(cls.image_list.keys())

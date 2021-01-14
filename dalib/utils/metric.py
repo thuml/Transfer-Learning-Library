@@ -87,7 +87,7 @@ class ConfusionMatrix(object):
 
         table = prettytable.PrettyTable(["class", "acc", "iou"])
         for i, class_name, per_acc, per_iu in zip(range(len(classes)), classes, (acc * 100).tolist(), (iu * 100).tolist()):
-            table.add_row([class_name, per_acc, per_acc])
+            table.add_row([class_name, per_acc, per_iu])
 
         return 'global correct: {:.1f}\nmean correct:{:.1f}\nmean IoU: {:.1f}\n{}'.format(
             acc_global.item() * 100, acc.mean().item() * 100, iu.mean().item() * 100, table.get_string())

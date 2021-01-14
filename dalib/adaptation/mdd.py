@@ -346,7 +346,7 @@ class ImageRegressor(nn.Module):
             nn.ReLU(),
         )
 
-        # The classifier head used for final predictions.
+        # The regressor head used for final predictions.
         self.head = nn.Sequential(
             nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(width),
@@ -363,7 +363,7 @@ class ImageRegressor(nn.Module):
             if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
                 nn.init.normal_(layer.weight, 0, 0.01)
                 nn.init.constant_(layer.bias, 0)
-        # The adversarial classifier head
+        # The adversarial regressor head
         self.adv_head = nn.Sequential(
             nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(width),

@@ -65,3 +65,7 @@ class OfficeCaltech(DatasetFolder):
     def num_classes(self):
         """Number of classes"""
         return len(self.classes)
+
+    @classmethod
+    def domains(cls):
+        return list(cls.directories.keys())

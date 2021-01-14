@@ -62,3 +62,7 @@ class OfficeHome(ImageList):
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
         super(OfficeHome, self).__init__(root, OfficeHome.CLASSES, data_list_file=data_list_file, **kwargs)
+
+    @classmethod
+    def domains(cls):
+        return list(cls.image_list.keys())

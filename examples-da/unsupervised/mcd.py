@@ -150,9 +150,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        # measure data loading time
-        data_time.update(time.time() - end)
-
         x_s, labels_s = next(train_source_iter)
         x_t, labels_t = next(train_target_iter)
 
@@ -162,6 +159,9 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         labels_t = labels_t.to(device)
         x = torch.cat((x_s, x_t), dim=0)
         assert x.requires_grad is False
+
+        # measure data loading time
+        data_time.update(time.time() - end)
 
         # Step A train all networks to minimize loss on source domain
         optimizer_g.zero_grad()

@@ -128,15 +128,15 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     for i in range(args.iters_per_epoch):
         optimizer.zero_grad()
 
-        # measure data loading time
-        data_time.update(time.time() - end)
-
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device).float()
         x_t, labels_t = next(train_target_iter)
         x_t = x_t.to(device)
         labels_t = labels_t.to(device).float()
+
+        # measure data loading time
+        data_time.update(time.time() - end)
 
         # compute output
         x = torch.cat([x_s, x_t], dim=0)
