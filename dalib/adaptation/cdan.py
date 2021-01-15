@@ -130,13 +130,14 @@ class RandomizedMultiLinearMap(nn.Module):
 
     def __init__(self, features_dim: int, num_classes: int, output_dim: Optional[int] = 1024):
         super(RandomizedMultiLinearMap, self).__init__()
-        self.Rf = torch.randn(features_dim, output_dim)
-        self.Rg = torch.randn(num_classes, output_dim)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.Rf = torch.randn(features_dim, output_dim).to(device)
+        self.Rg = torch.randn(num_classes, output_dim).to(device)
         self.output_dim = output_dim
 
     def forward(self, f: torch.Tensor, g: torch.Tensor) -> torch.Tensor:
-        f = torch.mm(self.Rf, f)
-        g = torch.mm(self.Rg, g)
+        f = torch.mm(f, self.Rf)
+        g = torch.mm(g, self.Rg)
         output = torch.mul(f, g) / np.sqrt(float(self.output_dim))
         return output
 

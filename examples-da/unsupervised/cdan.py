@@ -26,7 +26,6 @@ from dalib.utils.metric import accuracy, ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter
 from dalib.vision.transforms import ResizeImage
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -93,17 +92,21 @@ def main(args: argparse.Namespace):
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
     classifier_feature_dim = classifier.features_dim
 
-    domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
+    if args.randomized:
+        domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024).to(device)
+    else:
+        domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
 
     all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
     # define optimizer and lr scheduler
     optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
     domain_adv = ConditionalDomainAdversarialLoss(
         domain_discri, entropy_conditioning=args.entropy,
-        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized,
+        randomized_dim=args.randomized_dim
     ).to(device)
 
     # start training
@@ -288,6 +291,10 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('-r', '--randomized', default=False, type=bool,
+                        help='using randomized multi-linear-map (default: False)')
+    parser.add_argument('-rd', '--randomized-dim', default=1024, type=int,
+                        help='randomized dimension when using randomized multi-linear-map (default: 1024)')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
