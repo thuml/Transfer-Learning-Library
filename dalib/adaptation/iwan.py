@@ -7,6 +7,8 @@ from dalib.modules.classifier import Classifier as ClassifierBase
 
 
 class ImageClassifier(ClassifierBase):
+    r"""The Image Classifier for `Importance Weighted Adversarial Nets for Partial Domain Adaptation <https://arxiv.org/abs/1803.09210>`_
+    """
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
