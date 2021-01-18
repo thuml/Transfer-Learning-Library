@@ -135,8 +135,8 @@ class RandomizedMultiLinearMap(nn.Module):
         self.output_dim = output_dim
 
     def forward(self, f: torch.Tensor, g: torch.Tensor) -> torch.Tensor:
-        f = torch.mm(self.Rf, f)
-        g = torch.mm(self.Rg, g)
+        f = torch.mm(f, self.Rf.to(f.device))
+        g = torch.mm(g, self.Rg.to(g.device))
         output = torch.mul(f, g) / np.sqrt(float(self.output_dim))
         return output
 
