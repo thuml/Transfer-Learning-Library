@@ -69,23 +69,6 @@ class MinimumClassConfusionLoss(nn.Module):
         return mcc_loss
 
 
-def entropy(predictions: torch.Tensor) -> torch.Tensor:
-    r"""Entropy of N predictions :math:`(p_1, p_2, ..., p_N)`.
-    The definition is:
-
-    .. math::
-        d(p_1, p_2, ..., p_N) = -\dfrac{1}{K} \sum_{k=1}^K \log \left( \dfrac{1}{N} \sum_{i=1}^N p_{ik} \right)
-
-    where K is number of classes.
-
-    Parameters:
-        - **predictions** (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
-    """
-    epsilon = 1e-5
-    H = -predictions * torch.log(predictions + epsilon)
-    return H.sum(dim=1)
-
-
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
