@@ -20,7 +20,7 @@ sys.path.append('.')
 from dalib.modules.domain_discriminator import DomainDiscriminator
 from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.adaptation.dann import DomainAdversarialLoss
-from dalib.adaptation.mcc import entropy
+from dalib.adaptation._util import entropy
 from dalib.adaptation.importance_weighted_adversarial_nets import ImageClassifier, ImageClassifierHead
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
@@ -157,6 +157,7 @@ def pretrain_classifier(model: ImageClassifier, dataset, args: argparse.Namespac
             x, labels = next(train_iter)
             x = x.to(device)
             labels = labels.to(device)
+            
             y, _ = model(x)
 
             loss = F.cross_entropy(y, labels)
@@ -238,53 +239,49 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
             x_s = x_s.to(device)
             x_t = x_t.to(device)
+            labels_s = labels_s.to(device)
+            labels_t = labels_t.to(device)
+            
             # measure data loading time
             data_time.update(time.time() - end)
+            
             y_s, f_s = classifier_s(x_s)
             y_t, f_t = classifier_t(x_t)
 
-            labels_s = labels_s.to(device)
-            labels_t = labels_t.to(device)
-
-            # optimize D
+            # 1. Optimize D,
             D.train()
-            f_s_prime = f_s.detach()
-            f_t_prime = f_t.detach()
-            domain_cls_loss = domain_adv_D(f_s_prime, f_t_prime)
-
-            domain_acc = domain_adv_D.domain_discriminator_accuracy
-            domain_accs_D.update(domain_acc, x_s.size(0))
-
+            domain_cls_loss = domain_adv_D(f_s.detach(), f_t.detach())
+            # compute gradient and do SGD step
             optimizer_D.zero_grad()
             domain_cls_loss.backward()
             optimizer_D.step()
             lr_scheduler_D.step()
 
-            # optimize F_t, D_0
-            y_t = F.softmax(y_t, dim=1)
-            entropy_loss = args.gamma * torch.mean(entropy(y_t))
-            # importance weights
+            # 2. Get importance weights
             D.eval()
             weights = 1. - D(f_s).detach()
             weights = weights / weights.mean()
+            
+            # 3. Optimize F_t, D_0,
+            y_t = F.softmax(y_t, dim=1)
+            entropy_loss = args.gamma * torch.mean(entropy(y_t))
             transfer_loss = domain_adv_D_0(f_s, f_t, weights)
             loss = entropy_loss + transfer_loss
-
-            domain_acc = domain_adv_D_0.domain_discriminator_accuracy
-            cls_acc = accuracy(y_s, labels_s)[0]
-            tgt_acc = accuracy(y_t, labels_t)[0]
-
-            losses.update(loss.item(), x_s.size(0))
-            cls_accs.update(cls_acc.item(), x_s.size(0))
-            domain_accs_D_0.update(domain_acc.item(), x_s.size(0))
-            tgt_accs.update(tgt_acc.item(), x_s.size(0))
-
             # compute gradient and do SGD step
             optimizer_D_0.zero_grad()
             classifier_t.head.zero_grad()
             loss.backward()
             optimizer_D_0.step()
             lr_scheduler_D_0.step()
+
+            cls_acc = accuracy(y_s, labels_s)[0]
+            tgt_acc = accuracy(y_t, labels_t)[0]
+            
+            losses.update(loss.item(), x_s.size(0))
+            cls_accs.update(cls_acc.item(), x_s.size(0))
+            tgt_accs.update(tgt_acc.item(), x_s.size(0))
+            domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
+            domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
 
             batch_time.update(time.time() - end)
             end = time.time()
