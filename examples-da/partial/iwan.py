@@ -21,7 +21,7 @@ from dalib.modules.domain_discriminator import DomainDiscriminator
 from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.adaptation.dann import DomainAdversarialLoss
 from dalib.adaptation._util import entropy
-from dalib.adaptation.importance_weighted_adversarial_nets import ImageClassifier, ImageClassifierHead
+from dalib.adaptation.iwan import ImageClassifier, ImageClassifierHead
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
 import dalib.vision.models as models
