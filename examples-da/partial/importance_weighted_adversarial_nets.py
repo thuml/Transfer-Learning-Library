@@ -177,12 +177,9 @@ def pretrain_classifier(model: ImageClassifier, dataset, args: argparse.Namespac
         acc1 = validate(val_loader, model, args)
 
         # remember best acc@1 and save checkpoint
-        if acc1 > best_acc1:
-            best_model = copy.deepcopy(model.state_dict())
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
-    model.load_state_dict(best_model)
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, classifier_s: ImageClassifier,
@@ -202,10 +199,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     domain_adv_D_0 = DomainAdversarialLoss(D_0, grl=grl).to(device)
     # parameters
     optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    optimizer_D_0 = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
+    optimizer = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
                       weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler_D = LambdaLR(optimizer_D, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-    lr_scheduler_D_0 = LambdaLR(optimizer_D_0, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # start training
     print("train feature extractor F_t and domain classifier D, D_0 simultaneously.")
@@ -268,11 +265,11 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             transfer_loss = domain_adv_D_0(f_s, f_t, weights)
             loss = entropy_loss + transfer_loss
             # compute gradient and do SGD step
-            optimizer_D_0.zero_grad()
+            optimizer.zero_grad()
             classifier_t.head.zero_grad()
             loss.backward()
-            optimizer_D_0.step()
-            lr_scheduler_D_0.step()
+            optimizer.step()
+            lr_scheduler.step()
 
             cls_acc = accuracy(y_s, labels_s)[0]
             tgt_acc = accuracy(y_t, labels_t)[0]
