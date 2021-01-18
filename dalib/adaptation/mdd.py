@@ -37,6 +37,8 @@ class MarginDisparityDiscrepancy(nn.Module):
         - **y_s_adv**: output :math:`y^s` by the adversarial head on the source domain
         - **y_t**: output :math:`y^t` by the main head on the target domain
         - **y_t_adv**: output :math:`y_{adv}^t` by the adversarial head on the target domain
+        - **w_s** (optional): instance weights for source domain
+        - **w_t** (optional): instance weights for target domain
 
     Examples::
         >>> num_outputs = 2
@@ -57,8 +59,19 @@ class MarginDisparityDiscrepancy(nn.Module):
         self.source_disparity = source_disparity
         self.target_disparity = target_disparity
 
-    def forward(self, y_s: torch.Tensor, y_s_adv: torch.Tensor, y_t: torch.Tensor, y_t_adv: torch.Tensor) -> torch.Tensor:
-        loss = -self.margin * self.source_disparity(y_s, y_s_adv) + self.target_disparity(y_t, y_t_adv)
+    def forward(self, y_s: torch.Tensor, y_s_adv: torch.Tensor, y_t: torch.Tensor, y_t_adv: torch.Tensor,
+                w_s: Optional[torch.Tensor] = None, w_t: Optional[torch.Tensor] = None) -> torch.Tensor:
+
+        source_loss = -self.margin * self.source_disparity(y_s, y_s_adv)
+        target_loss = self.target_disparity(y_t, y_t_adv)
+        if w_s is None:
+            w_s = torch.ones_like(source_loss)
+        source_loss = source_loss * w_s
+        if w_t is None:
+            w_t = torch.ones_like(target_loss)
+        target_loss = target_loss * w_t
+
+        loss = source_loss + target_loss
         if self.reduction == 'mean':
             loss = loss.mean()
         elif self.reduction == 'sum':
@@ -114,6 +127,7 @@ class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
         >>> y_s_adv, y_t_adv = torch.randn(batch_size, num_classes), torch.randn(batch_size, num_classes)
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
     """
+
     def __init__(self, margin: Optional[float] = 4, **kwargs):
         def source_discrepancy(y: torch.Tensor, y_adv: torch.Tensor):
             _, prediction = y.max(dim=1)
@@ -123,7 +137,8 @@ class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
             _, prediction = y.max(dim=1)
             return -F.nll_loss(shift_log(1. - F.softmax(y_adv, dim=1)), prediction, reduction='none')
 
-        super(ClassificationMarginDisparityDiscrepancy, self).__init__(source_discrepancy, target_discrepancy, margin, **kwargs)
+        super(ClassificationMarginDisparityDiscrepancy, self).__init__(source_discrepancy, target_discrepancy, margin,
+                                                                       **kwargs)
 
 
 class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
@@ -174,6 +189,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
         >>> y_s_adv, y_t_adv = torch.randn(batch_size, num_outputs), torch.randn(batch_size, num_outputs)
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
     """
+
     def __init__(self, margin: Optional[float] = 1, loss_function=F.mse_loss, **kwargs):
         def source_discrepancy(y: torch.Tensor, y_adv: torch.Tensor):
             return loss_function(y_adv, y.detach(), reduction='none')
@@ -181,7 +197,8 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
         def target_discrepancy(y: torch.Tensor, y_adv: torch.Tensor):
             return loss_function(y_adv, y.detach(), reduction='none')
 
-        super(RegressionMarginDisparityDiscrepancy, self).__init__(source_discrepancy, target_discrepancy, margin, **kwargs)
+        super(RegressionMarginDisparityDiscrepancy, self).__init__(source_discrepancy, target_discrepancy, margin,
+                                                                   **kwargs)
 
 
 def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
@@ -237,11 +254,13 @@ class ImageClassifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int,
-                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
+                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
+                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
         super(ImageClassifier, self).__init__()
         self.num_classes = num_classes
         self.backbone = backbone
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000., auto_step=False)
+        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
+                                                       auto_step=False) if grl is None else grl
 
         self.bottleneck = nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
@@ -335,6 +354,7 @@ class ImageRegressor(nn.Module):
         - outputs, outputs_adv: :math:`(minibatch, F)`, where F means the number of factors.
 
     """
+
     def __init__(self, backbone: nn.Module, num_factors: int,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
         super(ImageRegressor, self).__init__()
