@@ -18,10 +18,10 @@ import torch.nn.functional as F
 
 sys.path.append('.')
 from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.adaptation.dann import DomainAdversarialLoss
 from dalib.adaptation.mcc import entropy
-from dalib.adaptation.importance_weighted_adversarial_nets import ImageClassifier, ImageClassifierHead, \
-    AutomaticUpdateTradeOffModule
+from dalib.adaptation.importance_weighted_adversarial_nets import ImageClassifier, ImageClassifierHead
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
 import dalib.vision.models as models
@@ -196,14 +196,15 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     classifier_t.set_features_only(True)
 
     domain_adv_D = DomainAdversarialLoss(D).to(device)
-    domain_adv_D_0 = DomainAdversarialLoss(D_0).to(device)
+    # define trade off scheduler
+    grl = WarmStartGradientReverseLayer(alpha=1, lo=0, hi=args.trade_off, max_iters=args.epochs * args.iters_per_epoch)
+    domain_adv_D_0 = DomainAdversarialLoss(D_0, grl=grl).to(device)
     # parameters
     optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     optimizer_D_0 = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
                       weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler_D = LambdaLR(optimizer_D, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
     lr_scheduler_D_0 = LambdaLR(optimizer_D_0, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-    trade_off_module = AutomaticUpdateTradeOffModule(args.epochs * args.iters_per_epoch, args.trade_off)
 
     # start training
     print("train feature extractor F_t and domain classifier D, D_0 simultaneously.")
@@ -267,8 +268,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             weights = 1. - D(f_s).detach()
             weights = weights / weights.mean()
             transfer_loss = domain_adv_D_0(f_s, f_t, weights)
-            trade_off = trade_off_module.get_trade_off()
-            loss = entropy_loss + trade_off * transfer_loss
+            loss = entropy_loss + transfer_loss
 
             domain_acc = domain_adv_D_0.domain_discriminator_accuracy
             cls_acc = accuracy(y_s, labels_s)[0]
@@ -285,8 +285,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             loss.backward()
             optimizer_D_0.step()
             lr_scheduler_D_0.step()
-            # update trade_off_module
-            trade_off_module.step()
 
             batch_time.update(time.time() - end)
             end = time.time()

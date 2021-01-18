@@ -68,22 +68,3 @@ class ImageClassifierHead(nn.Module):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.head(inputs)
-
-
-class AutomaticUpdateTradeOffModule(object):
-    r"""
-    Calculate trade_off based on current training process and max_value
-    see 'get_trade_off' method about the details of the calculation.
-    """
-
-    def __init__(self, max_iters: int, mu: float, alpha: Optional[float] = 1.):
-        self.max_iters = max_iters
-        self.current_iters = 0
-        self.mu = mu
-        self.alpha = alpha
-
-    def get_trade_off(self) -> float:
-        return 2 * self.mu / (1 + np.exp(-self.alpha * self.current_iters / self.max_iters)) - self.mu
-
-    def step(self):
-        self.current_iters += 1
