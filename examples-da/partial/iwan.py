@@ -157,7 +157,7 @@ def pretrain_classifier(model: ImageClassifier, dataset, args: argparse.Namespac
             x, labels = next(train_iter)
             x = x.to(device)
             labels = labels.to(device)
-            
+
             y, _ = model(x)
 
             loss = F.cross_entropy(y, labels)
@@ -195,12 +195,14 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     domain_adv_D = DomainAdversarialLoss(D).to(device)
     # define trade off scheduler
-    grl = WarmStartGradientReverseLayer(alpha=1, lo=0, hi=args.trade_off, max_iters=args.epochs * args.iters_per_epoch)
+    grl = WarmStartGradientReverseLayer(alpha=1, lo=0, hi=args.trade_off, max_iters=args.epochs * args.iters_per_epoch,
+                                        auto_step=True)
     domain_adv_D_0 = DomainAdversarialLoss(D_0, grl=grl).to(device)
     # parameters
-    optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay,
+                      nesterov=True)
     optimizer = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
-                      weight_decay=args.weight_decay, nesterov=True)
+                    weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler_D = LambdaLR(optimizer_D, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
     lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
@@ -238,10 +240,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             x_t = x_t.to(device)
             labels_s = labels_s.to(device)
             labels_t = labels_t.to(device)
-            
+
             # measure data loading time
             data_time.update(time.time() - end)
-            
+
             y_s, f_s = classifier_s(x_s)
             y_t, f_t = classifier_t(x_t)
 
@@ -258,7 +260,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             D.eval()
             weights = 1. - D(f_s).detach()
             weights = weights / weights.mean()
-            
+
             # 3. Optimize F_t, D_0,
             y_t = F.softmax(y_t, dim=1)
             entropy_loss = args.gamma * torch.mean(entropy(y_t))
@@ -273,7 +275,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
             cls_acc = accuracy(y_s, labels_s)[0]
             tgt_acc = accuracy(y_t, labels_t)[0]
-            
+
             losses.update(loss.item(), x_s.size(0))
             cls_accs.update(cls_acc.item(), x_s.size(0))
             tgt_accs.update(tgt_acc.item(), x_s.size(0))
