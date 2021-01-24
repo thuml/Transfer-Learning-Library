@@ -81,7 +81,7 @@ class ConfusionMatrix(object):
                 ['{:.1f}'.format(i) for i in (iu * 100).tolist()],
                 iu.mean().item() * 100)
 
-    def format(self, classes):
+    def format(self, classes: list):
         """print the accuracy and IoU for each class"""
         acc_global, acc, iu = self.compute()
 
