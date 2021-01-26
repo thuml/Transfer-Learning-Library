@@ -7,12 +7,15 @@ Welcome to dalib's documentation!
 =================================
 
 .. toctree::
-    dalib.adaptation.unsupervised_da
-    dalib.adaptation.partial_da
-    dalib.adaptation.open_set_da
-    dalib.adaptation.regression_da
+    dalib.unsupervised_da
+    dalib.partial_da
+    dalib.open_set_da
+    dalib.multi_source_da
+    dalib.regression_da
+    dalib.segmentation_da
     dalib.modules
     dalib.vision.datasets
     dalib.vision.models
+    dalib.vision.transforms
     dalib.utils
 

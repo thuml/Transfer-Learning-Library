@@ -68,7 +68,7 @@ def main(args: argparse.Namespace):
     train_source_dataset = source_dataset(
         root=args.source_root,
         transforms=T.Compose([
-            T.Resize((2048, 1024)),
+            T.Resize((2048, 1024)),  # convert source image to the size of the target image before fourier transform
             fourier_transform,
             T.RandomResizedCrop(size=args.train_size, ratio=args.resize_ratio, scale=(0.5, 1.)),
             T.RandomHorizontalFlip(),

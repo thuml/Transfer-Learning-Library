@@ -19,8 +19,8 @@ class AutomaticUpdateClassWeightModule(object):
         - **device** (torch.device): The device to run classifier.
         - **temperature** (float, optional): T, temperature in ClassWeightModule. Default: 0.1
         - **partial_classes_index** (list[int], optional): The index of partial classes. Note that this parameter is \
-            just for debugging, since in real-world dataset, we have no access to the index of partial classes. \
-            Default: None.
+          just for debugging, since in real-world dataset, we have no access to the index of partial classes. \
+          Default: None.
 
     Examples::
         >>> class_weight_module = AutomaticUpdateClassWeightModule(update_steps=500, ...)

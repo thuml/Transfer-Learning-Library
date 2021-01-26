@@ -5,6 +5,21 @@ import numpy as np
 
 
 class Discriminator(nn.Sequential):
+    """
+    Domain discriminator model from
+    `"ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation" <https://arxiv.org/abs/1811.12833>`_
+
+    Distinguish pixel-by-pixel whether the input predictions come from the source domain or the target domain.
+    The source domain label is 1 and the target domain label is 0.
+
+    Parameters:
+        - **num_classes** (int): num of classes in the predictions
+        - **ndf** (int): dimension of the hidden features
+
+    Shape:
+        - Inputs: :math:`(minibatch, num_classes, H, W)`
+        - Outputs: :math:`(minibatch, 1, H, W)`
+    """
     def __init__(self, num_classes, ndf=64):
         super(Discriminator, self).__init__(
             nn.Conv2d(num_classes, ndf, kernel_size=4, stride=2, padding=1),
@@ -34,24 +49,71 @@ def bce_loss(y_pred, y_label):
 
 
 class DomainAdversarialEntropyLoss(nn.Module):
+    r"""The `Domain Adversarial Entropy Loss <https://arxiv.org/abs/1811.12833>`_
+
+    Minimizing entropy with adversarial learning through training a domain discriminator.
+
+    Parameters:
+        - **domain_discriminator** (class:`nn.Module` object): A domain discriminator object, which predicts
+          the domains of predictions. Its input shape is (N, C, H, W) and output shape is (N, 1, H, W)
+
+    Inputs: logits, domain_label
+        - **logits** (tensor): logits output of segmentation model
+        - **domain_label** (str): whether the data comes from source or target. Choices: ['source', 'target'].
+
+    Shape:
+        - logits: :math:`(N, C, H, W)` where C means the number of classes
+        - Outputs: scalar.
+
+    Examples::
+        >>> B, C, H, W = 2, 19, 512, 512
+        >>> discriminator = Discriminator(num_classes=C)
+        >>> dann = DomainAdversarialEntropyLoss(discriminator)
+        >>> # logits output on source domain and target domain
+        >>> y_s, y_t = torch.randn(B, C, H, W), torch.randn(B, C, H, W)
+        >>> loss = 0.5 * (dann(y_s, "source") + dann(y_t, "target"))
+    """
     def __init__(self, discriminator: nn.Module):
         super(DomainAdversarialEntropyLoss, self).__init__()
         self.discriminator = discriminator
 
     def forward(self, logits, domain_label='source'):
+        """
+        Args:
+            - **logits** (tensor): logits output of segmentation model
+            - **domain_label** (str): whether the data comes from source or target. Choices: ['source', 'target'].
+        """
         assert domain_label in ['source', 'target']
         probability = F.softmax(logits, dim=1)
         entropy = prob_2_entropy(probability)
         domain_prediciton = self.discriminator(entropy)
         if domain_label == 'source':
-            return bce_loss(domain_prediciton, 0)
-        else:
             return bce_loss(domain_prediciton, 1)
+        else:
+            return bce_loss(domain_prediciton, 0)
 
     def train(self, mode=True):
+        r"""Sets the discriminator in training mode. In the training mode,
+        all the parameters in discriminator will be set requires_grad=True.
+
+        Args:
+            - **mode** (bool): whether to set training mode (``True``) or evaluation mode (``False``). Default: ``True``.
+
+        Returns:
+            Module: self
+        """
         self.discriminator.train(mode)
         for param in self.discriminator.parameters():
             param.requires_grad = mode
+        return self
 
     def eval(self):
-        self.train(False)
+        r"""Sets the module in evaluation mode. In the training mode,
+        all the parameters in discriminator will be set requires_grad=False.
+
+        This is equivalent with :meth:`self.train(False) <torch.nn.Module.train>`.
+
+        Returns:
+            Module: self
+        """
+        return self.train(False)

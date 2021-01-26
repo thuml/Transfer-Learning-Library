@@ -22,8 +22,6 @@ import dalib.vision.datasets.segmentation.transforms as T
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter, Meter
-from dalib.translation.fourier_transform import FourierTransform
-from dalib.adaptation.segmentation.fda import robust_entropy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

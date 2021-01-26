@@ -6,12 +6,12 @@ def accuracy(output, target, topk=(1,)):
     r"""
     Computes the accuracy over the k top predictions for the specified values of k
 
-    Inputs:
+    Args:
         - **output** (Tensor): Classification outputs, :math:`(N, C)` where `C = number of classes`
         - **target** (Tensor): :math:`(N)` where each value is :math:`0 \leq \text{targets}[i] \leq C-1`
         - **topk** (sequence[int]): A list of top-N number.
 
-    Outputs: res
+    Returns:
         - **res** (sequence[float]): Top-N accuracies (N :math:`\in` K).
     """
     with torch.no_grad():
@@ -38,7 +38,7 @@ class ConfusionMatrix(object):
         """
         Update confusion matrix.
 
-        Inputs:
+        Args:
             - **target**: ground truth
             - **output**: predictions of models
         """

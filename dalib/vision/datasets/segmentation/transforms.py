@@ -1,16 +1,24 @@
 from PIL import Image
-import numpy as np
 import random
-import warnings
 import math
 from typing import ClassVar, Sequence, List, Tuple
 from torch import Tensor
 import torch
 import torchvision.transforms.functional as F
 import torchvision.transforms.transforms as T
+import torch.nn as nn
 
 
 def wrapper(transform: ClassVar):
+    """ Wrap a transform for classification to a transform for segmentation.
+    Note that the segmentation label will keep the same before and after wrapper.
+
+    Args:
+        - **transform** (class, callable): transform for classification
+
+    Returns:
+        - **WrapperTransform** (class, callable): transform for segmentation
+    """
     class WrapperTransform(transform):
         def __call__(self, image, label):
             image = super().__call__(image)
@@ -18,8 +26,23 @@ def wrapper(transform: ClassVar):
     return WrapperTransform
 
 
+ColorJitter = wrapper(T.ColorJitter)
+
+
 class Compose:
+    """Composes several transforms together.
+
+    Args:
+        - **transforms** (list of ``Transform`` objects): list of transforms to compose.
+
+    Example:
+        >>> Compose([
+        >>>     Resize((512, 512)),
+        >>>     RandomHorizontalFlip()
+        >>> ])
+    """
     def __init__(self, transforms):
+        super(Compose, self).__init__()
         self.transforms = transforms
 
     def __call__(self, image, target):
@@ -28,26 +51,62 @@ class Compose:
         return image, target
 
 
-class Resize:
+class Resize(nn.Module):
+    """Resize the input image and the corresponding label to the given size.
+    The image should be a PIL Image.
+
+    Args:
+        - **image_size** (sequence): The requested image size in pixels, as a 2-tuple:
+          (width, height).
+        - **label_size** (sequence, optional): The requested segmentation label size in pixels, as a 2-tuple:
+          (width, height). The same as image_size if None. Default: None.
+    """
+
     def __init__(self, image_size, label_size=None):
+        super(Resize, self).__init__()
         self.image_size = image_size
         if label_size is None:
             self.label_size = image_size
         else:
             self.label_size = label_size
 
-    def __call__(self, image, label):
+    def forward(self, image, label):
+        """
+        Args:
+            - **image**: (PIL Image): Image to be scaled.
+            - **label**: (PIL Image): Segmentation label to be scaled.
+
+        Returns: (image, label) pair
+            - **image**: (PIL Image): Rescaled image.
+            - **label**: (PIL Image): Rescaled segmentation label.
+        """
         # resize
         image = image.resize(self.image_size, Image.BICUBIC)
         label = label.resize(self.label_size, Image.NEAREST)
         return image, label
 
 
-class RandomCrop:
+class RandomCrop(nn.Module):
+    """Crop the given image at a random location.
+    The image can be a PIL Image
+
+    Args:
+        - **size** (sequence): Desired output size of the crop.
+    """
     def __init__(self, size):
+        super(RandomCrop, self).__init__()
         self.size = size
 
-    def __call__(self, image, label):
+    def forward(self, image, label):
+        """
+        Args:
+            - **image**: (PIL Image): Image to be cropped.
+            - **label**: (PIL Image): Segmentation label to be cropped.
+
+        Returns: (image, label) pair
+            - **image**: (PIL Image): Cropped image.
+            - **label**: (PIL Image): Cropped segmentation label.
+        """
         # random crop
         left = image.size[0] - self.size[0]
         upper = image.size[1] - self.size[1]
@@ -62,21 +121,26 @@ class RandomCrop:
         return image, label
 
 
-class RandomHorizontalFlip(object):
+class RandomHorizontalFlip(nn.Module):
     """Horizontally flip the given PIL Image randomly with a given probability.
+
     Args:
-        p (float): probability of the image being flipped. Default value is 0.5
+        - **p** (float): probability of the image being flipped. Default value is 0.5
     """
 
     def __init__(self, p=0.5):
+        super(RandomHorizontalFlip, self).__init__()
         self.p = p
 
-    def __call__(self, image, label):
+    def forward(self, image, label):
         """
         Args:
-            img (PIL Image): Image to be flipped.
-        Returns:
-            PIL Image: Randomly flipped image.
+            - **image**: (PIL Image): Image to be flipped.
+            - **label**: (PIL Image): Segmentation label to be flipped.
+
+        Returns: (image, label) pair
+            - **image**: (PIL Image): Randomly flipped image.
+            - **label**: (PIL Image): Randomly flipped segmentation label.
         """
         if random.random() < self.p:
             return F.hflip(image), F.hflip(label)
@@ -85,23 +149,21 @@ class RandomHorizontalFlip(object):
 
 class RandomResizedCrop(T.RandomResizedCrop):
     """Crop the given image to random size and aspect ratio.
-    The image can be a PIL Image or a Tensor, in which case it is expected
-    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
+    The image can be a PIL Image.
 
-    A crop of random size (default: of 0.08 to 1.0) of the original size and a random
+    A crop of random size (default: of 0.5 to 1.0) of the original size and a random
     aspect ratio (default: of 3/4 to 4/3) of the original aspect ratio is made. This crop
     is finally resized to given size.
-    This is popularly used to train the Inception networks.
 
     Args:
-        size (int or sequence): expected output size of each edge. If size is an
-            int instead of sequence like (h, w), a square output size ``(size, size)`` is
-            made. If provided a tuple or list of length 1, it will be interpreted as (size[0], size[0]).
-        scale (tuple of float): range of size of the origin size cropped
-        ratio (tuple of float): range of aspect ratio of the origin aspect ratio cropped.
-        interpolation (int): Desired interpolation enum defined by `filters`_.
-            Default is ``PIL.Image.BILINEAR``. If input is Tensor, only ``PIL.Image.NEAREST``, ``PIL.Image.BILINEAR``
-            and ``PIL.Image.BICUBIC`` are supported.
+        - **size** (int or sequence): expected output size of each edge. If size is an
+          int instead of sequence like (h, w), a square output size ``(size, size)`` is
+          made. If provided a tuple or list of length 1, it will be interpreted as (size[0], size[0]).
+        - **scale** (tuple of float): range of size of the origin size cropped
+        - **ratio** (tuple of float): range of aspect ratio of the origin aspect ratio cropped.
+        - **interpolation** (int): Desired interpolation enum defined by `filters`_.
+          Default is ``PIL.Image.BILINEAR``. If input is Tensor, only ``PIL.Image.NEAREST``, ``PIL.Image.BILINEAR``
+          and ``PIL.Image.BICUBIC`` are supported.
     """
 
     def __init__(self, size, scale=(0.5, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BICUBIC):
@@ -114,9 +176,9 @@ class RandomResizedCrop(T.RandomResizedCrop):
         """Get parameters for ``crop`` for a random sized crop.
 
         Args:
-            img (PIL Image or Tensor): Input image.
-            scale (list): range of scale of the origin size cropped
-            ratio (list): range of aspect ratio of the origin aspect ratio cropped
+            - **img** (PIL Image): Input image.
+            - **scale** (list): range of scale of the origin size cropped
+            - **ratio** (list): range of aspect ratio of the origin aspect ratio cropped
 
         Returns:
             tuple: params (i, j, h, w) to be passed to ``crop`` for a random
@@ -156,10 +218,12 @@ class RandomResizedCrop(T.RandomResizedCrop):
     def forward(self, image, label):
         """
         Args:
-            img (PIL Image or Tensor): Image to be cropped and resized.
+            - **image**: (PIL Image): Image to be cropped and resized.
+            - **label**: (PIL Image): Segmentation label to be cropped and resized.
 
-        Returns:
-            PIL Image or Tensor: Randomly cropped and resized image.
+        Returns: (image, label) pair
+            - **image**: (PIL Image): Randomly cropped and resized image.
+            - **label**: (PIL Image): Randomly cropped and resized segmentation label.
         """
         top, left, height, width = self.get_params(image, self.scale, self.ratio)
         image = image.crop((left, top, left + width, top + height))
@@ -169,11 +233,8 @@ class RandomResizedCrop(T.RandomResizedCrop):
         return image, label
 
 
-ColorJitter = wrapper(T.ColorJitter)
-
-
 class RandomChoice(T.RandomTransforms):
-    """Apply single transformation randomly picked from a list. This transform does not support torchscript.
+    """Apply single transformation randomly picked from a list.
     """
     def __call__(self, image, label):
         t = random.choice(self.transforms)
@@ -181,11 +242,11 @@ class RandomChoice(T.RandomTransforms):
 
 
 class RandomApply(T.RandomTransforms):
-    """Apply randomly a list of transformations with a given probability
+    """Apply randomly a list of transformations with a given probability.
 
     Args:
-        transforms (list or tuple): list of transformations
-        p (float): probability
+        - **transforms** (list or tuple or torch.nn.Module): list of transformations
+        - **p** (float): probability
     """
 
     def __init__(self, transforms, p=0.5):

@@ -128,6 +128,7 @@ Avg         50.2    21.6    44.3    56.6    41.4    42.8
 .. _CDAN: https://arxiv.org/abs/1705.10667
 .. _MCD: https://arxiv.org/abs/1712.02560
 .. _MDD: https://arxiv.org/abs/1904.05801
+.. _MCC: https://arxiv.org/abs/1912.03699v1
 
 .. currentmodule:: dalib.adaptation
 
@@ -139,33 +140,33 @@ DANN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
-    :show-inheritance:
+
 
 
 DAN
 ----
 
 .. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
-    :show-inheritance:
+
 
 
 JAN
 ---------------------------
 .. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
-    :show-inheritance:
+
 
 
 CDAN
 ----------------------------
 
 .. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.cdan.RandomizedMultiLinearMap
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.cdan.MultiLinearMap
-    :show-inheritance:
+
 
 MCD
 ----------------------------
@@ -174,19 +175,19 @@ MCD
 .. autofunction:: dalib.adaptation.mcd.entropy
 
 .. autoclass:: dalib.adaptation.mcd.ImageClassifierHead
-    :show-inheritance:
+
 
 MDD
 ----------------------------
 
 .. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancy
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.mdd.ClassificationMarginDisparityDiscrepancy
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.mdd.ImageClassifier
-    :show-inheritance:
+
 
 .. autofunction:: dalib.adaptation.mdd.shift_log
 
@@ -194,4 +195,3 @@ MDD
 MCC
 ----------------------------
 .. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss
-    :show-inheritance:

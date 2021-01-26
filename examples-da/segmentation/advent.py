@@ -45,7 +45,10 @@ def main(args: argparse.Namespace):
     target_dataset = datasets.__dict__[args.target]
     train_target_dataset = target_dataset(
         root=args.target_root,
-        transforms=T.Resize(image_size=args.train_size),
+        transforms=T.Compose([
+            T.RandomResizedCrop(size=args.train_size, ratio=(2., 2.), scale=(0.5, 1.)),
+            T.RandomHorizontalFlip(),
+        ]),
         mean=image_mean
     )
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
@@ -61,8 +64,8 @@ def main(args: argparse.Namespace):
     train_source_dataset = source_dataset(
         root=args.source_root,
         transforms=T.Compose([
-            T.Resize((2048, 1024)),
             T.RandomResizedCrop(size=args.train_size, ratio=args.resize_ratio, scale=(0.5, 1.)),
+            T.ColorJitter(brightness=0.3, contrast=0.3),
             T.RandomHorizontalFlip(),
         ]),
         mean=image_mean
@@ -81,13 +84,13 @@ def main(args: argparse.Namespace):
     # define optimizer and lr scheduler
     optimizer = SGD(model.get_parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
     optimizer_d = Adam(discriminator.parameters(), lr=args.lr_d, betas=(0.9, 0.99))
-    lr_decay_function = lambda x: args.lr * (1. - float(x) / args.epochs / args.iters_per_epoch) ** (args.lr_power)
-    lr_scheduler = LambdaLR(optimizer, lr_decay_function)
-    lr_scheduler_d = LambdaLR(optimizer_d, lr_decay_function)
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. - float(x) / args.epochs / args.iters_per_epoch) ** (args.lr_power))
+    lr_scheduler_d = LambdaLR(optimizer_d, lambda x: (1. - float(x) / args.epochs / args.iters_per_epoch) ** (args.lr_power))
 
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
         model.load_state_dict(checkpoint['model'])
+        discriminator.load_state_dict(checkpoint['discriminator'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
         optimizer_d.load_state_dict(checkpoint['optimizer_d'])
@@ -131,8 +134,11 @@ def main(args: argparse.Namespace):
         torch.save(
             {
                 'model': model.state_dict(),
+                'discriminator': discriminator.state_dict(),
                 'optimizer': optimizer.state_dict(),
+                'optimizer_d': optimizer_d.state_dict(),
                 'lr_scheduler': lr_scheduler.state_dict(),
+                'lr_scheduler_d': lr_scheduler_d.state_dict(),
                 'epoch': epoch,
                 'args': args
             },

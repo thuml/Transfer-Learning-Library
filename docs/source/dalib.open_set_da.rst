@@ -69,4 +69,3 @@ OSBP
 ------
 
 .. autoclass:: dalib.adaptation.osbp.UnknownClassBinaryCrossEntropy
-    :show-inheritance:

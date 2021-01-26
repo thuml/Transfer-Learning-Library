@@ -9,6 +9,8 @@ class DomainNet(ImageList):
 
     See `Moment Matching for Multi-Source Domain Adaptation <https://arxiv.org/abs/1812.01754>`_ for details.
 
+    Parent Class: :ref:`ImageList<imagelist>`.
+
     Parameters:
         - **root** (str): Root directory of dataset
         - **task** (str): The task (domain) to create dataset. Choices include ``'c'``:clipart, \

@@ -1,57 +1,61 @@
-DALIB Datasets
+DALIB Vision Datasets
 =============================
 
+
+Unsupervised Domain Adaptation Dataset for Classification
+---------------------------------------------------------
+
+
+--------------------------------------
 ImageList
 --------------------------------------
 
-.. automodule:: dalib.vision.datasets.imagelist
+.. autoclass:: dalib.vision.datasets.imagelist.ImageList
    :members:
 
-
+-------------------------------------
 Office-31
 -------------------------------------
 
-.. automodule:: dalib.vision.datasets.office31
+.. autoclass:: dalib.vision.datasets.office31.Office31
    :members:
 
-
+---------------------------------------
 Office-Caltech
 ---------------------------------------
 
-.. automodule:: dalib.vision.datasets.officecaltech
+.. autoclass:: dalib.vision.datasets.officecaltech.OfficeCaltech
    :members:
 
-
+---------------------------------------
 Office-Home
 ---------------------------------------
 
-.. automodule:: dalib.vision.datasets.officehome
+.. autoclass:: dalib.vision.datasets.officehome.OfficeHome
    :members:
 
-
+--------------------------------------
 VisDA-2017
 --------------------------------------
 
-.. automodule:: dalib.vision.datasets.visda2017
+.. autoclass:: dalib.vision.datasets.visda2017.VisDA2017
    :members:
 
 
+--------------------------------------
 DomainNet
 --------------------------------------
 
-.. automodule:: dalib.vision.datasets.domainnet
+.. autoclass:: dalib.vision.datasets.domainnet.DomainNet
    :members:
 
 
-Partial Domain Adaptation Dataset
---------------------------------------
+Partial Domain Adaptation Dataset for Classification
+----------------------------------------------------
 
-.. autoclass:: dalib.vision.datasets.partial.partial
-   :members:
+.. autofunction:: dalib.vision.datasets.partial.partial
 
-
-.. autoclass:: dalib.vision.datasets.partial.default_partial
-   :members:
+.. autofunction:: dalib.vision.datasets.partial.default_partial
 
 
 ---------------------------------------
@@ -70,20 +74,20 @@ ImageNet-1k->Caltech-256
    :members:
 
 
+Open Set Domain Adaptation Dataset for Classification
+------------------------------------------------------
 
-Open Set Domain Adaptation Dataset
---------------------------------------
+.. autofunction:: dalib.vision.datasets.openset.open_set
 
-.. autoclass:: dalib.vision.datasets.openset.open_set
-   :members:
-
-
-.. autoclass:: dalib.vision.datasets.openset.default_open_set
-   :members:
+.. autofunction:: dalib.vision.datasets.openset.default_open_set
 
 
-Regression Dataset for Domain Adaptation
-----------------------------------------
+Unsupervised Domain Adaptation Dataset for Regression
+------------------------------------------------------
+
+---------------------------------------
+ImageRegression
+---------------------------------------
 
 .. autoclass:: dalib.vision.datasets.regression.image_regression.ImageRegression
    :members:
@@ -99,5 +103,30 @@ MPI3D
 ---------------------------------------
 .. autoclass:: dalib.vision.datasets.regression.mpi3d.MPI3D
    :members:
+
+
+Unsupervised Domain Adaptation for Segmentation
+-----------------------------------------------
+
+---------------------------------------
+SegmentationList
+---------------------------------------
+.. autoclass:: dalib.vision.datasets.segmentation.segmentation_list.SegmentationList
+   :members:
+
+---------------------------------------
+Cityscapes
+---------------------------------------
+.. autoclass:: dalib.vision.datasets.segmentation.cityscapes.Cityscapes
+
+---------------------------------------
+GTA5
+---------------------------------------
+.. autoclass:: dalib.vision.datasets.segmentation.gta5.GTA5
+
+---------------------------------------
+Synthia
+---------------------------------------
+.. autoclass:: dalib.vision.datasets.segmentation.synthia.Synthia
 
 

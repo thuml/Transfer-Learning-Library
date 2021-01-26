@@ -1,6 +1,6 @@
-from .imagelist import ImageList
+from .segmentation_list import SegmentationList
 from .cityscapes import Cityscapes
 from .gta5 import GTA5
 from .synthia import Synthia
 
-__all__ = ["ImageList", "Cityscapes", "GTA5", "Synthia"]
+__all__ = ["SegmentationList", "Cityscapes", "GTA5", "Synthia"]

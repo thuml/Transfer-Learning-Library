@@ -1,4 +1,4 @@
-DALIB Models
+DALIB Vision Models
 ===========================
 
 ResNets
@@ -6,5 +6,11 @@ ResNets
 
 .. automodule:: dalib.vision.models.resnet
    :members:
-   :undoc-members:
-   :show-inheritance:
+
+
+Segmentation Models
+----------------------------------
+
+.. autofunction:: dalib.vision.models.segmentation.deeplabv2.deeplabv2_resnet101
+
+

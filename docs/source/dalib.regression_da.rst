@@ -33,8 +33,6 @@ Algorithms
 DD/MDD
 ----------------------------
 .. autoclass:: dalib.adaptation.mdd.RegressionMarginDisparityDiscrepancy
-    :show-inheritance:
 
 .. autoclass:: dalib.adaptation.mdd.ImageRegressor
-    :show-inheritance:
 

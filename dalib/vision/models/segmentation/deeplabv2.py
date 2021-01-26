@@ -1,6 +1,10 @@
 import torch.nn as nn
-import torch
+from torchvision.models.utils import load_state_dict_from_url
 
+
+model_urls = {
+    'deeplabv2_resnet101': 'https://cloud.tsinghua.edu.cn/f/2d9a7fc43ce34f76803a/?dl=1'
+}
 
 affine_par = True
 
@@ -169,11 +173,16 @@ class Deeplab(nn.Module):
 
 
 def deeplabv2_resnet101(num_classes=19, pretrained_backbone=True):
+    """Constructs a DeepLabV2 model with a ResNet-101 backbone.
+
+     Args:
+         - **num_classes** (int, optional): number of classes. Default: 19
+         - **pretrained_backbone** (bool, optional): If True, returns a model pre-trained on ImageNet. Default: True.
+     """
     backbone = ResNet(Bottleneck, [3, 4, 23, 3])
     if pretrained_backbone:
-        # TODO support download
-        print("loading from ImageNet pretrained deeplabv2")
-        saved_state_dict = torch.load('checkpoints/deeplab_init.pth', map_location=lambda storage, loc: storage)
+        # download from Internet
+        saved_state_dict = load_state_dict_from_url(model_urls['deeplabv2_resnet101'], map_location=lambda storage, loc: storage, file_name="deeplabv2_resnet101.pth")
         new_params = backbone.state_dict().copy()
         for i in saved_state_dict:
             i_parts = i.split('.')

@@ -7,6 +7,8 @@ from ._util import download as download_data, check_exits
 class Office31(ImageList):
     """Office31 Dataset.
 
+    Parent Class: :ref:`ImageList<imagelist>`.
+
     Parameters:
         - **root** (str): Root directory of dataset
         - **task** (str): The task (domain) to create dataset. Choices include ``'A'``: amazon, \

@@ -7,6 +7,8 @@ from ._util import download as download_data, check_exits
 class VisDA2017(ImageList):
     """`VisDA-2017 <http://ai.bu.edu/visda-2017/assets/attachments/VisDA_2017.pdf>`_ Dataset
 
+    Parent Class: :ref:`ImageList<imagelist>`.
+
     Parameters:
         - **root** (str): Root directory of dataset
         - **task** (str): The task (domain) to create dataset. Choices include ``'Synthetic'``: synthetic images and \
