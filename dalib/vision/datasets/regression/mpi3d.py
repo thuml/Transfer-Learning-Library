@@ -5,21 +5,19 @@ from .image_regression import ImageRegression
 
 
 class MPI3D(ImageRegression):
-    """MPI3D <https://arxiv.org/abs/1906.03292>`_ Dataset.
+    """`MPI3D <https://arxiv.org/abs/1906.03292>`_ Dataset.
 
-    Parent Class: :ref:`ImageRegression<imageregression>`.
-
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``: Color, \
+    Args:
+        root (str): Root directory of dataset
+        task (str): The task (domain) to create dataset. Choices include ``'C'``: Color, \
             ``'N'``: Noisy and ``'S'``: Scream.
-        - **split** (str, optional): The dataset split, supports ``train``, or ``test``.
-        - **factors** (sequence[str]): Factors selected. Default: ('horizontal axis', 'vertical axis').
-        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        factors (sequence[str]): Factors selected. Default: ('horizontal axis', 'vertical axis').
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-            transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: In `root`, there will exist following files after downloading.
         ::

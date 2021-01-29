@@ -1,4 +1,4 @@
-DALIB Vision Transforms
+Vision Transforms
 =============================
 
 
@@ -13,6 +13,6 @@ Segmentation
 ---------------------------------
 
 
-.. automodule:: dalib.vision.datasets.segmentation.transforms
+.. automodule:: dalib.vision.transforms.segmentation
    :members:
 

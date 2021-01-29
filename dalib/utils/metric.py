@@ -7,12 +7,12 @@ def accuracy(output, target, topk=(1,)):
     Computes the accuracy over the k top predictions for the specified values of k
 
     Args:
-        - **output** (Tensor): Classification outputs, :math:`(N, C)` where `C = number of classes`
-        - **target** (Tensor): :math:`(N)` where each value is :math:`0 \leq \text{targets}[i] \leq C-1`
-        - **topk** (sequence[int]): A list of top-N number.
+        output (tensor): Classification outputs, :math:`(N, C)` where `C = number of classes`
+        target (tensor): :math:`(N)` where each value is :math:`0 \leq \text{targets}[i] \leq C-1`
+        topk (sequence[int]): A list of top-N number.
 
     Returns:
-        - **res** (sequence[float]): Top-N accuracies (N :math:`\in` K).
+        Top-N accuracies (N :math:`\in` topK).
     """
     with torch.no_grad():
         maxk = max(topk)
@@ -39,8 +39,12 @@ class ConfusionMatrix(object):
         Update confusion matrix.
 
         Args:
-            - **target**: ground truth
-            - **output**: predictions of models
+            target: ground truth
+            output: predictions of models
+
+        Shape:
+            - target: :math:`(minibatch, C)` where C means the number of classes.
+            - output: :math:`(minibatch, C)` where C means the number of classes.
         """
         n = self.num_classes
         if self.mat is None:
@@ -82,7 +86,7 @@ class ConfusionMatrix(object):
                 iu.mean().item() * 100)
 
     def format(self, classes: list):
-        """print the accuracy and IoU for each class"""
+        """Get the accuracy and IoU for each class in the table format"""
         acc_global, acc, iu = self.compute()
 
         table = prettytable.PrettyTable(["class", "acc", "iou"])

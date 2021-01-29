@@ -7,16 +7,14 @@ from .._util import download as download_data
 class Synthia(SegmentationList):
     """`SYNTHIA <https://synthia-dataset.net/>`_
 
-    Parent Class: :ref:`SegmentationList<segmentationlist>`.
-
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **split** (str, optional): The dataset split, supports ``train``.
-        - **data_folder** (str, optional): Sub-directory of the image. Default: 'RGB'.
-        - **label_folder** (str, optional): Sub-directory of the label. Default: 'synthia_mapped_to_cityscapes'.
-        - **mean** (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
-        - **transforms** (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
-            and returns a transformed version. E.g, ``transforms.RandomCrop``.
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``.
+        data_folder (str, optional): Sub-directory of the image. Default: 'RGB'.
+        label_folder (str, optional): Sub-directory of the label. Default: 'synthia_mapped_to_cityscapes'.
+        mean (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
+        transforms (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
+            and returns a transformed version. E.g, :class:`~dalib.vision.transforms.segmentation.Resize`.
 
     .. note:: You need to download GTA5 manually.
         Ensure that there exist following directories in the `root` directory before you using this class.

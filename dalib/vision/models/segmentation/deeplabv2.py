@@ -176,8 +176,8 @@ def deeplabv2_resnet101(num_classes=19, pretrained_backbone=True):
     """Constructs a DeepLabV2 model with a ResNet-101 backbone.
 
      Args:
-         - **num_classes** (int, optional): number of classes. Default: 19
-         - **pretrained_backbone** (bool, optional): If True, returns a model pre-trained on ImageNet. Default: True.
+         num_classes (int, optional): number of classes. Default: 19
+         pretrained_backbone (bool, optional): If True, returns a model pre-trained on ImageNet. Default: True.
      """
     backbone = ResNet(Bottleneck, [3, 4, 23, 3])
     if pretrained_backbone:

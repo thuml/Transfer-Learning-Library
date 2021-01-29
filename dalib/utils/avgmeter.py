@@ -6,6 +6,7 @@ class AverageMeter(object):
     r"""Computes and stores the average and current value.
 
     Examples::
+
         >>> # Initialize a meter to record loss
         >>> losses = AverageMeter()
         >>> # Update meter after every minibatch update

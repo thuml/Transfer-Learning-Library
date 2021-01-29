@@ -11,33 +11,36 @@ __all__ = ['DomainAdversarialLoss']
 
 
 class DomainAdversarialLoss(nn.Module):
-    r"""The `Domain Adversarial Loss <https://arxiv.org/abs/1505.07818>`_
+    """
+    The `Domain Adversarial Loss <https://arxiv.org/abs/1505.07818>`_
 
     Domain adversarial loss measures the domain discrepancy through training a domain discriminator.
     Given domain discriminator :math:`D`, feature representation :math:`f`, the definition of DANN loss is
 
     .. math::
-        loss(\mathcal{D}_s, \mathcal{D}_t) &= \mathbb{E}_{x_i^s \sim \mathcal{D}_s} log[D(f_i^s)] \\
-        &+ \mathbb{E}_{x_j^t \sim \mathcal{D}_t} log[1-D(f_j^t)].\\
+        loss(\mathcal{D}_s, \mathcal{D}_t) = \mathbb{E}_{x_i^s \sim \mathcal{D}_s} log[D(f_i^s)]
+            + \mathbb{E}_{x_j^t \sim \mathcal{D}_t} log[1-D(f_j^t)].
 
-    Parameters:
-        - **domain_discriminator** (class:`nn.Module` object): A domain discriminator object, which predicts
-          the domains of features. Its input shape is (N, F) and output shape is (N, 1)
-        - **reduction** (string, optional): Specifies the reduction to apply to the output:
-          ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
-          ``'mean'``: the sum of the output will be divided by the number of
-          elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
-        - **grl** (WarmStartGradientReverseLayer, optional): Default: None.
+    Args:
+        domain_discriminator (torch.nn.Module): A domain discriminator object, which predicts the domains of features. Its input shape is (N, F) and output shape is (N, 1)
+        reduction (str, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+        grl (WarmStartGradientReverseLayer, optional): Default: None.
 
-    Inputs: f_s, f_t
-        - **f_s** (tensor): feature representations on source domain, :math:`f^s`
-        - **f_t** (tensor): feature representations on target domain, :math:`f^t`
+    Inputs:
+        - f_s (tensor): feature representations on source domain, :math:`f^s`
+        - f_t (tensor): feature representations on target domain, :math:`f^t`
+        - w_s (tensor, optional): a rescaling weight given to each instance from source domain.
+        - w_t (tensor, optional): a rescaling weight given to each instance from target domain.
 
     Shape:
         - f_s, f_t: :math:`(N, F)` where F means the dimension of input features.
-        - Outputs: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(N, )`.
+        - Outputs: scalar by default. If :attr:`reduction` is ``'none'``, then :math:`(N, )`.
 
     Examples::
+
         >>> from dalib.modules.domain_discriminator import DomainDiscriminator
         >>> discriminator = DomainDiscriminator(in_feature=1024, hidden_size=1024)
         >>> loss = DomainAdversarialLoss(discriminator, reduction='mean')
@@ -49,7 +52,7 @@ class DomainAdversarialLoss(nn.Module):
     """
 
     def __init__(self, domain_discriminator: nn.Module, reduction: Optional[str] = 'mean',
-                 grl: Optional[WarmStartGradientReverseLayer] = None):
+                 grl: Optional = None):
         super(DomainAdversarialLoss, self).__init__()
         self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True) if grl is None else grl
         self.domain_discriminator = domain_discriminator

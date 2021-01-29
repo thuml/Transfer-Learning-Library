@@ -1,4 +1,4 @@
-DALIB Utils
+Utils
 ===========================
 
 Average Meter

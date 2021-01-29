@@ -30,18 +30,17 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
 
     .. math::
         \hat{D}_k(P, Q) &=
-        \dfrac{1}{n_s^2} \sum_{i=1}^{n_s}\sum_{j=1}^{n_s} k(z_i^{s}, z_j^{s}) \\
-        &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} k(z_i^{t}, z_j^{t}) \\
-        &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} k(z_i^{s}, z_j^{t}). \\
+        \dfrac{1}{n_s^2} \sum_{i=1}^{n_s}\sum_{j=1}^{n_s} k(z_i^{s}, z_j^{s})\\
+        &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} k(z_i^{t}, z_j^{t})\\
+        &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} k(z_i^{s}, z_j^{t}).\\
 
-    Parameters:
-        - **kernels** (tuple(`nn.Module`)): kernel functions.
-        - **linear** (bool): whether use the linear version of DAN. Default: False
-        - **quadratic_program** (bool): whether use quadratic program to solve :math:`\beta`. Default: False
+    Args:
+        kernels (tuple(torch.nn.Module)): kernel functions.
+        linear (bool): whether use the linear version of DAN. Default: False
 
-    Inputs: z_s, z_t
-        - **z_s** (tensor): activations from the source domain, :math:`z^s`
-        - **z_t** (tensor): activations from the target domain, :math:`z^t`
+    Inputs:
+        - z_s (tensor): activations from the source domain, :math:`z^s`
+        - z_t (tensor): activations from the target domain, :math:`z^t`
 
     Shape:
         - Inputs: :math:`(minibatch, *)`  where * means any dimension
@@ -54,6 +53,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
         The kernel values will add up when there are multiple kernels.
 
     Examples::
+
         >>> from dalib.modules.kernels import GaussianKernel
         >>> feature_dim = 1024
         >>> batch_size = 10

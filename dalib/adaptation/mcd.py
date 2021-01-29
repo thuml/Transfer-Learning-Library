@@ -5,6 +5,7 @@ import torch
 
 def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tensor) -> torch.Tensor:
     r"""The `Classifier Discrepancy` in `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation <https://arxiv.org/abs/1712.02560>`_.
+
     The classfier discrepancy between predictions :math:`p_1` and :math:`p_2` can be described as:
 
     .. math::
@@ -12,9 +13,9 @@ def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tenso
 
     where K is number of classes.
 
-    Parameters:
-        - **predictions1** (tensor): Classifier predictions :math:`p_1`. Expected to contain raw, normalized scores for each class
-        - **predictions2** (tensor): Classifier predictions :math:`p_2`
+    Args:
+        predictions1 (torch.Tensor): Classifier predictions :math:`p_1`. Expected to contain raw, normalized scores for each class
+        predictions2 (torch.Tensor): Classifier predictions :math:`p_2`
     """
     return torch.mean(torch.abs(predictions1 - predictions2))
 
@@ -28,18 +29,19 @@ def entropy(predictions: torch.Tensor) -> torch.Tensor:
 
     where K is number of classes.
 
-    Parameters:
-        - **predictions** (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
+    Args:
+        predictions (torch.Tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
     """
     return -torch.mean(torch.log(torch.mean(predictions, 0) + 1e-6))
 
 
 class ImageClassifierHead(nn.Module):
     r"""Classifier Head for MCD.
-    Parameters:
-        - **in_features** (int): Dimension of input features
-        - **num_classes** (int): Number of classes
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: 1024
+
+    Args:
+        in_features (int): Dimension of input features
+        num_classes (int): Number of classes
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
 
     Shape:
         - Inputs: :math:`(minibatch, F)` where F = `in_features`.

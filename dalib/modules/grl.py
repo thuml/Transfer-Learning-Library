@@ -43,12 +43,12 @@ class WarmStartGradientReverseLayer(nn.Module):
 
         where :math:`i` is the iteration step.
 
-        Parameters:
-            - **alpha** (float, optional): :math:`α`. Default: 1.0
-            - **lo** (float, optional): Initial value of :math:`\lambda`. Default: 0.0
-            - **hi** (float, optional): Final value of :math:`\lambda`. Default: 1.0
-            - **max_iters** (int, optional): :math:`N`. Default: 1000
-            - **auto_step** (bool, optional): If True, increase :math:`i` each time `forward` is called.
+        Args:
+            alpha (float, optional): :math:`α`. Default: 1.0
+            lo (float, optional): Initial value of :math:`\lambda`. Default: 0.0
+            hi (float, optional): Final value of :math:`\lambda`. Default: 1.0
+            max_iters (int, optional): :math:`N`. Default: 1000
+            auto_step (bool, optional): If True, increase :math:`i` each time `forward` is called.
               Otherwise use function `step` to increase :math:`i`. Default: False
         """
 

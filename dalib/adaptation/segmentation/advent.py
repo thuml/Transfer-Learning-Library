@@ -12,12 +12,12 @@ class Discriminator(nn.Sequential):
     Distinguish pixel-by-pixel whether the input predictions come from the source domain or the target domain.
     The source domain label is 1 and the target domain label is 0.
 
-    Parameters:
-        - **num_classes** (int): num of classes in the predictions
-        - **ndf** (int): dimension of the hidden features
+    Args:
+        num_classes (int): num of classes in the predictions
+        ndf (int): dimension of the hidden features
 
     Shape:
-        - Inputs: :math:`(minibatch, num_classes, H, W)`
+        - Inputs: :math:`(minibatch, C, H, W)` where :math:`C` is the number of classes
         - Outputs: :math:`(minibatch, 1, H, W)`
     """
     def __init__(self, num_classes, ndf=64):
@@ -53,19 +53,21 @@ class DomainAdversarialEntropyLoss(nn.Module):
 
     Minimizing entropy with adversarial learning through training a domain discriminator.
 
-    Parameters:
-        - **domain_discriminator** (class:`nn.Module` object): A domain discriminator object, which predicts
-          the domains of predictions. Its input shape is (N, C, H, W) and output shape is (N, 1, H, W)
+    Args:
+        domain_discriminator (torch.nn.Module): A domain discriminator object, which predicts
+          the domains of predictions. Its input shape is :math:`(minibatch, C, H, W)` and output shape is :math:`(minibatch, 1, H, W)`
 
-    Inputs: logits, domain_label
-        - **logits** (tensor): logits output of segmentation model
-        - **domain_label** (str): whether the data comes from source or target. Choices: ['source', 'target'].
+    Inputs:
+        - logits (tensor): logits output of segmentation model
+        - domain_label (str, optional): whether the data comes from source or target.
+          Choices: ['source', 'target']. Default: 'source'
 
     Shape:
-        - logits: :math:`(N, C, H, W)` where C means the number of classes
+        - logits: :math:`(minibatch, C, H, W)` where :math:`C` means the number of classes
         - Outputs: scalar.
 
     Examples::
+
         >>> B, C, H, W = 2, 19, 512, 512
         >>> discriminator = Discriminator(num_classes=C)
         >>> dann = DomainAdversarialEntropyLoss(discriminator)
@@ -79,9 +81,6 @@ class DomainAdversarialEntropyLoss(nn.Module):
 
     def forward(self, logits, domain_label='source'):
         """
-        Args:
-            - **logits** (tensor): logits output of segmentation model
-            - **domain_label** (str): whether the data comes from source or target. Choices: ['source', 'target'].
         """
         assert domain_label in ['source', 'target']
         probability = F.softmax(logits, dim=1)
@@ -97,10 +96,7 @@ class DomainAdversarialEntropyLoss(nn.Module):
         all the parameters in discriminator will be set requires_grad=True.
 
         Args:
-            - **mode** (bool): whether to set training mode (``True``) or evaluation mode (``False``). Default: ``True``.
-
-        Returns:
-            Module: self
+            mode (bool): whether to set training mode (``True``) or evaluation mode (``False``). Default: ``True``.
         """
         self.discriminator.train(mode)
         for param in self.discriminator.parameters():
@@ -112,8 +108,5 @@ class DomainAdversarialEntropyLoss(nn.Module):
         all the parameters in discriminator will be set requires_grad=False.
 
         This is equivalent with :meth:`self.train(False) <torch.nn.Module.train>`.
-
-        Returns:
-            Module: self
         """
         return self.train(False)

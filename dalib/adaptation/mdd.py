@@ -23,24 +23,25 @@ class MarginDisparityDiscrepancy(nn.Module):
     and :math:`L_t` refers to the disparity function defined on the target domain.
     You can see more details in `Bridging Theory and Algorithm for Domain Adaptation <https://arxiv.org/abs/1904.05801>`_.
 
-    Parameters:
-        - **source_disparity** (Callable): The disparity function defined on the source domain, :math:`L_s`.
-        - **target_disparity** (Callable): The disparity function defined on the target domain, :math:`L_t`.
-        - **margin** (float): margin :math:`\gamma`. Default: 4
-        - **reduction** (string, optional): Specifies the reduction to apply to the output:
+    Args:
+        source_disparity (callable): The disparity function defined on the source domain, :math:`L_s`.
+        target_disparity (callable): The disparity function defined on the target domain, :math:`L_t`.
+        margin (float): margin :math:`\gamma`. Default: 4
+        reduction (str, optional): Specifies the reduction to apply to the output:
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
           elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
 
-    Inputs: y_s, y_s_adv, y_t, y_t_adv
-        - **y_s**: output :math:`y^s` by the main head on the source domain
-        - **y_s_adv**: output :math:`y^s` by the adversarial head on the source domain
-        - **y_t**: output :math:`y^t` by the main head on the target domain
-        - **y_t_adv**: output :math:`y_{adv}^t` by the adversarial head on the target domain
-        - **w_s** (optional): instance weights for source domain
-        - **w_t** (optional): instance weights for target domain
+    Inputs:
+        - y_s: output :math:`y^s` by the main head on the source domain
+        - y_s_adv: output :math:`y^s` by the adversarial head on the source domain
+        - y_t: output :math:`y^t` by the main head on the target domain
+        - y_t_adv: output :math:`y_{adv}^t` by the adversarial head on the target domain
+        - w_s (optional): instance weights for source domain
+        - w_t (optional): instance weights for target domain
 
     Examples::
+
         >>> num_outputs = 2
         >>> batch_size = 10
         >>> loss = MarginDisparityDiscrepancy(margin=4., source_disparity=F.l1_loss, target_disparity=F.l1_loss)
@@ -82,6 +83,7 @@ class MarginDisparityDiscrepancy(nn.Module):
 class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
     r"""The margin disparity discrepancy (MDD) that measures the distribution discrepancy in domain adaptation
     for classification.
+
     When margin is equal to 1, it's also called disparity discrepancy (DD).
 
     The :math:`y^s` and :math:`y^t` are logits output by the main classifier on the source and target domain respectively.
@@ -98,18 +100,18 @@ class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
     where :math:`\gamma` is a margin hyper-parameter and :math:`h_y` refers to the predicted label when the logits output is :math:`y`.
     You can see more details in `Bridging Theory and Algorithm for Domain Adaptation <https://arxiv.org/abs/1904.05801>`_.
 
-    Parameters:
-        - **margin** (float): margin :math:`\gamma`. Default: 4
-        - **reduction** (string, optional): Specifies the reduction to apply to the output:
+    Args:
+        margin (float): margin :math:`\gamma`. Default: 4
+        reduction (str, optional): Specifies the reduction to apply to the output:
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
           elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
 
-    Inputs: y_s, y_s_adv, y_t, y_t_adv
-        - **y_s**: logits output :math:`y^s` by the main classifier on the source domain
-        - **y_s_adv**: logits output :math:`y^s` by the adversarial classifier on the source domain
-        - **y_t**: logits output :math:`y^t` by the main classifier on the target domain
-        - **y_t_adv**: logits output :math:`y_{adv}^t` by the adversarial classifier on the target domain
+    Inputs:
+        - y_s: logits output :math:`y^s` by the main classifier on the source domain
+        - y_s_adv: logits output :math:`y^s` by the adversarial classifier on the source domain
+        - y_t: logits output :math:`y^t` by the main classifier on the target domain
+        - y_t_adv: logits output :math:`y_{adv}^t` by the adversarial classifier on the target domain
 
     Shape:
         - Inputs: :math:`(minibatch, C)` where C = number of classes, or :math:`(minibatch, C, d_1, d_2, ..., d_K)`
@@ -118,6 +120,7 @@ class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
           :math:`(minibatch, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case of K-dimensional loss.
 
     Examples::
+
         >>> num_classes = 2
         >>> batch_size = 10
         >>> loss = ClassificationMarginDisparityDiscrepancy(margin=4.)
@@ -147,7 +150,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
 
     The :math:`y^s` and :math:`y^t` are logits output by the main regressor on the source and target domain respectively.
     The :math:`y_{adv}^s` and :math:`y_{adv}^t` are logits output by the adversarial regressor.
-    They are expected to contain normalized values for each factors.
+    They are expected to contain ``normalized`` values for each factors.
 
     The definition can be described as:
 
@@ -159,19 +162,19 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
     where :math:`\gamma` is a margin hyper-parameter and :math:`L` refers to the disparity function defined on both domains.
     You can see more details in `Bridging Theory and Algorithm for Domain Adaptation <https://arxiv.org/abs/1904.05801>`_.
 
-    Parameters:
-        - **loss_function** (Callable): The disparity function defined on both domains, :math:`L`.
-        - **margin** (float): margin :math:`\gamma`. Default: 4
-        - **reduction** (string, optional): Specifies the reduction to apply to the output:
+    Args:
+        loss_function (callable): The disparity function defined on both domains, :math:`L`.
+        margin (float): margin :math:`\gamma`. Default: 1
+        reduction (str, optional): Specifies the reduction to apply to the output:
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
           elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
 
-    Inputs: y_s, y_s_adv, y_t, y_t_adv
-        - **y_s**: logits output :math:`y^s` by the main regressor on the source domain
-        - **y_s_adv**: logits output :math:`y^s` by the adversarial regressor on the source domain
-        - **y_t**: logits output :math:`y^t` by the main regressor on the target domain
-        - **y_t_adv**: logits output :math:`y_{adv}^t` by the adversarial regressor on the target domain
+    Inputs:
+        - y_s: logits output :math:`y^s` by the main regressor on the source domain
+        - y_s_adv: logits output :math:`y^s` by the adversarial regressor on the source domain
+        - y_t: logits output :math:`y^t` by the main regressor on the target domain
+        - y_t_adv: logits output :math:`y_{adv}^t` by the adversarial regressor on the target domain
 
     Shape:
         - Inputs: :math:`(minibatch, F)` where F = number of factors, or :math:`(minibatch, F, d_1, d_2, ..., d_K)`
@@ -180,6 +183,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
           :math:`(minibatch, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case of K-dimensional loss.
 
     Examples::
+
         >>> num_outputs = 2
         >>> batch_size = 10
         >>> loss = RegressionMarginDisparityDiscrepancy(margin=4., loss_function=F.l1_loss)
@@ -188,6 +192,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
         >>> # adversarial output from source domain and target domain
         >>> y_s_adv, y_t_adv = torch.randn(batch_size, num_outputs), torch.randn(batch_size, num_outputs)
         >>> output = loss(y_s, y_s_adv, y_t, y_t_adv)
+
     """
 
     def __init__(self, margin: Optional[float] = 1, loss_function=F.mse_loss, **kwargs):
@@ -210,9 +215,9 @@ def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
 
     Used to avoid the gradient explosion problem in log(x) function when x=0.
 
-    Parameters:
-        - **x**: input tensor
-        - **offset**: offset size. Default: 1e-6
+    Args:
+        x (torch.Tensor): input tensor
+        offset (float, optional): offset size. Default: 1e-6
 
     .. note::
         Input tensor falls in [0., 1.] and the output tensor falls in [-log(offset), 0]
@@ -222,34 +227,35 @@ def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
 
 class ImageClassifier(nn.Module):
     r"""Classifier for MDD.
-    Parameters:
-        - **backbone** (class:`nn.Module` object): Any backbone to extract 1-d features from data
-        - **num_classes** (int): Number of classes
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: 1024
-        - **width** (int, optional): Feature dimension of the classifier head. Default: 1024
 
-    .. note::
-        Classifier for MDD has one backbone, one bottleneck, while two classifier heads.
-        The first classifier head is used for final predictions.
-        The adversarial classifier head is only used when calculating MarginDisparityDiscrepancy.
+    Classifier for MDD has one backbone, one bottleneck, while two classifier heads.
+    The first classifier head is used for final predictions.
+    The adversarial classifier head is only used when calculating MarginDisparityDiscrepancy.
 
-    .. note::
-        Remember to call function `step()` after function `forward()` **during training phase**! For instance,
 
-        >>> # x is inputs, classifier is an ImageClassifier
-        >>> outputs, outputs_adv = classifier(x)
-        >>> classifier.step()
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 1-d features from data
+        num_classes (int): Number of classes
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
+        width (int, optional): Feature dimension of the classifier head. Default: 1024
 
     Inputs:
-        - **x** (Tensor): input data
+        - x (tensor): input data
 
-    Outputs: (outputs, outputs_adv)
-        - **outputs**: logits outputs by the main classifier
-        - **outputs_adv**: logits outputs by the adversarial classifier
+    Outputs:
+        - outputs: logits outputs by the main classifier
+        - outputs_adv: logits outputs by the adversarial classifier
 
     Shapes:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, C)`, where C means the number of classes.
+
+    .. note::
+        Remember to call function `step()` after function `forward()` **during training phase**! For instance,
+
+            >>> # x is inputs, classifier is an ImageClassifier
+            >>> outputs, outputs_adv = classifier(x)
+            >>> classifier.step()
 
     """
 
@@ -295,6 +301,7 @@ class ImageClassifier(nn.Module):
         self.finetune = finetune
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """"""
         features = self.backbone(x)
         features = self.bottleneck(features)
         outputs = self.head(features)
@@ -303,15 +310,15 @@ class ImageClassifier(nn.Module):
         return outputs, outputs_adv
 
     def step(self):
-        """Call step() each iteration during training.
-        Will increase :math:`\lambda` in GRL layer.
+        """
+        Gradually increase :math:`\lambda` in GRL layer.
         """
         self.grl_layer.step()
 
     def get_parameters(self) -> List[Dict]:
         """
-        :return: A parameters list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
+        Return a parameters list which decides optimization hyper-parameters,
+        such as the relative learning rate of each layer.
         """
         params = [
             {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
@@ -324,34 +331,35 @@ class ImageClassifier(nn.Module):
 
 class ImageRegressor(nn.Module):
     r"""Regressor for MDD.
-    Parameters:
-        - **backbone** (class:`nn.Module` object): Any backbone to extract 1-d features from data
-        - **num_factors** (int): Number of factors
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: 1024
-        - **width** (int, optional): Feature dimension of the classifier head. Default: 1024
 
-    .. note::
-        Regressor for MDD has one backbone, one bottleneck, while two regressor heads.
-        The first regressor head is used for final predictions.
-        The adversarial regressor head is only used when calculating MarginDisparityDiscrepancy.
+    Regressor for MDD has one backbone, one bottleneck, while two regressor heads.
+    The first regressor head is used for final predictions.
+    The adversarial regressor head is only used when calculating MarginDisparityDiscrepancy.
 
-    .. note::
-        Remember to call function `step()` after function `forward()` **during training phase**! For instance,
 
-        >>> # x is inputs, regressor is an ImageRegressor
-        >>> outputs, outputs_adv = regressor(x)
-        >>> regressor.step()
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 1-d features from data
+        num_factors (int): Number of factors
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
+        width (int, optional): Feature dimension of the classifier head. Default: 1024
 
     Inputs:
-        - **x** (Tensor): input data
+        - x (Tensor): input data
 
     Outputs: (outputs, outputs_adv)
-        - **outputs**: outputs by the main regressor
-        - **outputs_adv**: outputs by the adversarial regressor
+        - outputs: outputs by the main regressor
+        - outputs_adv: outputs by the adversarial regressor
 
     Shapes:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, F)`, where F means the number of factors.
+
+    .. note::
+        Remember to call function `step()` after function `forward()` **during training phase**! For instance,
+
+            >>> # x is inputs, regressor is an ImageRegressor
+            >>> outputs, outputs_adv = regressor(x)
+            >>> regressor.step()
 
     """
 
@@ -411,15 +419,15 @@ class ImageRegressor(nn.Module):
         return outputs, outputs_adv
 
     def step(self):
-        """Call step() each iteration during training.
-        Will increase :math:`\lambda` in GRL layer.
+        """
+        Gradually increase :math:`\lambda` in GRL layer.
         """
         self.grl_layer.step()
 
     def get_parameters(self) -> List[Dict]:
         """
-        :return: A parameters list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
+        Returns a parameters list which decides optimization hyper-parameters,
+        such as the relative learning rate of each layer.
         """
         params = [
             {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},

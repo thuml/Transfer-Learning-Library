@@ -7,16 +7,14 @@ class Cityscapes(SegmentationList):
     """`Cityscapes <https://www.cityscapes-dataset.com/>`_ is a real-world semantic segmentation dataset collected
     in driving scenarios.
 
-    Parent Class: :ref:`SegmentationList<segmentationlist>`.
-
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **split** (str, optional): The dataset split, supports ``train``, or ``val``.
-        - **data_folder** (str, optional): Sub-directory of the image. Default: 'leftImg8bit'.
-        - **label_folder** (str, optional): Sub-directory of the label. Default: 'gtFine'.
-        - **mean** (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
-        - **transforms** (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
-            and returns a transformed version. E.g, ``transforms.RandomCrop``.
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``, or ``val``.
+        data_folder (str, optional): Sub-directory of the image. Default: 'leftImg8bit'.
+        label_folder (str, optional): Sub-directory of the label. Default: 'gtFine'.
+        mean (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
+        transforms (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
+            and returns a transformed version. E.g, :class:`~dalib.vision.transforms.segmentation.Resize`.
 
     .. note:: You need to download Cityscapes manually.
         Ensure that there exist following files in the `root` directory before you using this class.
@@ -48,6 +46,7 @@ class Cityscapes(SegmentationList):
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/cfbe840d5bb649a38cf5/?dl=1"),
     ]
+    EVALUATE_CLASSES = CLASSES
 
     def __init__(self, root, split='train', data_folder='leftImg8bit', label_folder='gtFine', **kwargs):
         assert split in ['train', 'val']

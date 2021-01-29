@@ -49,15 +49,15 @@ class CaltechImageNet(ImageList):
     The label is based on the Caltech256 (class 0-255) . The private classes of ImageNet-1K is discarded.
 
 
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
+    Args:
+        root (str): Root directory of dataset
+        task (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
             ``'I'``: ImageNet-1K validation set.
-        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-            transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
         since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.
@@ -105,15 +105,15 @@ class CaltechImageNetUniversal(ImageList):
         The label is based on the Caltech256 (class 0-255) . The private classes of ImageNet-1K is grouped into class 256 ("unknown").
         Thus, CaltechImageNetUniversal has 257 classes in total.
 
-        Parameters:
-            - **root** (str): Root directory of dataset
-            - **task** (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
+        Args:
+            root (str): Root directory of dataset
+            task (str): The task (domain) to create dataset. Choices include ``'C'``:Caltech-256, \
                 ``'I'``: ImageNet-1K validation set.
-            - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+            download (bool, optional): If true, downloads the dataset from the internet and puts it \
                 in root directory. If dataset is already downloaded, it is not downloaded again.
-            - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-                transformed version. E.g, ``transforms.RandomCrop``.
-            - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+            transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+                transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+            target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
         .. note:: You need to put ``train`` and ``val`` directory of ImageNet-1K manually in `root` directory
             since ImageNet-1K is no longer publicly accessible. DALIB will only download Caltech-256 and ImageList automatically.

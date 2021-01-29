@@ -1,4 +1,4 @@
-DALIB Vision Models
+Vision Models
 ===========================
 
 ResNets

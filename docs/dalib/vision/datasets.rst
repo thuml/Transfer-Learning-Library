@@ -1,8 +1,8 @@
-DALIB Vision Datasets
+Vision Datasets
 =============================
 
 
-Unsupervised Domain Adaptation Dataset for Classification
+Unsupervised DA for Classification
 ---------------------------------------------------------
 
 
@@ -19,6 +19,7 @@ Office-31
 
 .. autoclass:: dalib.vision.datasets.office31.Office31
    :members:
+   :inherited-members:
 
 ---------------------------------------
 Office-Caltech
@@ -26,6 +27,7 @@ Office-Caltech
 
 .. autoclass:: dalib.vision.datasets.officecaltech.OfficeCaltech
    :members:
+   :inherited-members:
 
 ---------------------------------------
 Office-Home
@@ -33,6 +35,7 @@ Office-Home
 
 .. autoclass:: dalib.vision.datasets.officehome.OfficeHome
    :members:
+   :inherited-members:
 
 --------------------------------------
 VisDA-2017
@@ -40,7 +43,7 @@ VisDA-2017
 
 .. autoclass:: dalib.vision.datasets.visda2017.VisDA2017
    :members:
-
+   :inherited-members:
 
 --------------------------------------
 DomainNet
@@ -48,10 +51,14 @@ DomainNet
 
 .. autoclass:: dalib.vision.datasets.domainnet.DomainNet
    :members:
+   :inherited-members:
 
-
-Partial Domain Adaptation Dataset for Classification
+Partial DA for Classification
 ----------------------------------------------------
+
+---------------------------------------
+Partial Wrapper
+---------------------------------------
 
 .. autofunction:: dalib.vision.datasets.partial.partial
 
@@ -74,15 +81,19 @@ ImageNet-1k->Caltech-256
    :members:
 
 
-Open Set Domain Adaptation Dataset for Classification
+Open Set DA for Classification
 ------------------------------------------------------
+
+---------------------------------------
+Open Set Wrapper
+---------------------------------------
 
 .. autofunction:: dalib.vision.datasets.openset.open_set
 
 .. autofunction:: dalib.vision.datasets.openset.default_open_set
 
 
-Unsupervised Domain Adaptation Dataset for Regression
+Unsupervised DA for Regression
 ------------------------------------------------------
 
 ---------------------------------------
@@ -105,7 +116,7 @@ MPI3D
    :members:
 
 
-Unsupervised Domain Adaptation for Segmentation
+Unsupervised DA for Segmentation
 -----------------------------------------------
 
 ---------------------------------------

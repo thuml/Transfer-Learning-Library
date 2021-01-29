@@ -27,11 +27,11 @@ class GaussianKernel(nn.Module):
     If :attr:`track_running_stats` is set to ``False``, this layer then does not
     keep running estimates, and use a fixed :math:`\sigma` instead.
 
-    Parameters:
-        - sigma (float, optional): bandwidth :math:`\sigma`. Default: None
-        - track_running_stats (bool, optional): If ``True``, this module tracks the running mean of :math:`\sigma^2`.
+    Args:
+        sigma (float, optional): bandwidth :math:`\sigma`. Default: None
+        track_running_stats (bool, optional): If ``True``, this module tracks the running mean of :math:`\sigma^2`.
           Otherwise, it won't track such statistics and always uses fix :math:`\sigma^2`. Default: ``True``
-        - alpha (float, optional): :math:`\alpha` which decides the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
+        alpha (float, optional): :math:`\alpha` which decides the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
 
     Inputs:
         - X (tensor): input group :math:`X`

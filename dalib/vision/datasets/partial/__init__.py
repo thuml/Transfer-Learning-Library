@@ -19,9 +19,9 @@ def partial(dataset_class: ClassVar, partial_classes: Sequence[str]) -> ClassVar
     In other words, those samples which doesn't belong to `partial_classes` will be discarded.
     Yet `partial` will not change the label space of `dataset_class`.
 
-    Parameters:
-        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` can be partial.
-        - **partial_classes** (sequence[str]): A sequence of which categories need to be kept in the partial dataset.\
+    Args:
+        dataset_class (class): Dataset class. Only subclass of ``ImageList`` can be partial.
+        partial_classes (sequence[str]): A sequence of which categories need to be kept in the partial dataset.\
             Each element of `partial_classes` must belong to the `classes` list of `dataset_class`.
 
     Examples::
@@ -56,9 +56,12 @@ def default_partial(dataset_class: ClassVar) -> ClassVar:
     """
     Default partial used in some paper.
 
-    Parameters:
-        - **dataset_class** (class): Dataset class. Currently, dataset_class must be one of ``Office31``, ``OfficeHome``, ``VisDA2017``,\
-            ``ImageNetCaltech`` and ``CaltechImageNet``.
+    Args:
+        dataset_class (class): Dataset class. Currently, dataset_class must be one of
+            :class:`~dalib.vision.datasets.office31.Office31`, :class:`~dalib.vision.datasets.officehome.OfficeHome`,
+            :class:`~dalib.vision.datasets.visda2017.VisDA2017`,
+            :class:`~dalib.vision.datasets.partial.imagenet_caltech.ImageNetCaltech`
+            and :class:`~dalib.vision.datasets.partial.caltech_imagenet.CaltechImageNet`.
     """
     if dataset_class == Office31:
         kept_classes = OfficeCaltech.CLASSES

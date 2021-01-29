@@ -1,4 +1,3 @@
-
 class ResizeImage(object):
     """Resize the input PIL Image to the given size.
 

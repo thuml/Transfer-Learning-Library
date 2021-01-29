@@ -4,14 +4,15 @@ import tqdm
 import random
 from PIL import Image
 from typing import Optional, Sequence
+import torch.nn as nn
 
 
 def low_freq_mutate(amp_src: np.ndarray, amp_trg: np.ndarray, beta: Optional[int] = 1):
     """
     Args:
-        - **amp_src** (np.ndarray): amplitude component of the Fourier transform of source image
-        - **amp_trg** (np.ndarray): amplitude component of the Fourier transform of target image
-        - **beta** (int, Optional): the size of the center region to be replace. Default: 1
+        amp_src (numpy.ndarray): amplitude component of the Fourier transform of source image
+        amp_trg (numpy.ndarray): amplitude component of the Fourier transform of target image
+        beta (int, optional): the size of the center region to be replace. Default: 1
 
     Returns:
         amplitude component of the Fourier transform of source image
@@ -39,7 +40,7 @@ def low_freq_mutate(amp_src: np.ndarray, amp_trg: np.ndarray, beta: Optional[int
     return a_src
 
 
-class FourierTransform:
+class FourierTransform(nn.Module):
     """
     Fourier Transform is introduced by `Fourier Domain Adaptation <https://arxiv.org/abs/2004.05498>`_
 
@@ -57,16 +58,17 @@ class FourierTransform:
     where :math:`\mathcal{F}^A`, :math:`\mathcal{F}^P` are the amplitude and phase component of the Fourier
     Transform :math:`\mathcal{F}` of an RGB image.
 
-    Parameters:
-        - **image_list** (sequence[str]): A sequence of image list from the target domain.
-        - **amplitude_dir** (string): Specifies the directory to put the amplitude component of the target image.
-        - **beta** (int, optional): :math:`β`. Default: 1.
-        - **rebuild** (bool, optional): whether rebuild the amplitude component of the target image in the given directory.
+    Args:
+        image_list (sequence[str]): A sequence of image list from the target domain.
+        amplitude_dir (str): Specifies the directory to put the amplitude component of the target image.
+        beta (int, optional): :math:`β`. Default: 1.
+        rebuild (bool, optional): whether rebuild the amplitude component of the target image in the given directory.
 
     Inputs:
-        - **image** (PIL.Image): image from the source domain, :math:`x^t`.
+        - image (PIL Image): image from the source domain, :math:`x^t`.
 
-    Examples::
+    Examples:
+
         >>> from dalib.translation.fourier_transform import FourierTransform
         >>> image_list = ["target_image_path1", "target_image_path2"]
         >>> amplitude_dir = "path/to/amplitude_dir"
@@ -74,20 +76,21 @@ class FourierTransform:
         >>> source_image = np.array((256, 256, 3)) # image form source domain
         >>> source_image_in_target_style = fourier_transform(source_image)
 
-    Note::
+    .. note::
         The meaning of :math:`β` is different from that of the origin paper. Experimentally, we found that the size of
         the center region in the frequency space should be constant when the image size increases. Thus we make the size
         of the center region independent of the image size. A recommended value for :math:`β` is 1.
 
-    Note::
+    .. note::
         The image structure of the source domain and target domain should be as similar as possible,
         thus for segemntation tasks, FourierTransform should be used before RandomResizeCrop and other transformations.
 
-    Note::
+    .. note::
         The image size of the source domain and the target domain need to be the same, thus before FourierTransform,
         you should use Resize to convert the source image to the target image size.
 
-    Examples::
+    Examples:
+
         >>> from dalib.translation.fourier_transform import FourierTransform
         >>> import dalib.vision.datasets.segmentation.transforms as T
         >>> from PIL import Image
@@ -96,11 +99,12 @@ class FourierTransform:
         >>> # build a fourier transform that translate source images to the target style
         >>> fourier_transform = T.wrapper(FourierTransform)(target_image_list, amplitude_dir)
         >>> transforms=T.Compose([
-        >>>        T.Resize((2048, 1024)),  # convert source image to the size of the target image before fourier transform
-        >>>        fourier_transform,
-        >>>        T.RandomResizedCrop((1024, 512)),
-        >>>        T.RandomHorizontalFlip(),
-        >>>    ])
+        ...     # convert source image to the size of the target image before fourier transform
+        ...     T.Resize((2048, 1024)),
+        ...     fourier_transform,
+        ...     T.RandomResizedCrop((1024, 512)),
+        ...     T.RandomHorizontalFlip(),
+        ... ])
         >>> source_image = Image.open("path/to/source_image") # image form source domain
         >>> source_image_in_target_style = transforms(source_image)
     """
@@ -125,7 +129,7 @@ class FourierTransform:
             amp = np.abs(fft)
             np.save(os.path.join(amplitude_dir, "{}.npy".format(i)), amp)
 
-    def __call__(self, image):
+    def forward(self, image):
         # randomly sample a target image and load its amplitude component
         amp_trg = np.load(os.path.join(self.amplitude_dir, "{}.npy".format(random.randint(0, self.length-1))))
 
