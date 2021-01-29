@@ -8,27 +8,27 @@ from torch.utils import data
 class SegmentationList(data.Dataset):
     """A generic Dataset class for domain adaptation in image segmentation
 
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **classes** (seq[str]): The names of all the classes
-        - **data_list_file** (str): File to read the image list from.
-        - **label_list_file** (str): File to read the label list from.
-        - **data_folder** (str): Sub-directory of the image.
-        - **label_folder** (str): Sub-directory of the label.
-        - **mean** (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
-        - **id_to_train_id** (dict, optional): the map between the id on the label and the actual train id.
-        - **train_id_to_color** (seq, optional): the map between the train id and the color.
-        - **transforms** (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
-            and returns a transformed version. E.g, ``transforms.RandomCrop``.
+    Args:
+        root (str): Root directory of dataset
+        classes (seq[str]): The names of all the classes
+        data_list_file (str): File to read the image list from.
+        label_list_file (str): File to read the label list from.
+        data_folder (str): Sub-directory of the image.
+        label_folder (str): Sub-directory of the label.
+        mean (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
+        id_to_train_id (dict, optional): the map between the id on the label and the actual train id.
+        train_id_to_color (seq, optional): the map between the train id and the color.
+        transforms (callable, optional): A function/transform that  takes in  (PIL Image, label) pair \
+            and returns a transformed version. E.g, :class:`~dalib.vision.transforms.segmentation.Resize`.
 
-    .. note:: In `data_list_file`, each line is the relative path of an image.
-        If your data_list_file has different formats, please over-ride `parse_data_file`.
+    .. note:: In ``data_list_file``, each line is the relative path of an image.
+        If your data_list_file has different formats, please over-ride :meth:`~SegmentationList.parse_data_file`.
         ::
             source_dir/dog_xxx.png
             target_dir/dog_xxy.png
 
-        In `label_list_file`, each line is the relative path of an label.
-        If your label_list_file has different formats, please over-ride `parse_label_file`.
+        In ``label_list_file``, each line is the relative path of an label.
+        If your label_list_file has different formats, please over-ride :meth:`~SegmentationList.parse_label_file`.
     """
     def __init__(self, root: str, classes: Sequence[str], data_list_file: str, label_list_file: str,
                  data_folder: str, label_folder: str, mean: Optional[Sequence[float]] = None,
@@ -50,9 +50,12 @@ class SegmentationList(data.Dataset):
 
     def parse_data_file(self, file_name):
         """Parse file to image list
-        Parameters:
-            - **file_name** (str): The path of data file
-            - **return** (list): List of image path
+
+        Args:
+            file_name (str): The path of data file
+
+        Returns:
+            List of image path
         """
         with open(file_name, "r") as f:
             data_list = [line.strip() for line in f.readlines()]
@@ -60,9 +63,12 @@ class SegmentationList(data.Dataset):
 
     def parse_label_file(self, file_name):
         """Parse file to label list
-        Parameters:
-            - **file_name** (str): The path of data file
-            - **return** (list): List of label path
+
+        Args:
+            file_name (str): The path of data file
+
+        Returns:
+            List of label path
         """
         with open(file_name, "r") as f:
             label_list = [line.strip() for line in f.readlines()]
@@ -103,11 +109,13 @@ class SegmentationList(data.Dataset):
 
     def decode_input(self, image):
         """
-        Recover the numpy array to PIL.Image
+        Recover the numpy array to PIL Image
 
-        Parameters:
-            - **image** (np.array): normalized image in shape 3 x H x W
-            - **return** (PIL.Image): RGB image in shape H x W x 3
+        Args:
+            image (numpy.ndarray): normalized image in shape 3 x H x W
+
+        Returns:
+            RGB image in shape H x W x 3
         """
         image = image.transpose((1, 2, 0))
         image += self.mean
@@ -117,9 +125,11 @@ class SegmentationList(data.Dataset):
     def decode_target(self, target):
         """ Decode label (each value is integer) into the corresponding RGB value.
 
-        Parameters:
-            - **target** (np.array): label in shape H x W
-            - **return** (PIL.Image): RGB label in shape H x W x 3
+        Args:
+            target (numpy.array): label in shape H x W
+
+        Returns:
+            RGB label (PIL Image) in shape H x W x 3
         """
         target = target.copy()
         target[target == 255] = self.num_classes # unknown label is black on the RGB label

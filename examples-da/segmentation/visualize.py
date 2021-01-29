@@ -14,7 +14,7 @@ import torch.nn as nn
 sys.path.append('.')
 import dalib.vision.models.segmentation as models
 import dalib.vision.datasets.segmentation as datasets
-import dalib.vision.datasets.segmentation.transforms as T
+import dalib.vision.transforms.segmentation as T
 from dalib.utils.metric import ConfusionMatrix
 from dalib.utils.avgmeter import AverageMeter, ProgressMeter, Meter
 
