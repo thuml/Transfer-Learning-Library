@@ -20,6 +20,6 @@ Our code is pythonic, and the design is consistent with torchvision. You can eas
 - Results for partial DA can be found at [Partial DA benchmark](https://github.com/thuml/Transfer-Learning-Library/blob/dev/docs/dalib/partial_da.rst)
 - Results for open-set DA can be found at [Open-set DA benchmark](https://github.com/thuml/Transfer-Learning-Library/blob/dev/docs/dalib/open_set_da.rst)
 - Results for regression DA can be found at [Regression DA benchmark](https://github.com/thuml/Transfer-Learning-Library/blob/dev/docs/dalib/regression_da.rst)
-- A new documentation can be found at [Documentation](http://microhhh.com/). Note that this link is only for temporary use.
+- A new documentation can be found at [Documentation (please open in Firefox or Safari)](http://microhhh.com/). Note that this link is only for temporary use.
 
 There might be many errors and changes in this branch. Please refer [master](https://github.com/thuml/Transfer-Learning-Library) for stable version. Also, any suggestions are welcome!
