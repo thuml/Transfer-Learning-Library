@@ -111,6 +111,7 @@ class FourierTransform(nn.Module):
     # TODO add image examples when beta is different
     def __init__(self, image_list: Sequence[str], amplitude_dir: str,
                  beta: Optional[int] = 1, rebuild: Optional[bool] = False):
+        super(FourierTransform, self).__init__()
         self.amplitude_dir = amplitude_dir
         if not os.path.exists(amplitude_dir) or rebuild:
             os.makedirs(amplitude_dir, exist_ok=True)
