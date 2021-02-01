@@ -21,19 +21,19 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         loss(\mathcal{D}_s, \mathcal{D}_t) &= \mathbb{E}_{x_i^s \sim \mathcal{D}_s} log[D(T(f_i^s, g_i^s))] \\
         &+ \mathbb{E}_{x_j^t \sim \mathcal{D}_t} log[1-D(T(f_j^t, g_j^t))],\\
 
-    where :math:`T` is a `multi linear map` or `randomized multi linear map` which convert two tensors to a single tensor.
+    where :math:`T` is a :class:`MultiLinearMap`  or :class:`RandomizedMultiLinearMap` which convert two tensors to a single tensor.
 
-    Parameters:
-        - **domain_discriminator** (class:`nn.Module` object): A domain discriminator object, which predicts the domains of
+    Args:
+        domain_discriminator (torch.nn.Module): A domain discriminator object, which predicts the domains of
           features. Its input shape is (N, F) and output shape is (N, 1)
-        - **entropy_conditioning** (bool, optional): If True, use entropy-aware weight to reweight each training example.
+        entropy_conditioning (bool, optional): If True, use entropy-aware weight to reweight each training example.
           Default: False
-        - **randomized** (bool, optional): If True, use `randomized multi linear map`. Else, use `multi linear map`.
+        randomized (bool, optional): If True, use `randomized multi linear map`. Else, use `multi linear map`.
           Default: False
-        - **num_classes** (int, optional): Number of classes. Default: -1
-        - **features_dim** (int, optional): Dimension of input features. Default: -1
-        - **randomized_dim** (int, optional): Dimension of features after randomized. Default: 1024
-        - **reduction** (string, optional): Specifies the reduction to apply to the output:
+        num_classes (int, optional): Number of classes. Default: -1
+        features_dim (int, optional): Dimension of input features. Default: -1
+        randomized_dim (int, optional): Dimension of features after randomized. Default: 1024
+        reduction (str, optional): Specifies the reduction to apply to the output:
           ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
           ``'mean'``: the sum of the output will be divided by the number of
           elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
@@ -42,18 +42,19 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         You need to provide `num_classes`, `features_dim` and `randomized_dim` **only when** `randomized`
         is set True.
 
-    Inputs: g_s, f_s, g_t, f_t
-        - **g_s** (tensor): unnormalized classifier predictions on source domain, :math:`g^s`
-        - **f_s** (tensor): feature representations on source domain, :math:`f^s`
-        - **g_t** (tensor): unnormalized classifier predictions on target domain, :math:`g^t`
-        - **f_t** (tensor): feature representations on target domain, :math:`f^t`
+    Inputs:
+        - g_s (tensor): unnormalized classifier predictions on source domain, :math:`g^s`
+        - f_s (tensor): feature representations on source domain, :math:`f^s`
+        - g_t (tensor): unnormalized classifier predictions on target domain, :math:`g^t`
+        - f_t (tensor): feature representations on target domain, :math:`f^t`
 
     Shape:
         - g_s, g_t: :math:`(minibatch, C)` where C means the number of classes.
         - f_s, f_t: :math:`(minibatch, F)` where F means the dimension of input features.
-        - Output: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(minibatch, )`.
+        - Output: scalar by default. If :attr:`reduction` is ``'none'``, then :math:`(minibatch, )`.
 
     Examples::
+
         >>> from dalib.modules.domain_discriminator import DomainDiscriminator
         >>> from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss
         >>> import torch
@@ -117,10 +118,10 @@ class RandomizedMultiLinearMap(nn.Module):
     where :math:`\odot` is element-wise product, :math:`R_f` and :math:`R_g` are random matrices
     sampled only once and ﬁxed in training.
 
-    Parameters:
-        - **features_dim** (int): dimension of input :math:`f`
-        - **num_classes** (int): dimension of input :math:`g`
-        - **output_dim** (int, optional): dimension of output tensor. Default: 1024
+    Args:
+        features_dim (int): dimension of input :math:`f`
+        num_classes (int): dimension of input :math:`g`
+        output_dim (int, optional): dimension of output tensor. Default: 1024
 
     Shape:
         - f: (minibatch, features_dim)

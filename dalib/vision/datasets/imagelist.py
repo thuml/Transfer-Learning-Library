@@ -7,13 +7,13 @@ from torchvision.datasets.folder import default_loader
 class ImageList(datasets.VisionDataset):
     """A generic Dataset class for domain adaptation in image classification
 
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **classes** (List[str]): The names of all the classes
-        - **data_list_file** (str): File to read the image list from.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image \
-            and returns a transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+    Args:
+        root (str): Root directory of dataset
+        classes (list[str]): The names of all the classes
+        data_list_file (str): File to read the image list from.
+        transform (callable, optional): A function/transform that  takes in an PIL image \
+            and returns a transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: In `data_list_file`, each line has 2 values in the following format.
         ::
@@ -23,7 +23,7 @@ class ImageList(datasets.VisionDataset):
             target_dir/cat_nsdf3.png 1
 
         The first value is the relative path of an image, and the second value is the label of the corresponding image.
-        If your data_list_file has different formats, please over-ride `parse_data_file`.
+        If your data_list_file has different formats, please over-ride :meth:`~ImageList.parse_data_file`.
     """
 
     def __init__(self, root: str, classes: List[str], data_list_file: str,
@@ -38,9 +38,9 @@ class ImageList(datasets.VisionDataset):
 
     def __getitem__(self, index: int) -> Tuple[Any, int]:
         """
-        Parameters:
-            - **index** (int): Index
-            - **return** (tuple): (image, target) where target is index of the target class.
+        Args:
+            index (int): Index
+            return (tuple): (image, target) where target is index of the target class.
         """
         path, target = self.samples[index]
         img = self.loader(path)
@@ -56,9 +56,9 @@ class ImageList(datasets.VisionDataset):
     def parse_data_file(self, file_name: str) -> List[Tuple[str, int]]:
         """Parse file to data list
 
-        Parameters:
-            - **file_name** (str): The path of data file
-            - **return** (list): List of (image path, class_index) tuples
+        Args:
+            file_name (str): The path of data file
+            return (list): List of (image path, class_index) tuples
         """
         with open(file_name, "r") as f:
             data_list = []

@@ -9,16 +9,16 @@ class DomainNet(ImageList):
 
     See `Moment Matching for Multi-Source Domain Adaptation <https://arxiv.org/abs/1812.01754>`_ for details.
 
-    Parameters:
-        - **root** (str): Root directory of dataset
-        - **task** (str): The task (domain) to create dataset. Choices include ``'c'``:clipart, \
+    Args:
+        root (str): Root directory of dataset
+        task (str): The task (domain) to create dataset. Choices include ``'c'``:clipart, \
             ``'i'``: infograph, ``'p'``: painting, ``'q'``: quickdraw, ``'r'``: real, ``'s'``: sketch
-        - **split** (str, optional): The dataset split, supports ``train``, or ``test``.
-        - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
             in root directory. If dataset is already downloaded, it is not downloaded again.
-        - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-            transformed version. E.g, ``transforms.RandomCrop``.
-        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     .. note:: In `root`, there will exist following files after downloading.
         ::

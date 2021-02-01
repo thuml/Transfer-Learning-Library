@@ -19,23 +19,23 @@ def open_set(dataset_class: ClassVar, public_classes: Sequence[str],
 
     Be aware that `open_set` will change the label number of each category.
 
-    Parameters:
-        - **dataset_class** (class): Dataset class. Only subclass of ``ImageList`` can be open-set.
-        - **public_classes** (sequence[str]): A sequence of which categories need to be kept in the open-set dataset.\
+    Args:
+        dataset_class (class): Dataset class. Only subclass of ``ImageList`` can be open-set.
+        public_classes (sequence[str]): A sequence of which categories need to be kept in the open-set dataset.\
             Each element of `public_classes` must belong to the `classes` list of `dataset_class`.
-        - **private_classes** (sequence[str], optional): A sequence of which categories need to be marked as "unknown" \
+        private_classes (sequence[str], optional): A sequence of which categories need to be marked as "unknown" \
             in the open-set dataset. Each element of `private_classes` must belong to the `classes` list of \
             `dataset_class`. Default: ().
 
     Examples::
 
-    >>> public_classes = ['back_pack', 'bike', 'calculator', 'headphones', 'keyboard']
-    >>> private_classes = ['laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
-    >>> # create a open-set dataset class which has classes
-    >>> # 'back_pack', 'bike', 'calculator', 'headphones', 'keyboard' and 'unknown'.
-    >>> OpenSetOffice31 = open_set(Office31, public_classes, private_classes)
-    >>> # create an instance of the open-set dataset
-    >>> dataset = OpenSetDataset(root="data/office31", task="A")
+        >>> public_classes = ['back_pack', 'bike', 'calculator', 'headphones', 'keyboard']
+        >>> private_classes = ['laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
+        >>> # create a open-set dataset class which has classes
+        >>> # 'back_pack', 'bike', 'calculator', 'headphones', 'keyboard' and 'unknown'.
+        >>> OpenSetOffice31 = open_set(Office31, public_classes, private_classes)
+        >>> # create an instance of the open-set dataset
+        >>> dataset = OpenSetDataset(root="data/office31", task="A")
 
     """
     if not (issubclass(dataset_class, ImageList)):
@@ -64,9 +64,11 @@ def default_open_set(dataset_class: ClassVar, source: bool) -> ClassVar:
     """
     Default open-set used in some paper.
 
-    Parameters:
-        - **dataset_class** (class): Dataset class. Currently, dataset_class must be one of ``Office31``, ``OfficeHome`` and ``VisDA2017``.
-        - **source** (bool): Whether the dataset is used for source domain or not.
+    Args:
+        dataset_class (class): Dataset class. Currently, dataset_class must be one of
+            :class:`~dalib.vision.datasets.office31.Office31`, :class:`~dalib.vision.datasets.officehome.OfficeHome`,
+            :class:`~dalib.vision.datasets.visda2017.VisDA2017`,
+        source (bool): Whether the dataset is used for source domain or not.
     """
     if dataset_class == Office31:
         public_classes = Office31.CLASSES[:20]

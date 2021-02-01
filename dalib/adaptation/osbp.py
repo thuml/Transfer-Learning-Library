@@ -20,18 +20,18 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
 
     where t is a hyper-parameter and C is the number of known classes.
 
-    Parameters:
-        - **t** (float): Predefined hyper-parameter. Default: 0.5
+    Args:
+        t (float): Predefined hyper-parameter. Default: 0.5
 
-    Inputs: y
-        - **y** (tensor): classification outputs (before softmax).
+    Inputs:
+        - y (tensor): classification outputs (before softmax).
 
     Shape:
         - y: :math:`(minibatch, C+1)`  where C is the number of known classes.
         - Outputs: scalar
 
     """
-    def __init__(self, t=0.5):
+    def __init__(self, t: Optional[float]=0.5):
         super(UnknownClassBinaryCrossEntropy, self).__init__()
         self.t = t
 

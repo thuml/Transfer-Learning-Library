@@ -8,13 +8,13 @@ __all__ = ['Classifier']
 class Classifier(nn.Module):
     """A generic Classifier class for domain adaptation.
 
-    Parameters:
-        - **backbone** (class:`nn.Module` object): Any backbone to extract 2-d features from data
-        - **num_classes** (int): Number of classes
-        - **bottleneck** (class:`nn.Module` object, optional): Any bottleneck layer. Use no bottleneck by default
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: -1
-        - **head** (class:`nn.Module` object, optional): Any classifier head. Use `nn.Linear` by default
-        - **finetune** (bool): Whether finetune the classifier or train from scratch. Default: True
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 2-d features from data
+        num_classes (int): Number of classes
+        bottleneck (torch.nn.Module, optional): Any bottleneck layer. Use no bottleneck by default
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: -1
+        head (torch.nn.Module, optional): Any classifier head. Use :class:`torch.nn.Linear` by default
+        finetune (bool): Whether finetune the classifier or train from scratch. Default: True
 
     .. note::
         Different classifiers are used in different domain adaptation algorithms to achieve better accuracy
@@ -24,14 +24,14 @@ class Classifier(nn.Module):
 
     .. note::
         The learning rate of this classifier is set 10 times to that of the feature extractor for better accuracy
-        by default. If you have other optimization strategies, please over-ride `get_parameters`.
+        by default. If you have other optimization strategies, please over-ride :meth:`~Classifier.get_parameters`.
 
     Inputs:
-        - **x** (tensor): input data fed to `backbone`
+        - x (tensor): input data fed to `backbone`
 
-    Outputs: predictions, features
-        - **predictions**: classifier's predictions
-        - **features**: features after `bottleneck` layer and before `head` layer
+    Outputs:
+        - predictions: classifier's predictions
+        - features: features after `bottleneck` layer and before `head` layer
 
     Shape:
         - Inputs: (minibatch, *) where * means, any number of additional dimensions

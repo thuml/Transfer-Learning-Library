@@ -28,14 +28,14 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{tl}, z_j^{tl}) \\
         &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{sl}, z_j^{tl}). \\
 
-    Parameters:
-        - **kernels** (tuple(tuple(`nn.Module`))): kernel functions, where `kernels[r]` corresponds to kernel :math:`k^{\mathcal{L}[r]}`.
-        - **linear** (bool): whether use the linear version of JAN. Default: False
-        - **thetas** (list(`Theta`): use adversarial version JAN if not None. Default: None
+    Args:
+        kernels (tuple(tuple(torch.nn.Module))): kernel functions, where `kernels[r]` corresponds to kernel :math:`k^{\mathcal{L}[r]}`.
+        linear (bool): whether use the linear version of JAN. Default: False
+        thetas (list(Theta): use adversarial version JAN if not None. Default: None
 
-    Inputs: z_s, z_t
-        - **z_s** (tuple(tensor)): multiple layers' activations from the source domain, :math:`z^s`
-        - **z_t** (tuple(tensor)): multiple layers' activations from the target domain, :math:`z^t`
+    Inputs:
+        - z_s (tuple(tensor)): multiple layers' activations from the source domain, :math:`z^s`
+        - z_t (tuple(tensor)): multiple layers' activations from the target domain, :math:`z^t`
 
     Shape:
         - :math:`z^{sl}` and :math:`z^{tl}`: :math:`(minibatch, *)`  where * means any dimension
@@ -48,6 +48,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         The kernel values will add up when there are multiple kernels for a certain layer.
 
     Examples::
+
         >>> feature_dim = 1024
         >>> batch_size = 10
         >>> layer1_kernels = (GaussianKernel(alpha=0.5), GaussianKernel(1.), GaussianKernel(2.))

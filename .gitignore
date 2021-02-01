@@ -69,6 +69,8 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/*
+docs/pytorch_sphinx_theme/*
 
 # PyBuilder
 target/
@@ -127,4 +129,3 @@ dmypy.json
 
 exp/*
 trash/*
-checkpoints/*

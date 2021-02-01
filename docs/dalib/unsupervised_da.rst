@@ -1,27 +1,40 @@
+===============================
 Unsupervised Domain Adaptation
-===============================================
+===============================
 
 The adaptation subpackage contains definitions for the following domain adaptation algorithms:
 
--  `DANN`_
--  `DAN`_
--  `JAN`_
--  `CDAN`_
--  `MCD`_
--  `MDD`_
--  `MCC`_
+-  Domain-Adversarial Training of Neural Networks (`DANN`_)
+-  Learning Transferable Features with Deep Adaptation Networks (`DAN`_)
+-  Deep Transfer Learning with Joint Adaptation Networks (`JAN`_)
+-  Conditional Adversarial Domain Adaptation (`CDAN`_)
+-  Maximum Classifier Discrepancy for Unsupervised Domain Adaptation (`MCD`_)
+-  Bridging Theory and Algorithm for Domain Adaptation (`MDD`_)
+-  Less Confusion More Transferable-Minimum Class Confusion for Versatile Domain Adaptation (`MCC`_)
 
------------
+
 Benchmarks
------------
+===========
 
-We provide benchmarks of different domain adaptation algorithms on *Office-31*, *Office-Home* , *VisDA-2017* and *DomainNet* as follows.
-Note that `Origin` means the accuracy reported by the original paper, while `Avg` is the accuracy reported by DALIB.
-We found that the accuracies of adversarial methods (including DANN, CDAN, MCD and MDD) are not stable even after the random seed is fixed, thus
-we repeat running adversarial methods on *Office-31* and *VisDA-2017* for three times and report their average accuracy.
+We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_, `VisDA-2017`_  and  `DomainNet`_.
+
+.. note::
+
+    - ``Origin`` means the accuracy reported by the original paper.
+    - ``Avg`` is the accuracy reported by DALIB.
+    - ``Source Only`` refers to the model trained with data from the source domain.
+    - ``Oracle`` refers to the model trained with data from the target domain.
+
+.. note::
+
+    We found that the accuracies of adversarial methods (including DANN, CDAN, MCD and MDD) are not stable even after the random seed is fixed, thus
+    we repeat running adversarial methods on *Office-31* and *VisDA-2017* for three times and report their average accuracy.
+
+
+.. _Office-31:
 
 Office-31 accuracy on ResNet-50
----------------------------------
+--------------------------------
 
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 Methods         Origin  Avg     A → W   D → W   W → D   A → D   D → A   W → A
@@ -35,6 +48,8 @@ MDD             88.9	89.6	95.6	98.6	100.0	94.4	76.6	72.2
 MCC             89.4	89.6	94.1	98.4	99.8	95.6	75.5	74.2
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 
+
+.. _Office-Home:
 
 Office-Home accuracy on ResNet-50
 -----------------------------------
@@ -51,11 +66,15 @@ MDD         68.1    69.7    56.2    75.4    79.6    63.5    72.1    73.8    62.5
 MCC         /       72.4    58.4    79.6    83.0    67.5    77.0    78.5    66.6    54.8    81.8    74.4    61.4    85.6
 =========== ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
-VisDA-2017 accuracy ResNet-101
------------------------------------------------
+.. _VisDA-2017:
 
-Note that `Origin` means the accuracy reported by the original paper,
-`Mean` refers to the accuracy average over classes, while `Avg` refers to accuracy average over samples.
+VisDA-2017 accuracy ResNet-101
+-----------------------------------
+
+.. note::
+    - ``Origin`` means the accuracy reported by the original paper.
+    - ``Mean`` refers to the accuracy average over ``classes``
+    - ``Avg`` refers to accuracy average over ``samples``.
 
 =========== ==========  ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 Methods     Origin      Mean    plane   bcycl   bus     car     horse   knife   mcycl   person  plant   sktbrd  train   truck   Avg
@@ -69,8 +88,13 @@ MDD         /           82.0	88.3	62.8	85.2	69.9	91.9	95.1	94.4	81.2	93.8	89.8	8
 MCC         78.8        83.6	95.3	85.8	77.1	68.0	93.9	92.9	84.5	79.5	93.6	93.7	85.3	53.8	80.4
 =========== ==========  ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
+.. _DomainNet:
+
 DomainNet accuracy on ResNet-101
------------------------------------------------
+-----------------------------------
+
+.. note::
+    The column headings indicate the source domain, and the horizontal headings indicate the target domain.
 
 =========== ======  ======  ======  ======  ======  ======
 Source Only clp	    inf	    pnt	    real    skt     Avg
@@ -122,76 +146,84 @@ skt         58.7    20.7    46.5    57.7    N/A     45.9
 Avg         50.2    21.6    44.3    56.6    41.4    42.8
 =========== ======  ======  ======  ======  ======  ======
 
-.. _DANN: https://arxiv.org/abs/1505.07818
-.. _DAN: https://arxiv.org/abs/1502.02791
-.. _JAN: https://arxiv.org/abs/1605.06636
-.. _CDAN: https://arxiv.org/abs/1705.10667
-.. _MCD: https://arxiv.org/abs/1712.02560
-.. _MDD: https://arxiv.org/abs/1904.05801
+=========== ======  ======  ======  ======  ======  ======
+Oracle      clp	    inf	    pnt	    real    skt     Avg
+/           78.2    40.7    71.6    83.8    70.6    69.0
+=========== ======  ======  ======  ======  ======  ======
 
 .. currentmodule:: dalib.adaptation
 
------------
+
 Algorithms
------------
+===========
+
+.. _DANN:
 
 DANN
-----------------------------
+--------
 
 .. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
-    :show-inheritance:
 
+
+.. _DAN:
 
 DAN
-----
+--------
 
 .. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
-    :show-inheritance:
 
+
+.. _JAN:
 
 JAN
----------------------------
-.. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
-    :show-inheritance:
+--------
 
+.. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
+
+
+.. _CDAN:
 
 CDAN
-----------------------------
+--------
 
 .. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.cdan.RandomizedMultiLinearMap
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.cdan.MultiLinearMap
-    :show-inheritance:
+
+.. _MCD:
 
 MCD
-----------------------------
+--------
+
 .. autofunction:: dalib.adaptation.mcd.classifier_discrepancy
 
 .. autofunction:: dalib.adaptation.mcd.entropy
 
 .. autoclass:: dalib.adaptation.mcd.ImageClassifierHead
-    :show-inheritance:
+
+.. _MDD:
 
 MDD
-----------------------------
+--------
 
 .. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancy
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.mdd.ClassificationMarginDisparityDiscrepancy
-    :show-inheritance:
+
 
 .. autoclass:: dalib.adaptation.mdd.ImageClassifier
-    :show-inheritance:
+    :members:
 
 .. autofunction:: dalib.adaptation.mdd.shift_log
 
+.. _MCC:
 
 MCC
-----------------------------
+--------
+
 .. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss
-    :show-inheritance:

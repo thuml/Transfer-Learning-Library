@@ -46,6 +46,14 @@ CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domai
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2p.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/source_only/DomainNet_s2r.txt
 
+# DomainNet Oracle
+CUDA_VISIBLE_DEVICES=3 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s c -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_c.txt
+CUDA_VISIBLE_DEVICES=3 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s i -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_i.txt
+CUDA_VISIBLE_DEVICES=3 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s p -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_p.txt
+CUDA_VISIBLE_DEVICES=4 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s q -t q -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_q.txt
+CUDA_VISIBLE_DEVICES=4 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s r -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_r.txt
+CUDA_VISIBLE_DEVICES=4 python examples-da/unsupervised/source_only.py data/domainnet -d DomainNet -s s -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_s.txt
+
 # Office-Caltech
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/office-caltech -d OfficeCaltech -s A -t C -a resnet50  --epochs 5 > benchmarks/da/unsupervised/source_only/OfficeCaltech_A2C.txt
 CUDA_VISIBLE_DEVICES=0 python examples-da/unsupervised/source_only.py data/office-caltech -d OfficeCaltech -s A -t D -a resnet50  --epochs 5 > benchmarks/da/unsupervised/source_only/OfficeCaltech_A2D.txt

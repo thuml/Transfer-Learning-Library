@@ -5,33 +5,33 @@ from .image_regression import ImageRegression
 
 
 class DSprites(ImageRegression):
-    """DSprites <https://github.com/deepmind/dsprites-dataset>`_ Dataset.
+    """`DSprites <https://github.com/deepmind/dsprites-dataset>`_ Dataset.
 
-        Parameters:
-            - **root** (str): Root directory of dataset
-            - **task** (str): The task (domain) to create dataset. Choices include ``'C'``: Color, \
-                ``'N'``: Noisy and ``'S'``: Scream.
-            - **split** (str, optional): The dataset split, supports ``train``, or ``test``.
-            - **factors** (sequence[str]): Factors selected. Default: ('scale', 'position x', 'position y').
-            - **download** (bool, optional): If true, downloads the dataset from the internet and puts it \
-                in root directory. If dataset is already downloaded, it is not downloaded again.
-            - **transform** (callable, optional): A function/transform that  takes in an PIL image and returns a \
-                transformed version. E.g, ``transforms.RandomCrop``.
-            - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+    Args:
+        root (str): Root directory of dataset
+        task (str): The task (domain) to create dataset. Choices include ``'C'``: Color, \
+            ``'N'``: Noisy and ``'S'``: Scream.
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        factors (sequence[str]): Factors selected. Default: ('scale', 'position x', 'position y').
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
-        .. note:: In `root`, there will exist following files after downloading.
-            ::
-                color/
-                    ...
-                noisy/
-                scream/
-                image_list/
-                    color_train.txt
-                    noisy_train.txt
-                    scream_train.txt
-                    color_test.txt
-                    noisy_test.txt
-                    scream_test.txt
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            color/
+                ...
+            noisy/
+            scream/
+            image_list/
+                color_train.txt
+                noisy_train.txt
+                scream_train.txt
+                color_test.txt
+                noisy_test.txt
+                scream_test.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/af802d55a7c847c0a908/?dl=1"),

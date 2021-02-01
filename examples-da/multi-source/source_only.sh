@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Office-Home
-CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Ar -a resnet50 --epochs 5 -i 500 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Ar.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Cl -a resnet50 --epochs 5 -i 500 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Cl.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Pr -a resnet50 --epochs 5 -i 500 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Pr.txt
-CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Rw -a resnet50 --epochs 5 -i 500 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Rw.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Ar -a resnet50 --epochs 10 -i 1000 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Ar.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Cl -a resnet50 --epochs 10 -i 1000 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Cl.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Pr -a resnet50 --epochs 10 -i 1000 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Pr.txt
+CUDA_VISIBLE_DEVICES=0 python examples-da/multi-source/source_only.py data/office-home -d OfficeHome -t Rw -a resnet50 --epochs 10 -i 1000 --seed 0 > benchmarks/da/multi_source/source_only/OfficeHome_:2Rw.txt
 
 
 # DomainNet

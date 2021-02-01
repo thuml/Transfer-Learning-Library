@@ -15,15 +15,15 @@ class MinimumClassConfusionLoss(nn.Module):
 
     You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation <https://arxiv.org/abs/1912.03699>`_
 
-    Parameters:
-        - **temperature** (float) : The temperature for rescaling, the prediction will shrink to vanilla softmax if
+    Args:
+        temperature (float) : The temperature for rescaling, the prediction will shrink to vanilla softmax if
           temperature is 1.0.
 
     .. note::
         Make sure that temperature is larger than 0.
 
     Inputs: g_t
-        - **g_t** (tensor): unnormalized classifier predictions on target domain, :math:`g^t`
+        - g_t (tensor): unnormalized classifier predictions on target domain, :math:`g^t`
 
     Shape:
         - g_t: :math:`(minibatch, C)` where C means the number of classes.
