@@ -6,9 +6,10 @@ Compared with the master version, we have added
 - Unsupervised DA (including MCC)
 - Partial DA (DANN, PADA)
 - Open Set DA (DANN, OSBP)
+- Segmentation DA (ADVENT, FDA)
 
 We are planning to add
-- Segmentation DA
+- Segmentation DA (CycleGAN, Cycada)
 - Keypoint Detection DA
 - Finetune Library (ftlib)
 
