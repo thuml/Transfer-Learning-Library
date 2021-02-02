@@ -115,7 +115,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
         if acc1 > best_acc1:
