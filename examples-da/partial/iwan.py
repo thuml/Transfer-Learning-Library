@@ -8,20 +8,22 @@ import copy
 import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-from torch.optim import Adam, SGD
-from torch.optim.lr_scheduler import LambdaLR, MultiStepLR
+from torch.optim import SGD
+from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data
 from torch.utils.data import DataLoader
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torch.nn.functional as F
+import numpy as np
 
 sys.path.append('.')
-from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.iwan import DomainDiscriminator
 from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.adaptation.dann import DomainAdversarialLoss
 from dalib.adaptation._util import entropy
-from dalib.adaptation.iwan import ImageClassifier, ImageClassifierHead
+from dalib.adaptation.iwan import ImageClassifier
+from dalib.modules.classifier import Classifier
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
 import dalib.vision.models as models
@@ -91,215 +93,143 @@ def main(args: argparse.Namespace):
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
+    target_idxes = train_target_dataset.partial_classes_idx
+
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     num_classes = train_source_dataset.num_classes
+    backbone = models.__dict__[args.arch](pretrained=True)
 
-    backbone_s = models.__dict__[args.arch](pretrained=True)
-    backbone_t = models.__dict__[args.arch](pretrained=True)
+    if args.data == 'ImageNetCaltech':
+        classifier = Classifier(backbone, num_classes, head=backbone.copy_head()).to(device)
+    else:
+        classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+    # define domain classifier D, D_0
+    D = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
+    D_0 = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
-    # use separate classifiers for source(classifier_s) and target(classifier_t) domain
-    classifier_head = ImageClassifierHead(args.bottleneck_dim, num_classes).to(device)
-    # According to 'Importance Weighted Adversarial Nets for Partial Domain Adaptation'
-    # feature extractor F_s, F_t must be different but classifier C is shared(**head** here)
-    classifier_s = ImageClassifier(backbone_s, num_classes, args.bottleneck_dim, head=classifier_head).to(device)
-    classifier_t = ImageClassifier(backbone_t, num_classes, args.bottleneck_dim, head=classifier_head).to(device)
-
-    # stage 1: pretrain feature_extractor F_s and classifier C
-    pretrain_classifier(classifier_s, train_source_dataset, args)
-
-    # initialize F_t using the parameters of F_s
-    classifier_t.load_state_dict(classifier_s.state_dict())
-    D = DomainDiscriminator(in_feature=classifier_s.features_dim, hidden_size=1024).to(device)
-    D_0 = DomainDiscriminator(in_feature=classifier_s.features_dim, hidden_size=1024).to(device)
-
-    # stage 2: train feature_extractor F_t and domain classifier D, D_0 simultaneously
-    train(train_source_iter, train_target_iter, classifier_s, classifier_t, D, D_0, val_loader, test_loader, args)
-
-
-def pretrain_classifier(model: ImageClassifier, dataset, args: argparse.Namespace):
-    """In this function we perform supervised pretraining
-    Inputs:
-        **model**: model to pretrain(classifier_s)
-        **dataset**: data from source domain
-    """
-    num_samples = len(dataset)
-    num_samples_train = num_samples * 4 // 5
-    # split dataset into training_set and validation_set
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset,
-                                                               [num_samples_train, num_samples - num_samples_train])
-
-    train_loader = DataLoader(train_dataset, batch_size=36, shuffle=True, num_workers=4, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=36, shuffle=False, num_workers=4)
-
-    train_iter = ForeverDataIterator(train_loader)
-
-    # parameters for pretraining
-    optimizer = SGD(model.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay,
-                    nesterov=True)
+    # define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters() + D.get_parameters() + D_0.get_parameters(), args.lr,
+                    momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
+    # define loss function
+    domain_adv_D = DomainAdversarialLoss(D).to(device)
+    domain_adv_D_0 = DomainAdversarialLoss(D_0).to(device)
+
     # start training
-    print('pretrain feature extractor F_s and classifier C on source domain.')
     best_acc1 = 0.
+    best_model = classifier.state_dict()
     for epoch in range(args.epochs):
-        # statistics
-        losses = AverageMeter('Loss', ':6.2f')
-        cls_accs = AverageMeter('Cls Acc', ':3.1f')
-        progress = ProgressMeter(
-            args.iters_per_epoch,
-            [losses, cls_accs],
-            prefix="Epoch: [{}]".format(epoch))
-        # switch to train mode
-        model.train()
-
-        for i in range(args.iters_per_epoch):
-            x, labels = next(train_iter)
-            x = x.to(device)
-            labels = labels.to(device)
-            
-            y, _ = model(x)
-
-            loss = F.cross_entropy(y, labels)
-            cls_acc = accuracy(y, labels)[0]
-            losses.update(loss.item(), x.size(0))
-            cls_accs.update(cls_acc.item(), x.size(0))
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
+        # train for one epoch
+        train(train_source_iter, train_target_iter, classifier, D, domain_adv_D, domain_adv_D_0, optimizer,
+              lr_scheduler, target_idxes, epoch, args)
         # evaluate on validation set
-        acc1 = validate(val_loader, model, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
+        if acc1 > best_acc1:
+            best_model = classifier.state_dict()
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
-
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, classifier_s: ImageClassifier,
-          classifier_t: ImageClassifier, D: DomainDiscriminator, D_0: DomainDiscriminator, val_loader: DataLoader,
-          test_loader: DataLoader, args: argparse.Namespace):
-    # In this function we train feature_extractor F_t and domain classifier D, D_0 simultaneously
-
-    # only train feature extractors(backbone, bottleneck) of classifier_t
-    classifier_s.eval()
-    classifier_t.train()
-    classifier_t.head.eval()
-    classifier_t.set_features_only(True)
-
-    domain_adv_D = DomainAdversarialLoss(D).to(device)
-    # define trade off scheduler
-    grl = WarmStartGradientReverseLayer(alpha=1, lo=0, hi=args.trade_off, max_iters=args.epochs * args.iters_per_epoch)
-    domain_adv_D_0 = DomainAdversarialLoss(D_0, grl=grl).to(device)
-    # parameters
-    optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    optimizer = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
-                      weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler_D = LambdaLR(optimizer_D, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-
-    # start training
-    print("train feature extractor F_t and domain classifier D, D_0 simultaneously.")
-    best_acc1 = 0.
-    for epoch in range(args.epochs):
-        # statistics
-        batch_time = AverageMeter('Time', ':5.2f')
-        data_time = AverageMeter('Data', ':5.2f')
-        losses = AverageMeter('Loss', ':6.2f')
-        cls_accs = AverageMeter('Cls Acc', ':3.1f')
-        domain_accs_D = AverageMeter('Domain Acc for D', ':3.1f')
-        domain_accs_D_0 = AverageMeter('Domain Acc for D_0', ':3.1f')
-        tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
-
-        progress = ProgressMeter(
-            args.iters_per_epoch,
-            [batch_time, data_time, losses, cls_accs, domain_accs_D, domain_accs_D_0, tgt_accs],
-            prefix="Epoch: [{}]".format(epoch))
-
-        # swtich to train mode
-        # notice classifier_t.head should be set to eval mode
-        classifier_t.train()
-        classifier_t.head.eval()
-        domain_adv_D.train()
-        domain_adv_D_0.train()
-
-        end = time.time()
-        for i in range(args.iters_per_epoch):
-            x_s, labels_s = next(train_source_iter)
-            x_t, labels_t = next(train_target_iter)
-
-            x_s = x_s.to(device)
-            x_t = x_t.to(device)
-            labels_s = labels_s.to(device)
-            labels_t = labels_t.to(device)
-            
-            # measure data loading time
-            data_time.update(time.time() - end)
-            
-            y_s, f_s = classifier_s(x_s)
-            y_t, f_t = classifier_t(x_t)
-
-            # 1. Optimize D,
-            D.train()
-            domain_cls_loss = domain_adv_D(f_s.detach(), f_t.detach())
-            # compute gradient and do SGD step
-            optimizer_D.zero_grad()
-            domain_cls_loss.backward()
-            optimizer_D.step()
-            lr_scheduler_D.step()
-
-            # 2. Get importance weights
-            D.eval()
-            weights = 1. - D(f_s).detach()
-            weights = weights / weights.mean()
-            
-            # 3. Optimize F_t, D_0,
-            y_t = F.softmax(y_t, dim=1)
-            entropy_loss = args.gamma * torch.mean(entropy(y_t))
-            transfer_loss = domain_adv_D_0(f_s, f_t, weights)
-            loss = entropy_loss + transfer_loss
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            classifier_t.head.zero_grad()
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-
-            cls_acc = accuracy(y_s, labels_s)[0]
-            tgt_acc = accuracy(y_t, labels_t)[0]
-            
-            losses.update(loss.item(), x_s.size(0))
-            cls_accs.update(cls_acc.item(), x_s.size(0))
-            tgt_accs.update(tgt_acc.item(), x_s.size(0))
-            domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
-            domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        # evaluate on validation set
-        acc1 = validate(val_loader, classifier_t, args)
-
-        # remember best acc@1 and save checkpoint
-        if acc1 > best_acc1:
-            best_model = copy.deepcopy(classifier_t.state_dict())
-        best_acc1 = max(acc1, best_acc1)
-
-    classifier_t.load_state_dict(best_model)
-    acc1 = validate(test_loader, classifier_t, args)
+    # evaluate on test set
+    classifier.load_state_dict(best_model)
+    acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
 
 
-def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace):
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
+          D: DomainDiscriminator, domain_adv_D: DomainAdversarialLoss, domain_adv_D_0: DomainAdversarialLoss,
+          optimizer: SGD, lr_scheduler: LambdaLR, target_idxes, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':5.2f')
+    data_time = AverageMeter('Data', ':5.2f')
+    losses = AverageMeter('Loss', ':6.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
+    domain_accs_D = AverageMeter('Domain Acc for D', ':3.1f')
+    domain_accs_D_0 = AverageMeter('Domain Acc for D_0', ':3.1f')
+    importance_weights = AverageMeter('Importance Weights', ':6.2f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs, domain_accs_D, domain_accs_D_0,
+         tgt_accs, importance_weights],
+        prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    model.train()
+    domain_adv_D.train()
+    domain_adv_D_0.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        x_t, labels_t = next(train_target_iter)
+
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
+        labels_t = labels_t.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # compute output
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
+        # classification loss
+        cls_loss = F.cross_entropy(y_s, labels_s)
+
+        # domain adversarial loss for D
+        adv_loss_D = domain_adv_D(f_s.detach(), f_t.detach())
+
+        # compute importance weight
+        weight = 1. - D(f_s)
+        weight = weight / weight.mean()
+        weight = weight.detach()
+
+        # domain adversarial loss for D_0
+        adv_loss_D_0 = domain_adv_D_0(f_s, f_t, w_s=weight)
+
+        # entropy loss
+        y_t = F.softmax(y_t, dim=1)
+        entropy_loss = entropy(y_t, reduction='mean')
+
+        loss = cls_loss + 1.5 * args.trade_off * adv_loss_D + args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_s.size(0))
+        domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
+        domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
+
+        labels_in_target = torch.FloatTensor([c in target_idxes for c in labels_s]).to(device)
+        labels_in_target_num = labels_in_target.sum()
+        if labels_in_target_num != 0:
+            avg_importance = (weight.squeeze() * labels_in_target / labels_in_target_num).sum()
+            importance_weights.update(avg_importance.item(), int(labels_in_target_num.item()))
+
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)
+
+
+def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace, per_class_eval=False):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -312,7 +242,7 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
     # switch to evaluate mode
     model.eval()
 
-    if args.per_class_eval:
+    if per_class_eval:
         classes = val_loader.dataset.classes
         confmat = ConfusionMatrix(len(classes))
     else:
@@ -376,14 +306,14 @@ if __name__ == '__main__':
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     # all parameters below correspond to the second state of training, the adversarial training process
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 36)')
-    parser.add_argument('--lr', '--learning-rate', default=0.002, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
@@ -396,10 +326,10 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--gamma', default=0.01, type=float,
-                        help='the trade-off hyper-parameter for entropy loss(default: 0.01)')
-    parser.add_argument('--trade-off', default=0.1, type=float,
-                        help='the trade-off hyper-parameter for transfer loss(default: 0.1))')
+    parser.add_argument('--gamma', default=0.1, type=float,
+                        help='the trade-off hyper-parameter for entropy loss(default: 0.1)')
+    parser.add_argument('--trade-off', default=3, type=float,
+                        help='the trade-off hyper-parameter for transfer loss(default: 3))')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
