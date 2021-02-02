@@ -23,6 +23,7 @@ from dalib.modules.grl import WarmStartGradientReverseLayer
 from dalib.adaptation.dann import DomainAdversarialLoss
 from dalib.adaptation._util import entropy
 from dalib.adaptation.iwan import ImageClassifier
+from dalib.modules.classifier import Classifier
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
 import dalib.vision.models as models
@@ -99,7 +100,10 @@ def main(args: argparse.Namespace):
     num_classes = train_source_dataset.num_classes
     backbone = models.__dict__[args.arch](pretrained=True)
 
-    classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+    if args.data == 'ImageNetCaltech':
+        classifier = Classifier(backbone, num_classes, head=backbone.copy_head()).to(device)
+    else:
+        classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
     # define domain classifier D, D_0
     D = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
     D_0 = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
