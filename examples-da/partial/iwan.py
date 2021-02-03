@@ -200,7 +200,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         y_t = F.softmax(y_t, dim=1)
         entropy_loss = entropy(y_t, reduction='mean')
 
-        loss = cls_loss + 1.5 * args.trade_off * adv_loss_D + args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
+        loss = cls_loss + args.lr_ratio * args.trade_off * adv_loss_D + args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -328,6 +328,8 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--gamma', default=0.1, type=float,
                         help='the trade-off hyper-parameter for entropy loss(default: 0.1)')
+    parser.add_argument('--lr-ratio', default=1.5, type=float,
+                        help='ratio of trade-off for D to trade-off for D_0')
     parser.add_argument('--trade-off', default=3, type=float,
                         help='the trade-off hyper-parameter for transfer loss(default: 3))')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
