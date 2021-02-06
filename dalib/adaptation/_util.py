@@ -20,8 +20,8 @@ def entropy(predictions: torch.Tensor, reduction='none') -> torch.Tensor:
 
     where K is number of classes.
 
-    Parameters:
-        - **predictions** (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
+    Args:
+        predictions (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
     """
     epsilon = 1e-5
     H = -predictions * torch.log(predictions + epsilon)
