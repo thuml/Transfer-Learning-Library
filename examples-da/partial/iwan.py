@@ -129,7 +129,7 @@ def main(args: argparse.Namespace):
 
         # remember best acc@1 and save checkpoint
         if acc1 > best_acc1:
-            best_model = classifier.state_dict()
+            best_model = copy.deepcopy(classifier.state_dict())
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
