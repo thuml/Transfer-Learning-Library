@@ -1,5 +1,4 @@
-from typing import Optional, Sequence
-from torch import Tensor
+from typing import Optional
 
 
 class AverageMeter(object):

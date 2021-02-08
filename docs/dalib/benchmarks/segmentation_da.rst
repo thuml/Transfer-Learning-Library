@@ -1,16 +1,13 @@
 Segmentation Domain Adaptation
 ==========================================
 
-The segmentation adaptation subpackage contains definitions for the following domain adaptation algorithms:
-
--  ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation (`ADVENT`_)
--  FDA: Fourier Domain Adaptation for Semantic Segmentation (`FDA`_)
-
------------
-Benchmarks
------------
-
 We provide benchmarks of different segmentation domain adaptation algorithms on `GTA5->Cityscapes`_ and `Synthia->Cityscapes`_ as follows.
+Those domain adaptation algorithms includes:
+
+-  :ref:`ADVENT`
+-  :ref:`FDA`
+-  :ref:`CycleGAN`
+
 
 .. note::
 
@@ -53,33 +50,3 @@ ADVENT      47.6    47.9    88.3    44.9        80.5        4.5     9.1     81.3
 FDA         /       43.9    62.5    23.7        78.5        9.4     15.7    78.3    81.1    52.3    18.7    79.8    32.5    8.7     29.6
 Oracle      71.7    76.6    97.4    79.7        90.1        55.5    67.2    90.2    93.0    72.7    55.2    92.7    78.5    54.6    68.8
 =========   ======  ====    ====    ========    ========    =====   ====    ====    ====    ======  =====   ====    ====    =====   ====
-
-
------------
-Algorithms
------------
-
-.. _ADVENT:
-
-ADVENT
-----------------------------
-
-.. autoclass:: dalib.adaptation.segmentation.advent.Discriminator
-
-.. autoclass:: dalib.adaptation.segmentation.advent.DomainAdversarialEntropyLoss
-    :members:
-
-.. _FDA:
-
-FDA
-----------------------------
-
-.. autoclass:: dalib.translation.fourier_transform.FourierTransform
-
-.. autofunction:: dalib.translation.fourier_transform.low_freq_mutate
-
-
-.. autofunction:: dalib.adaptation.segmentation.fda.robust_entropy
-
-
-

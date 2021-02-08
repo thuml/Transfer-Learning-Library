@@ -1,8 +1,10 @@
 import os
 from typing import Sequence, Optional, Dict, Callable
 from PIL import Image
+import tqdm
 import numpy as np
 from torch.utils import data
+import torch
 
 
 class SegmentationList(data.Dataset):
@@ -15,7 +17,7 @@ class SegmentationList(data.Dataset):
         label_list_file (str): File to read the label list from.
         data_folder (str): Sub-directory of the image.
         label_folder (str): Sub-directory of the label.
-        mean (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
+        mean (seq[float]): mean BGR value. Normalize and convert to the image if not None. Default: None.
         id_to_train_id (dict, optional): the map between the id on the label and the actual train id.
         train_id_to_color (seq, optional): the map between the train id and the color.
         transforms (callable, optional): A function/transform that  takes in  (PIL Image, label) pair \
@@ -29,9 +31,12 @@ class SegmentationList(data.Dataset):
 
         In ``label_list_file``, each line is the relative path of an label.
         If your label_list_file has different formats, please over-ride :meth:`~SegmentationList.parse_label_file`.
+
+    .. warning:: When mean is not None, please do not provide Normalize and ToTensor in transforms.
+
     """
     def __init__(self, root: str, classes: Sequence[str], data_list_file: str, label_list_file: str,
-                 data_folder: str, label_folder: str, mean: Optional[Sequence[float]] = None,
+                 data_folder: str, label_folder: str,
                  id_to_train_id: Optional[Dict] = None, train_id_to_color: Optional[Sequence] = None,
                  transforms: Optional[Callable] = None):
         self.root = root
@@ -40,7 +45,6 @@ class SegmentationList(data.Dataset):
         self.label_list_file = label_list_file
         self.data_folder = data_folder
         self.label_folder = label_folder
-        self.mean = mean
         self.ignore_label = 255
         self.id_to_train_id = id_to_train_id
         self.train_id_to_color = np.array(train_id_to_color)
@@ -84,43 +88,22 @@ class SegmentationList(data.Dataset):
         label = Image.open(os.path.join(self.root, self.label_folder, label_name))
 
         image, label = self.transforms(image, label)
-        image = np.asarray(image, np.float32)
-        label = np.asarray(label, np.int64)
 
         # remap label
+        if isinstance(label, torch.Tensor):
+            label = label.numpy()
+        label = np.asarray(label, np.int64)
         label_copy = self.ignore_label * np.ones(label.shape, dtype=np.int64)
         if self.id_to_train_id:
             for k, v in self.id_to_train_id.items():
                 label_copy[label == k] = v
 
-        # change to BGR
-        image = image[:, :, ::-1]
-        # normalize
-        if self.mean is not None:
-            image -= self.mean
-        image = image.transpose((2, 0, 1))
-
-        return image.copy(), label_copy.copy()
+        return image, label_copy.copy()
 
     @property
     def num_classes(self) -> int:
         """Number of classes"""
         return len(self.classes)
-
-    def decode_input(self, image):
-        """
-        Recover the numpy array to PIL Image
-
-        Args:
-            image (numpy.ndarray): normalized image in shape 3 x H x W
-
-        Returns:
-            RGB image in shape H x W x 3
-        """
-        image = image.transpose((1, 2, 0))
-        image += self.mean
-        image = image[:, :, ::-1]
-        return Image.fromarray(image.astype(np.uint8))
 
     def decode_target(self, target):
         """ Decode label (each value is integer) into the corresponding RGB value.
@@ -139,3 +122,18 @@ class SegmentationList(data.Dataset):
     def collect_image_paths(self):
         """Return a list of the absolute path of all the images"""
         return [os.path.join(self.root, self.data_folder, image_name) for image_name in self.data_list]
+
+    @staticmethod
+    def _save_pil_image(image, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        image.save(path)
+
+    def translate(self, transform: Callable, target_root: str):
+        os.makedirs(target_root, exist_ok=True)
+        for image_name, label_name in tqdm.tqdm(zip(self.data_list, self.label_list)):
+            image = Image.open(os.path.join(self.root, self.data_folder, image_name)).convert('RGB')
+            label = Image.open(os.path.join(self.root, self.label_folder, label_name))
+
+            translated_image, translated_label = transform(image, label)
+            self._save_pil_image(translated_image, os.path.join(target_root, self.data_folder, image_name))
+            self._save_pil_image(translated_label, os.path.join(target_root, self.label_folder, label_name))

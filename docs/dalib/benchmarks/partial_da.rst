@@ -1,15 +1,11 @@
 Partial Domain Adaptation
 ==========================================
 
-The adaptation subpackage contains definitions for the following domain adaptation algorithms:
-
--  Partial Adversarial Domain Adaptation (`PADA`_)
-
------------
-Benchmarks
------------
-
 We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_, `VisDA-2017`_  and  `ImageNet-Caltech`_.
+Those domain adaptation algorithms includes:
+
+-  :ref:`DANN`
+-  :ref:`PADA`
 
 .. note::
 
@@ -72,23 +68,3 @@ Source Only 45.3        50.9	59.2	31.3	68.7	73.2	69.3	3.4	    60.0
 DANN        51.0        55.9	88.4	34.1	72.1	50.7	61.9	27.8	57.1
 PADA        53.5        60.5	89.4	35.1	72.5	69.2	86.7	10.1	66.8
 =========== ==========  ======= ======= ======= ======= ======= ======= ======= =======
-
-
-.. currentmodule:: dalib.adaptation
-
-
------------
-Algorithms
------------
-
-.. _PADA:
-
-PADA
-----------------------------
-
-.. autoclass:: dalib.adaptation.pada.ClassWeightModule
-
-.. autoclass:: dalib.adaptation.pada.AutomaticUpdateClassWeightModule
-    :members:
-
-.. autofunction::  dalib.adaptation.pada.collect_classification_results

@@ -26,3 +26,9 @@ Kernels
 ------------------------
 .. autoclass:: dalib.modules.kernels.GaussianKernel
 
+
+Entropy
+------------------------
+.. autofunction:: dalib.modules.entropy.entropy
+
+

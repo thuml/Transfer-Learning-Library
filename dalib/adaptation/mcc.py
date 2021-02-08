@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dalib.modules.classifier import Classifier as ClassifierBase
-from ._util import entropy
+from ..modules.entropy import entropy
 
 
 __all__ = ['MinimumClassConfusionLoss', 'ImageClassifier']

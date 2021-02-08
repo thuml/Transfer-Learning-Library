@@ -2,6 +2,16 @@ import torch
 import prettytable
 
 
+def binary_accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
+    """Computes the accuracy for binary classification"""
+    with torch.no_grad():
+        batch_size = target.size(0)
+        pred = (output >= 0.5).float().t().view(-1)
+        correct = pred.eq(target.view(-1)).float().sum()
+        correct.mul_(100. / batch_size)
+        return correct
+
+
 def accuracy(output, target, topk=(1,)):
     r"""
     Computes the accuracy over the k top predictions for the specified values of k

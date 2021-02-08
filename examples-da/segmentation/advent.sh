@@ -1,2 +1,4 @@
-CUDA_VISIBLE_DEVICES=0 python examples-da/segmentation/advent.py data/GTA5 data/Cityscapes -s GTA5 -t Cityscapes --snapshot-dir snapshots/da/segmentation/advent/gtav2cityscapes
-CUDA_VISIBLE_DEVICES=0 python examples-da/segmentation/advent.py data/synthia data/Cityscapes -s Synthia -t Cityscapes --snapshot-dir snapshots/da/segmentation/advent/synthia2cityscapes
+CUDA_VISIBLE_DEVICES=0 python advent.py data/GTA5 data/Cityscapes -s GTA5 -t Cityscapes \
+    --log logs/advent/gtav2cityscapes
+CUDA_VISIBLE_DEVICES=0 python advent.py data/synthia data/Cityscapes -s Synthia -t Cityscapes \
+    --log logs/advent/synthia2cityscapes
