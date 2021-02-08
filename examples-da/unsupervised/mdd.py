@@ -3,33 +3,36 @@ import time
 import warnings
 import sys
 import argparse
-import copy
+import os.path as osp
+import shutil
 
 import torch
-import torch.nn.parallel
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
-import torch.utils.data
 from torch.utils.data import DataLoader
-import torch.utils.data.distributed
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 import torch.nn.functional as F
 
-sys.path.append('.')
-from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy as MarginDisparityDiscrepancy, ImageClassifier
+sys.path.append('../..')
+from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy\
+    as MarginDisparityDiscrepancy, ImageClassifier
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
+from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy, ConfusionMatrix
-from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-from dalib.vision.transforms import ResizeImage
+from dalib.utils.meter import AverageMeter, ProgressMeter
+from dalib.utils.logger import CompleteLogger
+from dalib.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args: argparse.Namespace):
+    logger = CompleteLogger(args.log, args.phase)
+
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -43,27 +46,27 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
-        train_transform = transforms.Compose([
+        train_transform = T.Compose([
             ResizeImage(256),
-            transforms.CenterCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            T.CenterCrop(224),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
             normalize
         ])
     else:
-        train_transform = transforms.Compose([
+        train_transform = T.Compose([
             ResizeImage(256),
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            T.RandomResizedCrop(224),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
             normalize
         ])
-    val_transform = transforms.Compose([
+    val_transform = T.Compose([
         ResizeImage(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
+        T.CenterCrop(224),
+        T.ToTensor(),
         normalize
     ])
 
@@ -98,9 +101,33 @@ def main(args: argparse.Namespace):
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
+    # resume from the best checkpoint
+    if args.phase != 'train':
+        checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
+        classifier.load_state_dict(checkpoint)
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        # plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        # calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == 'test':
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
     # start training
     best_acc1 = 0.
-    best_model = classifier.state_dict()
     for epoch in range(args.epochs):
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
@@ -110,16 +137,19 @@ def main(args: argparse.Namespace):
         acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
         if acc1 > best_acc1:
-            best_model = copy.deepcopy(classifier.state_dict())
+            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
     # evaluate on test set
-    classifier.load_state_dict(best_model)
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
     acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
@@ -255,7 +285,8 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser = argparse.ArgumentParser(description='MDD for Unsupervised Domain Adaptation')
+    # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
@@ -263,15 +294,19 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('--center-crop', default=False, action='store_true',
+                        help='whether use center crop during training')
+    # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run')
+    parser.add_argument('--bottleneck-dim', default=1024, type=int)
+    parser.add_argument('--margin', type=float, default=4., help="margin gamma")
+    parser.add_argument('--trade-off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
+    # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
@@ -282,20 +317,23 @@ if __name__ == '__main__':
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
+                        help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
-                        help='Number of iterations per epoch')
-    parser.add_argument('--margin', type=float, default=4., help="margin gamma")
-    parser.add_argument('--bottleneck-dim', default=1024, type=int)
-    parser.add_argument('--center-crop', default=False, action='store_true',
-                        help='whether use center crop during training')
-    parser.add_argument('--trade-off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
+    parser.add_argument("--log", type=str, default='mdd',
+                        help="Where to save logs, checkpoints and debugging images.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
+                        help="When phase is 'test', only test the model."
+                             "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     print(args)
     main(args)

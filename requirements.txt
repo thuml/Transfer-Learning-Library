@@ -3,3 +3,4 @@ torchvision
 numpy
 prettytable
 tqdm
+scikit-learn

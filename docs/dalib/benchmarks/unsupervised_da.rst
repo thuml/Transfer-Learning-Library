@@ -2,21 +2,16 @@
 Unsupervised Domain Adaptation
 ===============================
 
-The adaptation subpackage contains definitions for the following domain adaptation algorithms:
-
--  Domain-Adversarial Training of Neural Networks (`DANN`_)
--  Learning Transferable Features with Deep Adaptation Networks (`DAN`_)
--  Deep Transfer Learning with Joint Adaptation Networks (`JAN`_)
--  Conditional Adversarial Domain Adaptation (`CDAN`_)
--  Maximum Classifier Discrepancy for Unsupervised Domain Adaptation (`MCD`_)
--  Bridging Theory and Algorithm for Domain Adaptation (`MDD`_)
--  Less Confusion More Transferable-Minimum Class Confusion for Versatile Domain Adaptation (`MCC`_)
-
-
-Benchmarks
-===========
-
 We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_, `VisDA-2017`_  and  `DomainNet`_.
+Those domain adaptation algorithms includes:
+
+-  :ref:`DANN`
+-  :ref:`DAN`
+-  :ref:`JAN`
+-  :ref:`CDAN`
+-  :ref:`MCD`
+-  :ref:`MDD`
+-  :ref:`MCC`
 
 .. note::
 
@@ -33,6 +28,7 @@ We provide benchmarks of different domain adaptation algorithms on `Office-31`_ 
 
 .. _Office-31:
 
+--------------------------------
 Office-31 accuracy on ResNet-50
 --------------------------------
 
@@ -51,6 +47,7 @@ MCC             89.4	89.6	94.1	98.4	99.8	95.6	75.5	74.2
 
 .. _Office-Home:
 
+-----------------------------------
 Office-Home accuracy on ResNet-50
 -----------------------------------
 
@@ -68,6 +65,7 @@ MCC         /       72.4    58.4    79.6    83.0    67.5    77.0    78.5    66.6
 
 .. _VisDA-2017:
 
+-----------------------------------
 VisDA-2017 accuracy ResNet-101
 -----------------------------------
 
@@ -90,11 +88,15 @@ MCC         78.8        83.6	95.3	85.8	77.1	68.0	93.9	92.9	84.5	79.5	93.6	93.7	8
 
 .. _DomainNet:
 
+-----------------------------------
 DomainNet accuracy on ResNet-101
 -----------------------------------
 
 .. note::
     The column headings indicate the source domain, and the horizontal headings indicate the target domain.
+
+Source Only
+-----------
 
 =========== ======  ======  ======  ======  ======  ======
 Source Only clp	    inf	    pnt	    real    skt     Avg
@@ -106,6 +108,9 @@ skt         49.0    15.3    34.8    46.1    N/A     36.3
 Avg         43.6    18.5    36.9    50.9    34.3    36.8
 =========== ======  ======  ======  ======  ======  ======
 
+DANN
+-----------
+
 =========== ======  ======  ======  ======  ======  ======
 DANN        clp	    inf	    pnt	    real    skt     Avg
 clp         N/A	    19.7    35.4    53.9    44.2    38.3
@@ -115,6 +120,9 @@ real        50.6    22.1    47.9    N/A     39.0    39.9
 skt         54.0    19.7    42.7    52.8    N/A     42.3
 Avg         42.1    20.1    37.5    46.7    35.7    36.4
 =========== ======  ======  ======  ======  ======  ======
+
+DAN
+-----------
 
 =========== ======  ======  ======  ======  ======  ======
 DAN         clp	    inf	    pnt	    real    skt     Avg
@@ -126,6 +134,9 @@ skt         54.2    17.5    44.2    53.4    N/A     42.3
 Avg         45.8    18.1    41.0    52.5    37.6    39.0
 =========== ======  ======  ======  ======  ======  ======
 
+CDAN
+-----------
+
 =========== ======  ======  ======  ======  ======  ======
 CDAN        clp	    inf	    pnt	    real    skt     Avg
 clp         N/A	    20.8    40.0    56.1    45.5    40.6
@@ -135,6 +146,9 @@ real        55.3    24.1    52.6    N/A	    42.4	43.6
 skt         56.7    21.3    46.2    55.0    N/A     44.8
 Avg         47.0    21.7    42.2    52.4    38.1    40.3
 =========== ======  ======  ======  ======  ======  ======
+
+MDD
+-----------
 
 =========== ======  ======  ======  ======  ======  ======
 MDD         clp	    inf	    pnt	    real    skt     Avg
@@ -146,84 +160,10 @@ skt         58.7    20.7    46.5    57.7    N/A     45.9
 Avg         50.2    21.6    44.3    56.6    41.4    42.8
 =========== ======  ======  ======  ======  ======  ======
 
+Oracle
+-----------
+
 =========== ======  ======  ======  ======  ======  ======
 Oracle      clp	    inf	    pnt	    real    skt     Avg
 /           78.2    40.7    71.6    83.8    70.6    69.0
 =========== ======  ======  ======  ======  ======  ======
-
-.. currentmodule:: dalib.adaptation
-
-
-Algorithms
-===========
-
-.. _DANN:
-
-DANN
---------
-
-.. autoclass:: dalib.adaptation.dann.DomainAdversarialLoss
-
-
-.. _DAN:
-
-DAN
---------
-
-.. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
-
-
-.. _JAN:
-
-JAN
---------
-
-.. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
-
-
-.. _CDAN:
-
-CDAN
---------
-
-.. autoclass:: dalib.adaptation.cdan.ConditionalDomainAdversarialLoss
-
-
-.. autoclass:: dalib.adaptation.cdan.RandomizedMultiLinearMap
-
-
-.. autoclass:: dalib.adaptation.cdan.MultiLinearMap
-
-.. _MCD:
-
-MCD
---------
-
-.. autofunction:: dalib.adaptation.mcd.classifier_discrepancy
-
-.. autofunction:: dalib.adaptation.mcd.entropy
-
-.. autoclass:: dalib.adaptation.mcd.ImageClassifierHead
-
-.. _MDD:
-
-MDD
---------
-
-.. autoclass:: dalib.adaptation.mdd.MarginDisparityDiscrepancy
-
-
-.. autoclass:: dalib.adaptation.mdd.ClassificationMarginDisparityDiscrepancy
-
-
-.. autoclass:: dalib.adaptation.mdd.ImageClassifier
-    :members:
-
-.. autofunction:: dalib.adaptation.mdd.shift_log
-
-.. _MCC:
-
-MCC
---------
-
-.. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss

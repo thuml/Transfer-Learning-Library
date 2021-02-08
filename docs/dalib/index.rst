@@ -4,15 +4,32 @@ Domain Adaptation Library
 
 .. toctree::
     :maxdepth: 4
-    :caption: Algorithms and Benchmarks
+    :caption: Benchmarks
     :titlesonly:
 
-    unsupervised_da
-    partial_da
-    open_set_da
-    multi_source_da
-    regression_da
-    segmentation_da
+    benchmarks/unsupervised_da
+    benchmarks/partial_da
+    benchmarks/open_set_da
+    benchmarks/multi_source_da
+    benchmarks/regression_da
+    benchmarks/segmentation_da
+
+.. toctree::
+    :maxdepth: 4
+    :caption: Algorithms
+    :titlesonly:
+
+    adaptation/dan_jan
+    adaptation/dann_cdan
+    adaptation/mcd
+    adaptation/mdd
+    adaptation/mcc
+    adaptation/pada
+    adaptation/iwan
+    adaptation/osbp
+    adaptation/advent
+    translation/cyclegan
+    translation/fda
 
 .. toctree::
     :maxdepth: 4
@@ -23,7 +40,9 @@ Domain Adaptation Library
     vision/datasets
     vision/models
     vision/transforms
-    utils
+    utils/base
+    utils/metric
+    utils/analysis
 
 
 

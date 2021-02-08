@@ -3,35 +3,36 @@ import time
 import warnings
 import sys
 import argparse
-import copy
-from typing import Sequence
+import shutil
+import os.path as osp
 
 import torch
-import torch.nn.parallel
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
-import torch.utils.data
 from torch.utils.data import DataLoader
-import torch.utils.data.distributed
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 import torch.nn.functional as F
 
-sys.path.append('.')
+sys.path.append('../..')
 from dalib.modules.classifier import Classifier
 import dalib.vision.datasets.openset as datasets
 from dalib.vision.datasets.openset import default_open_set as open_set
 import dalib.vision.models as models
+from dalib.vision.transforms import ResizeImage
 from dalib.utils.data import ForeverDataIterator
 from dalib.utils.metric import accuracy, ConfusionMatrix
-from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-from dalib.vision.transforms import ResizeImage
-
+from dalib.utils.meter import AverageMeter, ProgressMeter
+from dalib.utils.logger import CompleteLogger
+from dalib.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args: argparse.Namespace):
+    logger = CompleteLogger(args.log, args.phase)
+
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -45,27 +46,27 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     if args.center_crop:
-        train_transform = transforms.Compose([
+        train_transform = T.Compose([
             ResizeImage(256),
-            transforms.CenterCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            T.CenterCrop(224),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
             normalize
         ])
     else:
-        train_transform = transforms.Compose([
+        train_transform = T.Compose([
             ResizeImage(256),
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            T.RandomResizedCrop(224),
+            T.RandomHorizontalFlip(),
+            T.ToTensor(),
             normalize
         ])
-    val_transform = transforms.Compose([
+    val_transform = T.Compose([
         ResizeImage(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
+        T.CenterCrop(224),
+        T.ToTensor(),
         normalize
     ])
 
@@ -93,27 +94,51 @@ def main(args: argparse.Namespace):
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(val_loader, feature_extractor, device)
+        # plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        # calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == 'test':
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
     # start training
-    best_acc1 = 0.
+    best_h_score = 0.
     for epoch in range(args.epochs):
         # train for one epoch
         train(train_source_iter, classifier, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        h_score = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
-        if acc1 > best_acc1:
-            best_model = copy.deepcopy(classifier.state_dict())
-        best_acc1 = max(acc1, best_acc1)
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
+        if h_score > best_h_score:
+            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+        best_h_score = max(h_score, best_h_score)
 
-    print("best_acc1 = {:3.1f}".format(best_acc1))
+    print("best_h_score = {:3.1f}".format(best_h_score))
 
     # evaluate on test set
-    classifier.load_state_dict(best_model)
-    acc1 = validate(test_loader, classifier, args)
-    print("test_acc1 = {:3.1f}".format(acc1))
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    h_score = validate(test_loader, classifier, args)
+    print("test_h_score = {:3.1f}".format(h_score))
+
+    logger.close()
 
 
 def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
@@ -165,7 +190,7 @@ def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: 
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace, classes: Sequence) -> float:
+def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     classes = val_loader.dataset.classes
     confmat = ConfusionMatrix(len(classes))
@@ -223,6 +248,7 @@ if __name__ == '__main__':
     )
 
     parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
@@ -230,15 +256,18 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('--center-crop', default=False, action='store_true',
+                        help='whether use center crop during training')
+    # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run')
+    parser.add_argument('--threshold', default=0.8, type=float,
+                        help='When class confidence is less than the given threshold, '
+                             'model will output "unknown" (default: 0.5)')
+    # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
@@ -250,18 +279,23 @@ if __name__ == '__main__':
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
-                        help='Number of iterations per epoch')
-    parser.add_argument('--threshold', default=0.8, type=float,
-                        help='When class confidence is less than the given threshold, '
-                             'model will output "unknown" (default: 0.5)')
-    parser.add_argument('--center-crop', default=False, action='store_true')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
+    parser.add_argument("--log", type=str, default='src_only',
+                        help="Where to save logs, checkpoints and debugging images.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
+                        help="When phase is 'test', only test the model."
+                             "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     print(args)
     main(args)

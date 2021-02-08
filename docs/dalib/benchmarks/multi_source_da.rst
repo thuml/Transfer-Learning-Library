@@ -1,11 +1,10 @@
 Multi Source Domain Adaptation
 ==========================================
 
------------
-Benchmarks
------------
-
 We provide benchmarks of different domain adaptation algorithms on `Office-Home`_ and  `DomainNet`_.
+Those domain adaptation algorithms includes:
+
+-  :ref:`MDD`
 
 .. note::
 

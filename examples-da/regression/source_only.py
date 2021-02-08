@@ -3,33 +3,31 @@ import time
 import warnings
 import sys
 import argparse
-import copy
+import shutil
 from typing import Tuple
 
 import torch
-import torch.nn as nn
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
-import torch.utils.data
 from torch.utils.data import DataLoader
-import torch.utils.data.distributed
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 import torch.nn.functional as F
 
-sys.path.append('.')
+sys.path.append('../..')
 from dalib.modules.regressor import Regressor
 import dalib.vision.datasets.regression as datasets
 import dalib.vision.models as models
 from dalib.utils.data import ForeverDataIterator
-from dalib.utils.avgmeter import AverageMeter, ProgressMeter
-
+from dalib.utils.meter import AverageMeter, ProgressMeter
+from dalib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args: argparse.Namespace):
+    logger = CompleteLogger(args.log, args.phase)
+
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -43,15 +41,15 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-        transforms.Resize(128),
-        transforms.ToTensor(),
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_transform = T.Compose([
+        T.Resize(128),
+        T.ToTensor(),
         normalize
     ])
-    val_transform = transforms.Compose([
-        transforms.Resize(128),
-        transforms.ToTensor(),
+    val_transform = T.Compose([
+        T.Resize(128),
+        T.ToTensor(),
         normalize
     ])
 
@@ -64,20 +62,25 @@ def main(args: argparse.Namespace):
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_loader = val_loader
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-
     backbone = models.__dict__[args.arch](pretrained=True)
     num_factors = train_source_dataset.num_factors
     regressor = Regressor(backbone=backbone, num_factors=num_factors).to(device)
+
     # define optimizer and lr scheduler
     optimizer = SGD(regressor.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    if args.phase == 'test':
+        regressor.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+        mae = validate(val_loader, regressor, args, train_source_dataset.factors)
+        print(mae)
+        return
 
     # start training
     best_mae = 100000.
@@ -90,18 +93,16 @@ def main(args: argparse.Namespace):
         # evaluate on validation set
         mae = validate(val_loader, regressor, args, train_source_dataset.factors)
 
-        # remember best acc@1 and save checkpoint
+        # remember best mae and save checkpoint
+        torch.save(regressor.state_dict(), logger.get_checkpoint_path('latest'))
         if mae < best_mae:
-            best_model = copy.deepcopy(regressor.state_dict())
+            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
         best_mae = min(mae, best_mae)
         print("mean MAE {:6.3f} best MAE {:6.3f}".format(mae, best_mae))
 
     print("best_mae = {:6.3f}".format(best_mae))
 
-    # evaluate on test set
-    regressor.load_state_dict(best_model)
-    mae = validate(test_loader, regressor, args, train_source_dataset.factors)
-    print("test_mae = {:6.3f}".format(mae))
+    logger.close()
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
@@ -208,7 +209,8 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Source Only for Regression Domain Adaptation')
+    # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='DSprites',
@@ -216,15 +218,13 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
+    # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run')
+    # training parameters
     parser.add_argument('-b', '--batch-size', default=128, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
@@ -236,12 +236,20 @@ if __name__ == '__main__':
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+                        help='number of data loading workers (default: 4)')
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
+                        help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
-                        help='Number of iterations per epoch')
+    parser.add_argument("--log", type=str, default='src_only',
+                        help="Where to save logs, checkpoints and debugging images.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
+                        help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     print(args)
     main(args)

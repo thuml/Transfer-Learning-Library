@@ -1,16 +1,12 @@
 Open Set Domain Adaptation
 ==========================================
 
-The adaptation subpackage contains definitions for the following domain adaptation algorithms:
-
--  Open Set Domain Adaptation by Backpropagation (`OSBP`_)
-
------------
-Benchmarks
------------
-
-
 We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_ and `VisDA-2017`_ as follows.
+Those domain adaptation algorithms includes:
+
+-  :ref:`DANN`
+-  :ref:`OSBP`
+
 
 .. note::
     - ``Source Only`` refers to the model trained with data from the source domain.
@@ -75,16 +71,3 @@ OSBP        75.4        67.3    62.9    94.3    63.7	75.9	49.6	74.4	86.2	27.3
 
 
 .. _CMU: http://ise.thss.tsinghua.edu.cn/~mlong/publications.html
-
-.. currentmodule:: dalib.adaptation
-
------------
-Algorithms
------------
-
-.. _OSBP:
-
-OSBP
-------
-
-.. autoclass:: dalib.adaptation.osbp.UnknownClassBinaryCrossEntropy

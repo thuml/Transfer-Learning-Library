@@ -27,11 +27,12 @@ class DomainDiscriminator(nn.Module):
         Distinguish whether the input features come from the source domain or the target domain.
         The source domain label is 1 and the target domain label is 0.
 
-        Notice **Batch Normalization** is **not** used here
+        .. note::
+            **Batch Normalization** is **not** used here
 
-        Parameters:
-            - **in_feature** (int): dimension of the input feature
-            - **hidden_size** (int): dimension of the hidden features
+        Args:
+            in_feature (int): dimension of the input feature
+            hidden_size (int): dimension of the hidden features
 
         Shape:
             - Inputs: (minibatch, `in_feature`)
