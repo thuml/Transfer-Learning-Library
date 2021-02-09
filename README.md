@@ -1,5 +1,3 @@
-<p align="center"><img src="TransLearn.png" width="480"\></p>
-
 ## Introduction
 
 This is the development branch for *Trans-Learn*. 
