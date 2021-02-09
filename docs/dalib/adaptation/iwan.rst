@@ -3,4 +3,5 @@
 Importance Weighted Adversarial Nets (IWAN)
 ---------------------------------------------
 
-.. autoclass:: dalib.adaptation.iwan.DomainDiscriminator
+.. autoclass:: dalib.adaptation.iwan.ImportanceWeightModule
+    :members:
