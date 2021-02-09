@@ -1,4 +1,4 @@
-![](TransLearn.png)
+<p align="center"><img src="TransLearn.png" width="480"\></p>
 
 ## Introduction
 
