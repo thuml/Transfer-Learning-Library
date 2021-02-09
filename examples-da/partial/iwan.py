@@ -18,7 +18,8 @@ import torch.nn.functional as F
 sys.path.append('../..')
 from dalib.modules.classifier import Classifier
 from dalib.modules.entropy import entropy
-from dalib.adaptation.iwan import DomainDiscriminator, ImageClassifier
+from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.iwan import ImportanceWeightModule, ImageClassifier
 from dalib.adaptation.dann import DomainAdversarialLoss
 import dalib.vision.datasets.partial as datasets
 from dalib.vision.datasets.partial import default_partial as partial
@@ -93,8 +94,6 @@ def main(args: argparse.Namespace):
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
-    target_idxes = train_target_dataset.partial_classes_idx
-
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     num_classes = train_source_dataset.num_classes
@@ -105,8 +104,8 @@ def main(args: argparse.Namespace):
     else:
         classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
     # define domain classifier D, D_0
-    D = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
-    D_0 = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
+    D = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024, batch_norm=False).to(device)
+    D_0 = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024, batch_norm=False).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + D.get_parameters() + D_0.get_parameters(),
@@ -116,6 +115,8 @@ def main(args: argparse.Namespace):
     # define loss function
     domain_adv_D = DomainAdversarialLoss(D).to(device)
     domain_adv_D_0 = DomainAdversarialLoss(D_0).to(device)
+    # define importance weight module
+    importance_weight_module = ImportanceWeightModule(D, train_target_dataset.partial_classes_idx)
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -146,8 +147,8 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, D, domain_adv_D, domain_adv_D_0, optimizer,
-              lr_scheduler, target_idxes, epoch, args)
+        train(train_source_iter, train_target_iter, classifier, domain_adv_D, domain_adv_D_0,
+              importance_weight_module, optimizer, lr_scheduler, epoch, args)
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
 
@@ -168,8 +169,8 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          D: DomainDiscriminator, domain_adv_D: DomainAdversarialLoss, domain_adv_D_0: DomainAdversarialLoss,
-          optimizer: SGD, lr_scheduler: LambdaLR, target_idxes, epoch: int, args: argparse.Namespace):
+          domain_adv_D: DomainAdversarialLoss, domain_adv_D_0: DomainAdversarialLoss,
+          importance_weight_module, optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -177,12 +178,13 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
     domain_accs_D = AverageMeter('Domain Acc for D', ':3.1f')
     domain_accs_D_0 = AverageMeter('Domain Acc for D_0', ':3.1f')
-    importance_weights = AverageMeter('Importance Weights', ':6.2f')
+    partial_classes_weights = AverageMeter('Partial Weight', ':3.2f')
+    non_partial_classes_weights = AverageMeter('Non-Partial Weight', ':3.2f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
         [batch_time, data_time, losses, cls_accs, tgt_accs,
-         domain_accs_D, domain_accs_D_0, importance_weights],
+         domain_accs_D, domain_accs_D_0, partial_classes_weights, non_partial_classes_weights],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -215,14 +217,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # domain adversarial loss for D
         adv_loss_D = domain_adv_D(f_s.detach(), f_t.detach())
 
-        # compute importance weight
-        # TODO abstract weight into a class
-        weight = 1. - D(f_s)
-        weight = weight / weight.mean()
-        weight = weight.detach()
-
+        # get importance weights
+        w_s = importance_weight_module.get_importance_weight(f_s)
         # domain adversarial loss for D_0
-        adv_loss_D_0 = domain_adv_D_0(f_s, f_t, w_s=weight)
+        adv_loss_D_0 = domain_adv_D_0(f_s, f_t, w_s=w_s)
 
         # entropy loss
         y_t = F.softmax(y_t, dim=1)
@@ -230,6 +228,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         loss = cls_loss + 1.5 * args.trade_off * adv_loss_D + \
                args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
+
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -245,11 +244,11 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
         domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
 
-        labels_in_target = torch.FloatTensor([c in target_idxes for c in labels_s]).to(device)
-        labels_in_target_num = labels_in_target.sum()
-        if labels_in_target_num != 0:
-            avg_importance = (weight.squeeze() * labels_in_target / labels_in_target_num).sum()
-            importance_weights.update(avg_importance.item(), int(labels_in_target_num.item()))
+        # debug: output class weight averaged on the partial classes and non-partial classes respectively
+        partial_class_weight, non_partial_classes_weight = \
+            importance_weight_module.get_partial_classes_weight(w_s, labels_s)
+        partial_classes_weights.update(partial_class_weight.item(), x_s.size(0))
+        non_partial_classes_weights.update(non_partial_classes_weight.item(), x_s.size(0))
 
         batch_time.update(time.time() - end)
         end = time.time()

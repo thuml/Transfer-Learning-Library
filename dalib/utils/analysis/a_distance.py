@@ -32,7 +32,8 @@ def calculate(source_feature: torch.Tensor, target_feature: torch.Tensor,
         source_feature (tensor): features from source domain in shape :math:`(minibatch, F)`
         target_feature (tensor): features from target domain in shape :math:`(minibatch, F)`
         device (torch.device)
-        progress (bool): If True, displays a the progress of training A-Net
+        progress (bool): if True, displays a the progress of training A-Net
+        training_epochs (int): the number of epochs when training the classifier
 
     Returns:
         :math:`\mathcal{A}`-distance
