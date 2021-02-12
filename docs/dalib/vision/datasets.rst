@@ -53,6 +53,30 @@ DomainNet
    :members:
    :inherited-members:
 
+--------------------------------------
+MNIST
+--------------------------------------
+
+.. autoclass:: dalib.vision.datasets.digits.MNIST
+   :members:
+
+
+--------------------------------------
+USPS
+--------------------------------------
+
+.. autoclass:: dalib.vision.datasets.digits.USPS
+   :members:
+
+
+--------------------------------------
+SVHN
+--------------------------------------
+
+.. autoclass:: dalib.vision.datasets.digits.SVHN
+   :members:
+
+
 Partial DA for Classification
 ----------------------------------------------------
 

@@ -225,7 +225,50 @@ def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
     return torch.log(torch.clamp(x + offset, max=1.))
 
 
-class ImageClassifier(nn.Module):
+class GeneralModule(nn.Module):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: nn.Module,
+                head: nn.Module, adv_head: nn.Module,
+                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune: Optional[bool] = True):
+        super(GeneralModule, self).__init__()
+        self.backbone = backbone
+        self.num_classes = num_classes
+        self.bottleneck = bottleneck
+        self.head = head
+        self.adv_head = adv_head
+        self.finetune = finetune
+        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
+                                                       auto_step=False) if grl is None else grl
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """"""
+        features = self.backbone(x)
+        features = self.bottleneck(features)
+        outputs = self.head(features)
+        features_adv = self.grl_layer(features)
+        outputs_adv = self.adv_head(features_adv)
+        return outputs, outputs_adv
+
+    def step(self):
+        """
+        Gradually increase :math:`\lambda` in GRL layer.
+        """
+        self.grl_layer.step()
+
+    def get_parameters(self) -> List[Dict]:
+        """
+        Return a parameters list which decides optimization hyper-parameters,
+        such as the relative learning rate of each layer.
+        """
+        params = [
+            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
+            {"params": self.bottleneck.parameters(), "lr": 1.},
+            {"params": self.head.parameters(), "lr": 1.},
+            {"params": self.adv_head.parameters(), "lr": 1.}
+        ]
+        return params
+
+
+class ImageClassifier(GeneralModule):
     r"""Classifier for MDD.
 
     Classifier for MDD has one backbone, one bottleneck, while two classifier heads.
@@ -262,13 +305,10 @@ class ImageClassifier(nn.Module):
     def __init__(self, backbone: nn.Module, num_classes: int,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
                  grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
-        super(ImageClassifier, self).__init__()
-        self.num_classes = num_classes
-        self.backbone = backbone
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
+        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
                                                        auto_step=False) if grl is None else grl
 
-        self.bottleneck = nn.Sequential(
+        bottleneck = nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
             nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
@@ -276,60 +316,33 @@ class ImageClassifier(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        self.bottleneck[2].weight.data.normal_(0, 0.005)
-        self.bottleneck[2].bias.data.fill_(0.1)
+        bottleneck[2].weight.data.normal_(0, 0.005)
+        bottleneck[2].bias.data.fill_(0.1)
 
         # The classifier head used for final predictions.
-        self.head = nn.Sequential(
+        head = nn.Sequential(
             nn.Linear(bottleneck_dim, width),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(width, num_classes)
         )
         # The adversarial classifier head
-        self.adv_head = nn.Sequential(
+        adv_head = nn.Sequential(
             nn.Linear(bottleneck_dim, width),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(width, num_classes)
         )
         for dep in range(2):
-            self.head[dep * 3].weight.data.normal_(0, 0.01)
-            self.head[dep * 3].bias.data.fill_(0.0)
-            self.adv_head[dep * 3].weight.data.normal_(0, 0.01)
-            self.adv_head[dep * 3].bias.data.fill_(0.0)
-        self.finetune = finetune
-
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """"""
-        features = self.backbone(x)
-        features = self.bottleneck(features)
-        outputs = self.head(features)
-        features_adv = self.grl_layer(features)
-        outputs_adv = self.adv_head(features_adv)
-        return outputs, outputs_adv
-
-    def step(self):
-        """
-        Gradually increase :math:`\lambda` in GRL layer.
-        """
-        self.grl_layer.step()
-
-    def get_parameters(self) -> List[Dict]:
-        """
-        Return a parameters list which decides optimization hyper-parameters,
-        such as the relative learning rate of each layer.
-        """
-        params = [
-            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
-            {"params": self.bottleneck.parameters(), "lr": 1.},
-            {"params": self.head.parameters(), "lr": 1.},
-            {"params": self.adv_head.parameters(), "lr": 1.}
-        ]
-        return params
+            head[dep * 3].weight.data.normal_(0, 0.01)
+            head[dep * 3].bias.data.fill_(0.0)
+            adv_head[dep * 3].weight.data.normal_(0, 0.01)
+            adv_head[dep * 3].bias.data.fill_(0.0)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck,
+                                              head, adv_head, grl_layer, finetune)
 
 
-class ImageRegressor(nn.Module):
+class ImageRegressor(GeneralModule):
     r"""Regressor for MDD.
 
     Regressor for MDD has one backbone, one bottleneck, while two regressor heads.
@@ -365,17 +378,15 @@ class ImageRegressor(nn.Module):
 
     def __init__(self, backbone: nn.Module, num_factors: int,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
-        super(ImageRegressor, self).__init__()
-        self.backbone = backbone
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000, auto_step=False)
-        self.bottleneck = nn.Sequential(
+        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000, auto_step=False)
+        bottleneck = nn.Sequential(
             nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(bottleneck_dim),
             nn.ReLU(),
         )
 
         # The regressor head used for final predictions.
-        self.head = nn.Sequential(
+        head = nn.Sequential(
             nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(width),
             nn.ReLU(),
@@ -387,12 +398,12 @@ class ImageRegressor(nn.Module):
             nn.Linear(width, num_factors),
             nn.Sigmoid()
         )
-        for layer in self.head:
+        for layer in head:
             if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
                 nn.init.normal_(layer.weight, 0, 0.01)
                 nn.init.constant_(layer.bias, 0)
         # The adversarial regressor head
-        self.adv_head = nn.Sequential(
+        adv_head = nn.Sequential(
             nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(width),
             nn.ReLU(),
@@ -404,35 +415,10 @@ class ImageRegressor(nn.Module):
             nn.Linear(width, num_factors),
             nn.Sigmoid()
         )
-        for layer in self.adv_head:
+        for layer in adv_head:
             if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
                 nn.init.normal_(layer.weight, 0, 0.01)
                 nn.init.constant_(layer.bias, 0)
-        self.finetune = finetune
-
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        features = self.backbone(x)
-        features = self.bottleneck(features)
-        outputs = self.head(features)
-        features_adv = self.grl_layer(features)
-        outputs_adv = self.adv_head(features_adv)
-        return outputs, outputs_adv
-
-    def step(self):
-        """
-        Gradually increase :math:`\lambda` in GRL layer.
-        """
-        self.grl_layer.step()
-
-    def get_parameters(self) -> List[Dict]:
-        """
-        Returns a parameters list which decides optimization hyper-parameters,
-        such as the relative learning rate of each layer.
-        """
-        params = [
-            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
-            {"params": self.bottleneck.parameters(), "lr": 1.},
-            {"params": self.head.parameters(), "lr": 1.},
-            {"params": self.adv_head.parameters(), "lr": 1.}
-        ]
-        return params
+        super(ImageRegressor, self).__init__(backbone, num_factors, bottleneck,
+                                              head, adv_head, grl_layer, finetune)
+        self.num_factors = num_factors

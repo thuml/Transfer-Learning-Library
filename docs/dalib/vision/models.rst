@@ -7,6 +7,11 @@ ResNets
 .. automodule:: dalib.vision.models.resnet
    :members:
 
+Models for Digits Dataset
+--------------------------
+
+.. automodule:: dalib.vision.models.digits
+   :members:
 
 Segmentation Models
 ----------------------------------
