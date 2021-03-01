@@ -27,11 +27,6 @@ class Synthia(SegmentationList):
         15: 6, 9: 7, 6: 8, 16: 9, 1: 10, 10: 11, 17: 12,
         8: 13, 18: 14, 19: 15, 20: 16, 12: 17, 11: 18
     }
-    # classes used to evaluate
-    EVALUATE_CLASSES = [
-        'road', 'sidewalk', 'building', 'traffic light', 'traffic sign',
-        'vegetation', 'sky', 'person', 'rider', 'car', 'bus', 'motorcycle', 'bicycle'
-    ]
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/f0525017ea43455f9b3e/?dl=1"),
     ]
@@ -44,3 +39,10 @@ class Synthia(SegmentationList):
         super(Synthia, self).__init__(root, Cityscapes.CLASSES, data_list_file, data_list_file, data_folder,
                                       label_folder, id_to_train_id=Synthia.ID_TO_TRAIN_ID,
                                       train_id_to_color=Cityscapes.TRAIN_ID_TO_COLOR, **kwargs)
+
+    @property
+    def evaluate_classes(self):
+        return [
+            'road', 'sidewalk', 'building', 'traffic light', 'traffic sign',
+            'vegetation', 'sky', 'person', 'rider', 'car', 'bus', 'motorcycle', 'bicycle'
+        ]

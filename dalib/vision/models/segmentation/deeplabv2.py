@@ -165,10 +165,10 @@ class Deeplab(nn.Module):
         for param in self.classifier.parameters():
             yield param
 
-    def get_parameters(self):
+    def get_parameters(self, lr=1.):
         return [
-            {'params': self.get_1x_lr_params_NOscale(), 'lr': 0.1},
-            {'params': self.get_10x_lr_params(), 'lr': 1.}
+            {'params': self.get_1x_lr_params_NOscale(), 'lr': 0.1 * lr},
+            {'params': self.get_10x_lr_params(), 'lr': lr}
         ]
 
 

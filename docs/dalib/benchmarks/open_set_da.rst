@@ -36,7 +36,7 @@ Office-31 H-Score on ResNet-50
 ---------------------------------
 
 .. note::
-    We conduct `21` class classification experiments in this setting (follows `OSBP`_).
+    We conduct `21` class classification experiments in this setting (follows :ref:`OSBP`).
 
 ===========     ================    ======  ======  ======  ======  ======  ======
 Methods         Avg                 A → W   D → W   W → D   A → D   D → A   W → A

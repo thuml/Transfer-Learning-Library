@@ -165,3 +165,7 @@ Synthia
 .. autoclass:: dalib.vision.datasets.segmentation.synthia.Synthia
 
 
+---------------------------------------
+Foggy Cityscapes
+---------------------------------------
+.. autoclass:: dalib.vision.datasets.segmentation.cityscapes.FoggyCityscapes

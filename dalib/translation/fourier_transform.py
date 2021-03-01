@@ -122,7 +122,7 @@ class FourierTransform(nn.Module):
     @staticmethod
     def build_amplitude(image_list, amplitude_dir):
         # extract amplitudes from target domain
-        for i, image_name in tqdm.tqdm(enumerate(image_list)):
+        for i, image_name in enumerate(tqdm.tqdm(image_list)):
             image = Image.open(image_name).convert('RGB')
             image = np.asarray(image, np.float32)
             image = image.transpose((2, 0, 1))

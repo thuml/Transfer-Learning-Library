@@ -58,6 +58,8 @@ class CompleteLogger:
         self.logger = TextLogger(log_filename)
         sys.stdout = self.logger
         sys.stderr = self.logger
+        if phase != 'train':
+            self.set_epoch(phase)
 
     def set_epoch(self, epoch):
         """Set the epoch number. Please use it during training."""

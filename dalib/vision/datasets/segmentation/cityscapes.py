@@ -64,3 +64,48 @@ class Cityscapes(SegmentationList):
         with open(label_list_file, "r") as f:
             label_list = [line.strip().replace("leftImg8bit", "gtFine_labelIds") for line in f.readlines()]
         return label_list
+
+
+class FoggyCityscapes(Cityscapes):
+    """`Foggy Cityscapes <https://www.cityscapes-dataset.com/>`_ is a real-world semantic segmentation dataset collected
+    in foggy driving scenarios.
+
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``, or ``val``.
+        data_folder (str, optional): Sub-directory of the image. Default: 'leftImg8bit'.
+        label_folder (str, optional): Sub-directory of the label. Default: 'gtFine'.
+        beta (float, optional): The parameter for foggy. Choices includes: 0.005, 0.01, 0.02. Default: 0.02
+        mean (seq[float]): mean BGR value. Normalize the image if not None. Default: None.
+        transforms (callable, optional): A function/transform that  takes in  (PIL image, label) pair \
+            and returns a transformed version. E.g, :class:`~dalib.vision.transforms.segmentation.Resize`.
+
+    .. note:: You need to download Cityscapes manually.
+        Ensure that there exist following files in the `root` directory before you using this class.
+        ::
+            leftImg8bit_foggy/
+                train/
+                val/
+                test/
+            gtFine/
+                train/
+                val/
+                test/
+    """
+    def __init__(self, root, split='train', data_folder='leftImg8bit_foggy', label_folder='gtFine', beta=0.02, **kwargs):
+        assert beta in [0.02, 0.01, 0.005]
+        self.beta = beta
+        super(FoggyCityscapes, self).__init__(root, split, data_folder, label_folder, **kwargs)
+
+    def parse_data_file(self, file_name):
+        """Parse file to image list
+
+        Args:
+            file_name (str): The path of data file
+
+        Returns:
+            List of image path
+        """
+        with open(file_name, "r") as f:
+            data_list = [line.strip().replace("leftImg8bit", "leftImg8bit_foggy_beta_{}".format(self.beta)) for line in f.readlines()]
+        return data_list

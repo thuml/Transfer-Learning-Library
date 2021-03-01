@@ -29,6 +29,7 @@ Domain Adaptation Library
     adaptation/osbp
     adaptation/advent
     translation/cyclegan
+    translation/cycada
     translation/fda
 
 .. toctree::

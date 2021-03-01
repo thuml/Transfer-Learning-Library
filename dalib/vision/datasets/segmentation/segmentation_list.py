@@ -5,6 +5,7 @@ import tqdm
 import numpy as np
 from torch.utils import data
 import torch
+import torch.nn.functional as F
 
 
 class SegmentationList(data.Dataset):
@@ -86,7 +87,6 @@ class SegmentationList(data.Dataset):
         label_name = self.label_list[index]
         image = Image.open(os.path.join(self.root, self.data_folder, image_name)).convert('RGB')
         label = Image.open(os.path.join(self.root, self.label_folder, label_name))
-
         image, label = self.transforms(image, label)
 
         # remap label
@@ -128,12 +128,38 @@ class SegmentationList(data.Dataset):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         image.save(path)
 
-    def translate(self, transform: Callable, target_root: str):
+    def translate(self, transform: Callable, target_root: str, color=False):
+        """ Translate an image and save it into a specified directory
+
+        Args:
+            transform (callable): a transform function that maps (image, label) pair from one domain to another domain
+            target_root (str): the root directory to save images and labels
+
+        """
         os.makedirs(target_root, exist_ok=True)
-        for image_name, label_name in tqdm.tqdm(zip(self.data_list, self.label_list)):
+        for image_name, label_name in zip(tqdm.tqdm(self.data_list), self.label_list):
+            image_path = os.path.join(target_root, self.data_folder, image_name)
+            label_path = os.path.join(target_root, self.label_folder, label_name)
+            if os.path.exists(image_path) and os.path.exists(label_path):
+                continue
             image = Image.open(os.path.join(self.root, self.data_folder, image_name)).convert('RGB')
             label = Image.open(os.path.join(self.root, self.label_folder, label_name))
 
             translated_image, translated_label = transform(image, label)
-            self._save_pil_image(translated_image, os.path.join(target_root, self.data_folder, image_name))
-            self._save_pil_image(translated_label, os.path.join(target_root, self.label_folder, label_name))
+            self._save_pil_image(translated_image, image_path)
+            self._save_pil_image(translated_label, label_path)
+            if color:
+                colored_label = self.decode_target(np.array(translated_label))
+                file_name, file_ext = os.path.splitext(label_name)
+                self._save_pil_image(colored_label, os.path.join(target_root, self.label_folder,
+                                                                 "{}_color{}".format(file_name, file_ext)))
+
+    @property
+    def evaluate_classes(self):
+        """The name of classes to be evaluated"""
+        return self.classes
+
+    @property
+    def ignore_classes(self):
+        """The name of classes to be ignored"""
+        return list(set(self.classes) - set(self.evaluate_classes))

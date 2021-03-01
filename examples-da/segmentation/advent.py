@@ -151,7 +151,7 @@ def main(args: argparse.Namespace):
 
         # calculate the mean iou over partial classes
         indexes = [train_source_dataset.classes.index(name) for name
-                   in train_source_dataset.EVALUATE_CLASSES]
+                   in train_source_dataset.evaluate_classes]
         iu = iu[indexes]
         mean_iou = iu.mean()
 

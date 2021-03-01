@@ -99,7 +99,7 @@ def main(args):
             T.wrapper(cyclegan.transform.Translation)(netG_S2T, device),
         ])
         train_source_dataset.translate(transform, args.translated_root)
-        exit(0)
+        return
 
     # define loss function
     criterion_gan = cyclegan.LeastSquaresGenerativeAdversarialLoss()
@@ -149,6 +149,13 @@ def main(args):
                 'args': args
             }, logger.get_checkpoint_path(epoch)
         )
+
+    if args.translated_root is not None:
+        transform = T.Compose([
+            T.Resize(image_size=args.test_input_size),
+            T.wrapper(cyclegan.transform.Translation)(netG_S2T, device),
+        ])
+        train_source_dataset.translate(transform, args.translated_root)
 
     logger.close()
 
@@ -265,14 +272,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)')
     parser.add_argument('--resize-ratio', nargs='+', type=float, default=(1.5, 8 / 3.),
                         help='the resize ratio for the random resize crop')
-    parser.add_argument('--train-size', nargs='+', type=int, default=(720, 360),
+    parser.add_argument('--train-size', nargs='+', type=int, default=(1024, 512),
                         help='the input and output image size during training')
     # model parameters
     parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in the last conv layer')
     parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in the first conv layer')
     parser.add_argument('--netD', type=str, default='patch',
                         help='specify discriminator architecture [patch | pixel]. The basic model is a 70x70 PatchGAN.')
-    parser.add_argument('--netG', type=str, default='resnet_9',
+    parser.add_argument('--netG', type=str, default='unet_256',
                         help='specify generator architecture [resnet_9 | resnet_6 | unet_256 | unet_128]')
     parser.add_argument('--norm', type=str, default='instance',
                         help='instance normalization or batch normalization [instance | batch | none]')

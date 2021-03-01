@@ -26,8 +26,6 @@ class GTA5(SegmentationList):
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/e13fbec03e5045058df1/?dl=1"),
     ]
 
-    EVALUATE_CLASSES = Cityscapes.CLASSES
-
     def __init__(self, root, split='train', data_folder='images', label_folder='labels', **kwargs):
         assert split in ['train']
         # download meta information from Internet

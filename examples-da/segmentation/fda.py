@@ -69,7 +69,7 @@ def main(args: argparse.Namespace):
     # collect the absolute paths of all images in the target dataset
     target_image_list = train_target_dataset.collect_image_paths()
     # build a fourier transform that translate source images to the target style
-    fourier_transform = T.wrapper(FourierTransform)(target_image_list, os.path.join(args.target_root, "amplitudes"),
+    fourier_transform = T.wrapper(FourierTransform)(target_image_list, os.path.join(logger.root, "amplitudes"),
                                                     rebuild=False, beta=args.beta)
 
     source_dataset = datasets.__dict__[args.source]
@@ -152,7 +152,7 @@ def main(args: argparse.Namespace):
 
         # calculate the mean iou over partial classes
         indexes = [train_source_dataset.classes.index(name) for name
-                   in train_source_dataset.EVALUATE_CLASSES]
+                   in train_source_dataset.evaluate_classes]
         iu = iu[indexes]
         mean_iou = iu.mean()
 

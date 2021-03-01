@@ -273,7 +273,8 @@ def resnet_6(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
 def unet_256(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
              init_type='normal', init_gain=0.02):
     """
-    `U-Net <https://arxiv.org/abs/1505.04597>`_ generator for 256x256 input images
+    `U-Net <https://arxiv.org/abs/1505.04597>`_ generator for 256x256 input images.
+    The size of the input image should be a multiple of 256.
 
     Args:
         ngf (int): the number of filters in the last conv layer
@@ -295,7 +296,8 @@ def unet_256(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
 def unet_128(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
              init_type='normal', init_gain=0.02):
     """
-    `U-Net <https://arxiv.org/abs/1505.04597>`_ generator for 128x128 input images
+    `U-Net <https://arxiv.org/abs/1505.04597>`_ generator for 128x128 input images.
+    The size of the input image should be a multiple of 128.
 
     Args:
         ngf (int): the number of filters in the last conv layer
@@ -310,5 +312,27 @@ def unet_128(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
     """
     norm_layer = get_norm_layer(norm_type=norm)
     net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+    init_weights(net, init_type, init_gain)
+    return net
+
+
+def unet_32(ngf, input_nc=3, output_nc=3, norm='batch', use_dropout=False,
+             init_type='normal', init_gain=0.02):
+    """
+    `U-Net <https://arxiv.org/abs/1505.04597>`_ generator for 32x32 input images
+
+    Args:
+        ngf (int): the number of filters in the last conv layer
+        input_nc (int): the number of channels in input images. Default: 3
+        output_nc (int): the number of channels in output images. Default: 3
+        norm (str): the type of normalization layers used in the network. Default: 'batch'
+        use_dropout (bool): whether use dropout. Default: False
+        init_type (str): the name of the initialization method. Choices includes: ``normal`` |
+            ``xavier`` | ``kaiming`` | ``orthogonal``. Default: 'normal'
+        init_gain (float): scaling factor for normal, xavier and orthogonal. Default: 0.02
+
+    """
+    norm_layer = get_norm_layer(norm_type=norm)
+    net = UnetGenerator(input_nc, output_nc, 5, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     init_weights(net, init_type, init_gain)
     return net
