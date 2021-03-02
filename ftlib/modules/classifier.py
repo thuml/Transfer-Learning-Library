@@ -84,5 +84,4 @@ class Classifier(nn.Module):
             {"params": self.head.parameters(), "lr": 1.},
         ]
 
-
         return params
