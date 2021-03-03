@@ -63,7 +63,9 @@ class ImageList(datasets.VisionDataset):
         with open(file_name, "r") as f:
             data_list = []
             for line in f.readlines():
-                path, target = line.split()
+                split_line = line.split()
+                target = split_line[-1]
+                path = ' '.join(split_line[:-1])
                 if not os.path.isabs(path):
                     path = os.path.join(self.root, path)
                 target = int(target)
