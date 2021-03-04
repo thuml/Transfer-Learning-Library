@@ -1,3 +1,4 @@
 from .stochnorm import *
 from .BSS import *
-__all__ = ['stochnorm', 'BSS']
+from .co_tuning import *
+__all__ = ['stochnorm', 'BSS', 'co_tuning']
