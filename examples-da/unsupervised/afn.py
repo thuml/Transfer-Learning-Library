@@ -12,10 +12,10 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
-import torch.nn.functional as func
+import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.adaptation.afn import l2_norm_loss, weights_init, ImageClassifierHead
+from dalib.adaptation.afn import AdaptiveFeatureNorm, ImageClassifier
 from dalib.modules.entropy import entropy
 import dalib.vision.datasets as datasets
 import dalib.vision.models as models
@@ -89,26 +89,24 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    G = models.__dict__[args.arch](pretrained=True).to(device)
-    num_classes = train_source_dataset.num_classes
-    F = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
-    F.apply(weights_init)
+    backbone = models.__dict__[args.arch](pretrained=True)
+    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 dropout_p=args.dropout_p).to(device)
+    adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
 
     # define optimizer
     # the learning rate is fixed according to origin paper
-    optimizer_g = SGD(G.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    optimizer_f = SGD(F.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = SGD(classifier.get_parameters(), args.lr, weight_decay=args.weight_decay)
 
     # resume from the best checkpoint
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-        G.load_state_dict(checkpoint['G'])
-        F.load_state_dict(checkpoint['F'])
+        classifier.load_state_dict(checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
         # extract features from both domains
-        feature_extractor = G.to(device)
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
@@ -121,7 +119,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, G, F, args)
+        acc1 = validate(test_loader, classifier, args)
         print(acc1)
         return
 
@@ -129,16 +127,13 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, G, F, optimizer_g, optimizer_f, epoch, args)
+        train(train_source_iter, train_target_iter, classifier, adaptive_feature_norm, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, G, F, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
-        torch.save({
-            'G': G.state_dict(),
-            'F': F.state_dict()
-        }, logger.get_checkpoint_path('latest'))
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
         if acc1 > best_acc1:
             shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
         best_acc1 = max(acc1, best_acc1)
@@ -146,17 +141,15 @@ def main(args: argparse.Namespace):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
     # evaluate on test set
-    checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-    G.load_state_dict(checkpoint['G'])
-    F.load_state_dict(checkpoint['F'])
-    acc1 = validate(test_loader, G, F, args)
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, G: nn.Module,
-          F: ImageClassifierHead, optimizer_g: SGD, optimizer_f: SGD, epoch: int, args: argparse.Namespace):
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
+          adaptive_feature_norm: AdaptiveFeatureNorm, optimizer: SGD, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
@@ -172,8 +165,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
-    G.train()
-    F.train()
+    model.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
@@ -189,28 +181,26 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, f_s = F(G(x_s))
-        y_t, f_t = F(G(x_t))
+        y_s, f_s = model(x_s)
+        y_t, f_t = model(x_t)
 
         # classification loss
-        cls_loss = func.cross_entropy(y_s, labels_s)
+        cls_loss = F.cross_entropy(y_s, labels_s)
         # norm loss
-        norm_loss = l2_norm_loss(f_s, args.delta) + l2_norm_loss(f_t, args.delta)
+        norm_loss = adaptive_feature_norm(f_s) + adaptive_feature_norm(f_t)
 
         loss = cls_loss + norm_loss * args.trade_off_norm
 
         # using entropy minimization
         if args.trade_off_entropy:
-            y_t = func.softmax(y_t, dim=1)
+            y_t = F.softmax(y_t, dim=1)
             entropy_loss = entropy(y_t, reduction='mean')
             loss += entropy_loss * args.trade_off_entropy
 
         # compute gradient and do SGD step
-        optimizer_f.zero_grad()
-        optimizer_g.zero_grad()
+        optimizer.zero_grad()
         loss.backward()
-        optimizer_f.step()
-        optimizer_g.step()
+        optimizer.step()
 
         # update statistics
         cls_acc = accuracy(y_s, labels_s)[0]
@@ -231,7 +221,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, G: nn.Module, F: ImageClassifierHead, args: argparse.Namespace) -> float:
+def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -242,8 +232,7 @@ def validate(val_loader: DataLoader, G: nn.Module, F: ImageClassifierHead, args:
         prefix='Test: ')
 
     # switch to evaluate mode
-    G.eval()
-    F.eval()
+    model.eval()
 
     if args.per_class_eval:
         classes = val_loader.dataset.classes
@@ -258,8 +247,8 @@ def validate(val_loader: DataLoader, G: nn.Module, F: ImageClassifierHead, args:
             target = target.to(device)
 
             # compute output
-            output, _ = F(G(images))
-            loss = func.cross_entropy(output, target)
+            output, _ = model(images)
+            loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
