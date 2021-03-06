@@ -22,5 +22,5 @@ CUDA_VISIBLE_DEVICES=0 python afn.py data/office-home -d OfficeHome -s Rw -t Cl 
 CUDA_VISIBLE_DEVICES=0 python afn.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 30 --seed 0 --log logs/afn/OfficeHome_Rw2Pr
 
 # VisDA-2017
-CUDA_VISIBLE_DEVICES=0 python afn.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --num-blocks 2 --trade-off-norm 0.01 -r 0.3 \
+CUDA_VISIBLE_DEVICES=0 python afn.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --trade-off-norm 0.01 -r 0.3 \
     --epochs 100 -i 1000 --seed 0 --per-class-eval --center-crop --log logs/afn/VisDA2017
