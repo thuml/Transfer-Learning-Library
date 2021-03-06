@@ -30,24 +30,46 @@ class AdaptiveFeatureNorm(nn.Module):
         return loss
 
 
+class Block(nn.Module):
+    r"""Basic building block for Image Classifier with structure: FC-BN-ReLU-Dropout order
+    """
+
+    def __init__(self, in_features: int, bottleneck_dim: Optional[int] = 1000, dropout_p: Optional[float] = 0.5):
+        super(Block, self).__init__()
+        self.fc = nn.Linear(in_features, bottleneck_dim)
+        self.bn = nn.BatchNorm1d(bottleneck_dim, affine=True)
+        self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(dropout_p)
+        self.dropout_p = dropout_p
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        f = self.fc(x)
+        f = self.bn(f)
+        f = self.relu(f)
+        f = self.dropout(f)
+        if self.training:
+            f.mul_(math.sqrt(1 - self.dropout_p))
+        return f
+
+
 class ImageClassifier(ClassfierBase):
     r"""The Image Classifier for 'Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised
         Domain Adaptation'
 
     """
 
-    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 1000,
-                 dropout_p: Optional[float] = 0.5, **kwargs):
-        bottleneck = nn.Sequential(
+    def __init__(self, backbone: nn.Module, num_classes: int, num_blocks: Optional[int] = 1,
+                 bottleneck_dim: Optional[int] = 1000, dropout_p: Optional[float] = 0.5, **kwargs):
+        assert num_blocks >= 1
+        layers = [nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
             nn.Flatten(),
-            nn.Linear(backbone.out_features, bottleneck_dim),
-            nn.BatchNorm1d(bottleneck_dim, affine=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=dropout_p)
-        )
+            Block(backbone.out_features, bottleneck_dim, dropout_p)
+        )]
+        for _ in range(num_blocks - 1):
+            layers.append(Block(bottleneck_dim, bottleneck_dim, dropout_p))
+        bottleneck = nn.Sequential(*layers)
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)
-        self.dropout_p = dropout_p
         # init parameters for bottleneck and head
         for m in self.bottleneck.modules():
             if isinstance(m, nn.BatchNorm1d):
@@ -60,14 +82,6 @@ class ImageClassifier(ClassfierBase):
             if isinstance(m, nn.Linear):
                 m.weight.data.normal_(0.0, 0.01)
                 m.bias.data.normal_(0.0, 0.01)
-
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        f = self.backbone(x)
-        f = self.bottleneck(f)
-        if self.training:
-            f.mul_(math.sqrt(1 - self.dropout_p))
-        predictions = self.head(f)
-        return predictions, f
 
     def get_parameters(self) -> List[Dict]:
         params = [

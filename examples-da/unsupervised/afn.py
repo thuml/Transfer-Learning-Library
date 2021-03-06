@@ -90,8 +90,8 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 dropout_p=args.dropout_p).to(device)
+    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, args.num_blocks,
+                                 bottleneck_dim=args.bottleneck_dim, dropout_p=args.dropout_p).to(device)
     adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
 
     # define optimizer
@@ -301,8 +301,8 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('--bottleneck-dim', default=1000, type=int,
-                        help='Dimension of bottleneck')
+    parser.add_argument('-n', '--num-blocks', default=1, type=int, help='Number of basic blocks for classifier')
+    parser.add_argument('--bottleneck-dim', default=1000, type=int, help='Dimension of bottleneck')
     parser.add_argument('--dropout-p', default=0.5, type=float,
                         help='Dropout probability')
     # training parameters
