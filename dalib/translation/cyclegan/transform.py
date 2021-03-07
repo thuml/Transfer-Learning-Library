@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
-from ...vision.transforms import Denormalize
+
+from common.vision.transforms import Denormalize
 
 
 class Translation(nn.Module):

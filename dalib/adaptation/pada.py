@@ -4,7 +4,6 @@ from torch.utils.data.dataloader import DataLoader
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from .dann import DomainAdversarialLoss
 
 
 class AutomaticUpdateClassWeightModule(object):

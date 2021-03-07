@@ -4,9 +4,8 @@ import warnings
 import sys
 import argparse
 import shutil
-import os.path as osp
 import numpy as np
-import os
+
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -16,14 +15,13 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-import ftlib.vision.datasets as datasets
-import ftlib.vision.models as models
-from ftlib.vision.transforms import ResizeImage
-from ftlib.utils.metric import accuracy
-from ftlib.utils.meter import AverageMeter, ProgressMeter
-from ftlib.utils.logger import CompleteLogger
 from ftlib.finetune.co_tuning import *
-
+import common.vision.datasets as datasets
+import common.vision.models as models
+from common.vision.transforms import ResizeImage
+from common.utils.metric import accuracy
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -45,7 +43,6 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
     train_transform = T.Compose([
         ResizeImage(256),
         T.RandomResizedCrop(224),

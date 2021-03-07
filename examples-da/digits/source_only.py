@@ -15,15 +15,15 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.modules.classifier import Classifier
-import dalib.vision.datasets.digits as datasets
-import dalib.vision.models.digits as models
-from dalib.vision.transforms import ResizeImage
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy, ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
-from dalib.utils.analysis import collect_feature, tsne, a_distance
+from common.modules.classifier import Classifier
+import common.vision.datasets.digits as datasets
+import common.vision.models.digits as models
+from common.vision.transforms import ResizeImage
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
+from common.utils.analysis import collect_feature, tsne, a_distance
 import dalib.translation.cyclegan as cyclegan
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,7 +92,7 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     arch = models.__dict__[args.arch]()
-    classifier = Classifier(arch.backbone(), arch.num_classes, arch.bottleneck(), arch.bottleneck_dim, arch.head(), False)
+    classifier = Classifier(arch.backbone(), arch.num_classes, arch.bottleneck(), arch.bottleneck_dim, arch.head(), False).to(device)
 
     # define optimizer and lr scheduler
     optimizer = Adam(classifier.get_parameters(), args.lr, betas=args.betas, weight_decay=args.wd)

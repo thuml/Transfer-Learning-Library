@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from dalib.modules.grl import WarmStartGradientReverseLayer
-from dalib.modules.classifier import Classifier as ClassifierBase
-from ..utils.metric import binary_accuracy
+from ..modules.grl import WarmStartGradientReverseLayer
+from common.modules.classifier import Classifier as ClassifierBase
+from common.utils.metric import binary_accuracy
 
 __all__ = ['DomainAdversarialLoss']
 

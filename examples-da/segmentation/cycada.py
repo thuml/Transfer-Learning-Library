@@ -17,13 +17,13 @@ sys.path.append('../..')
 import dalib.translation.cyclegan as cyclegan
 from dalib.translation.cyclegan.util import ImagePool, set_requires_grad
 from dalib.translation.cycada import SemanticConsistency
-import dalib.vision.models.segmentation as models
-import dalib.vision.datasets.segmentation as datasets
-from dalib.vision.transforms import Denormalize, NormalizeAndTranspose
-import dalib.vision.transforms.segmentation as T
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
+import common.vision.models.segmentation as models
+import common.vision.datasets.segmentation as datasets
+from common.vision.transforms import Denormalize, NormalizeAndTranspose
+import common.vision.transforms.segmentation as T
+from common.utils.data import ForeverDataIterator
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

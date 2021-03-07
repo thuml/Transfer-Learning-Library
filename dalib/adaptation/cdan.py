@@ -3,10 +3,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from dalib.modules.grl import WarmStartGradientReverseLayer
-from dalib.modules.classifier import Classifier as ClassifierBase
+
+from common.modules.classifier import Classifier as ClassifierBase
+from common.utils.metric import binary_accuracy
+from ..modules.grl import WarmStartGradientReverseLayer
 from ..modules.entropy import entropy
-from ..utils.metric import binary_accuracy
 
 
 __all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']

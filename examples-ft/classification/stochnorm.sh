@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
-#cub200
-CUDA_VISIBLE_DEVICES=4 python StochNorm.py data/cub200 -d  CUB200 -a resnet50 -sr 100 --epochs 100 --seed 0 --log logs/StochNorm/CUB200_100
+#CUB-200-2011
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 100 --seed 0 --log logs/stochnorm/cub200_100
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 50 --seed 0 --log logs/stochnorm/cub200_50
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 30 --seed 0 --log logs/stochnorm/cub200_30
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 15 --seed 0 --log logs/stochnorm/cub200_15
 
-CUDA_VISIBLE_DEVICES=4 python StochNorm.py data/cub200 -d  CUB200  -a resnet50 -sr 50 --epochs 100 --seed 0 --log logs/StochNorm/CUB200_50
-
-CUDA_VISIBLE_DEVICES=5 python StochNorm.py data/cub200 -d  CUB200  -a resnet50 -sr 30 --epochs 100 --seed 0 --log logs/StochNorm/CUB200_30
-
-CUDA_VISIBLE_DEVICES=5 python StochNorm.py data/cub200 -d  CUB200  -a resnet50 -sr 15 --epochs 100 --seed 0 --log logs/StochNorm/CUB200_15
-# car
-
-CUDA_VISIBLE_DEVICES=5 python StochNorm.py data/stanford_cars  --lr 0.01 -d stanford_cars -a resnet50 -sr 100 --epochs 100 --seed 0 --log logs/StochNorm/car_100
-
-CUDA_VISIBLE_DEVICES=5 python StochNorm.py data/stanford_cars  --lr 0.01 -d stanford_cars -a resnet50 -sr 50 --epochs 100 --seed 0 --log logs/StochNorm/car_50
-
-CUDA_VISIBLE_DEVICES=4 python StochNorm.py data/stanford_cars  --lr 0.01 -d stanford_cars -a resnet50 -sr 30 --epochs 100 --seed 0 --log logs/StochNorm/car_30
-
-CUDA_VISIBLE_DEVICES=4 python StochNorm.py data/stanford_cars  --lr 0.01 -d stanford_cars -a resnet50 -sr 15 --epochs 100 --seed 0 --log logs/StochNorm/car_15
-
+# Standford Cars
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/stanford_cars -d StanfordCars -sr 100 --seed 0 --log logs/stochnorm/car_100
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/stanford_cars -d StanfordCars -sr 50 --seed 0 --log logs/stochnorm/car_50
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/stanford_cars -d StanfordCars -sr 30 --seed 0 --log logs/stochnorm/car_30
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/stanford_cars -d StanfordCars -sr 15 --seed 0 --log logs/stochnorm/car_15

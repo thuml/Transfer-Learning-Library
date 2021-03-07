@@ -18,14 +18,14 @@ from torch.utils.data import DataLoader
 sys.path.append('../..')
 from dalib.translation.fourier_transform import FourierTransform
 from dalib.adaptation.segmentation.fda import robust_entropy
-import dalib.vision.models.segmentation as models
-import dalib.vision.datasets.segmentation as datasets
-import dalib.vision.transforms.segmentation as T
-from dalib.vision.transforms import DeNormalizeAndTranspose
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter, Meter
-from dalib.utils.logger import CompleteLogger
+import common.vision.models.segmentation as models
+import common.vision.datasets.segmentation as datasets
+import common.vision.transforms.segmentation as T
+from common.vision.transforms import DeNormalizeAndTranspose
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter, Meter
+from common.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -80,7 +80,6 @@ class _StochNorm(nn.Module):
         return z
 
 
-
 class StochNorm1d(_StochNorm):
     def _check_input_dim(self, input):
         if input.dim() != 2 and input.dim() != 3:
@@ -100,7 +99,6 @@ class StochNorm3d(_StochNorm):
         if input.dim() != 5:
             raise ValueError('expected 4D input (got {}D input)'
                              .format(input.dim()))
-
 
 
 def convert_model(module, p):
