@@ -5,7 +5,7 @@ Compared with the master version, we have added
 
 - Regression DA （including Source Only, DD)
 - Unsupervised DA (including MCC)
-- Partial DA (DANN, PADA)
+- Partial DA (DANN, PADA, IWAN)
 - Open Set DA (DANN, OSBP)
 - Segmentation DA (ADVENT, FDA, CycleGAN, Cycada)
 
