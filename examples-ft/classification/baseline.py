@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
-from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
@@ -20,8 +19,7 @@ from ftlib.modules.classifier import Classifier
 import ftlib.vision.datasets as datasets
 import ftlib.vision.models as models
 from ftlib.vision.transforms import ResizeImage
-from ftlib.utils.data import ForeverDataIterator
-from ftlib.utils.metric import accuracy, ConfusionMatrix
+from ftlib.utils.metric import accuracy
 from ftlib.utils.meter import AverageMeter, ProgressMeter
 from ftlib.utils.logger import CompleteLogger
 
@@ -45,22 +43,13 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    if args.center_crop:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.CenterCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    else:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.RandomResizedCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
+    train_transform = T.Compose([
+        ResizeImage(256),
+        T.RandomResizedCrop(224),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        normalize
+    ])
     val_transform = T.Compose([
         ResizeImage(256),
         T.CenterCrop(224),
@@ -76,8 +65,6 @@ def main(args: argparse.Namespace):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     test_loader = val_loader
 
-    train_iter = ForeverDataIterator(train_loader)
-
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
@@ -85,9 +72,17 @@ def main(args: argparse.Namespace):
     classifier = Classifier(backbone, num_classes).to(device)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
 
+    milestones = []
+    for milestone in args.lr_decay_epochs.split(','):
+        milestones.append(int(milestone))
+
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones, gamma=args.lr_gamma)
+    print('base', lr_scheduler.base_lrs)
+    print(milestones)
+    input()
     # resume from the best checkpoint
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
@@ -102,9 +97,9 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.0
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_iter, classifier, optimizer,
-              lr_scheduler, epoch, args)
-
+        train(train_loader, classifier, optimizer,
+               epoch, args)
+        lr_scheduler.step()
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
 
@@ -124,8 +119,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+def train(train_loader: DataLoader, model: Classifier, optimizer: SGD, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -136,12 +130,19 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
         [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
+    train_iter = iter(train_loader)
+
     # switch to train mode
     model.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x, labels = next(train_iter)
+        try:
+            x, labels = next(train_iter)
+        except StopIteration:
+            train_iter = iter(train_loader)
+            x, labels = next(train_iter)
+
         x = x.to(device)
         label = labels.to(device)
 
@@ -163,7 +164,6 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        lr_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -185,11 +185,6 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
     # switch to evaluate mode
     model.eval()
-    if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
-    else:
-        confmat = None
 
     with torch.no_grad():
         end = time.time()
@@ -203,8 +198,6 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            if confmat:
-                confmat.update(target, output.argmax(1))
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
             top5.update(acc5.item(), images.size(0))
@@ -218,8 +211,6 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
-        if confmat:
-            print(confmat.format(classes))
 
     return top1.avg
 
@@ -242,8 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
                         help='dataset: ' + ' | '.join(dataset_names) +
                              ' (default: Office31)')
-    parser.add_argument('--center-crop', default=False, action='store_true',
-                        help='whether use center crop during training')
+
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=architecture_names,
@@ -260,8 +250,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--lr-gamma', default=0.0003, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--lr-decay-epochs', type=str, default='40, 70', help='where to decay lr, can be a list')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
@@ -276,8 +266,6 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--per-class-eval', action='store_true',
-                        help='whether output per-class accuracy during evaluation')
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
