@@ -13,6 +13,7 @@ Domain Adaptation Library
     benchmarks/multi_source_da
     benchmarks/regression_da
     benchmarks/segmentation_da
+    benchmarks/keypoint_detection_da
 
 .. toctree::
     :maxdepth: 4
@@ -28,6 +29,7 @@ Domain Adaptation Library
     adaptation/iwan
     adaptation/osbp
     adaptation/advent
+    adaptation/regda
     translation/cyclegan
     translation/cycada
     translation/fda
