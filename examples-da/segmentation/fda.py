@@ -18,14 +18,14 @@ from torch.utils.data import DataLoader
 sys.path.append('../..')
 from dalib.translation.fourier_transform import FourierTransform
 from dalib.adaptation.segmentation.fda import robust_entropy
-import dalib.vision.models.segmentation as models
-import dalib.vision.datasets.segmentation as datasets
-import dalib.vision.transforms.segmentation as T
-from dalib.vision.transforms import DeNormalizeAndTranspose
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter, Meter
-from dalib.utils.logger import CompleteLogger
+import common.vision.models.segmentation as models
+import common.vision.datasets.segmentation as datasets
+import common.vision.transforms.segmentation as T
+from common.vision.transforms import DeNormalizeAndTranspose
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter, Meter
+from common.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -69,7 +69,7 @@ def main(args: argparse.Namespace):
     # collect the absolute paths of all images in the target dataset
     target_image_list = train_target_dataset.collect_image_paths()
     # build a fourier transform that translate source images to the target style
-    fourier_transform = T.wrapper(FourierTransform)(target_image_list, os.path.join(args.target_root, "amplitudes"),
+    fourier_transform = T.wrapper(FourierTransform)(target_image_list, os.path.join(logger.root, "amplitudes"),
                                                     rebuild=False, beta=args.beta)
 
     source_dataset = datasets.__dict__[args.source]
@@ -152,7 +152,7 @@ def main(args: argparse.Namespace):
 
         # calculate the mean iou over partial classes
         indexes = [train_source_dataset.classes.index(name) for name
-                   in train_source_dataset.EVALUATE_CLASSES]
+                   in train_source_dataset.evaluate_classes]
         iu = iu[indexes]
         mean_iou = iu.mean()
 

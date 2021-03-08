@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import math
 
-from dalib.modules.classifier import Classifier as ClassfierBase
+from common.modules.classifier import Classifier as ClassfierBase
 
 
 class AdaptiveFeatureNorm(nn.Module):

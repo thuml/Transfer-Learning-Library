@@ -11,18 +11,19 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-from torchvision.transforms import ToPILImage, Compose
+from torchvision.transforms import ToPILImage, Compose, Lambda
 
 sys.path.append('../..')
 import dalib.translation.cyclegan as cyclegan
 from dalib.translation.cyclegan.util import ImagePool, set_requires_grad
-import dalib.vision.models.segmentation as models
-import dalib.vision.datasets.segmentation as datasets
-from dalib.vision.transforms import Denormalize, NormalizeAndTranspose
-import dalib.vision.transforms.segmentation as T
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
+from dalib.translation.cycada import SemanticConsistency
+import common.vision.models.segmentation as models
+import common.vision.datasets.segmentation as datasets
+from common.vision.transforms import Denormalize, NormalizeAndTranspose
+import common.vision.transforms.segmentation as T
+from common.utils.data import ForeverDataIterator
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -100,13 +101,13 @@ def main(args):
             T.wrapper(cyclegan.transform.Translation)(netG_S2T, device),
         ])
         train_source_dataset.translate(transform, args.translated_root)
-        exit(0)
+        return
 
     # define loss function
     criterion_gan = cyclegan.LeastSquaresGenerativeAdversarialLoss()
     criterion_cycle = nn.L1Loss()
     criterion_identity = nn.L1Loss()
-    criterion_semantic = torch.nn.CrossEntropyLoss(ignore_index=args.ignore_label).to(device)
+    criterion_semantic = SemanticConsistency(ignore_index=[args.ignore_label]+train_source_dataset.ignore_classes).to(device)
     interp_train = nn.Upsample(size=args.train_size[::-1], mode='bilinear', align_corners=True)
 
     # define segmentation model and predict function
@@ -119,13 +120,13 @@ def main(args):
 
     cycle_gan_tensor_to_segmentation_tensor = Compose([
         Denormalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ToPILImage(),
+        Lambda(lambda image: image.mul(255).permute((1, 2, 0))),
         NormalizeAndTranspose(),
     ])
 
     def predict(image):
         image = cycle_gan_tensor_to_segmentation_tensor(image.squeeze())
-        image = torch.from_numpy(image).unsqueeze(dim=0).to(device)
+        image = image.unsqueeze(dim=0).to(device)
         prediction = model(image)
         return interp_train(prediction)
 
@@ -178,6 +179,13 @@ def main(args):
                 'args': args
             }, logger.get_checkpoint_path(epoch)
         )
+
+    if args.translated_root is not None:
+        transform = T.Compose([
+            T.Resize(image_size=args.test_input_size),
+            T.wrapper(cyclegan.transform.Translation)(netG_S2T, device),
+        ])
+        train_source_dataset.translate(transform, args.translated_root)
 
     logger.close()
 
@@ -330,7 +338,7 @@ if __name__ == '__main__':
     parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in the first conv layer')
     parser.add_argument('--netD', type=str, default='patch',
                         help='specify discriminator architecture [patch | pixel]. The basic model is a 70x70 PatchGAN.')
-    parser.add_argument('--netG', type=str, default='resnet_9',
+    parser.add_argument('--netG', type=str, default='unet_256',
                         help='specify generator architecture [resnet_9 | resnet_6 | unet_256 | unet_128]')
     parser.add_argument('--norm', type=str, default='instance',
                         help='instance normalization or batch normalization [instance | batch | none]')

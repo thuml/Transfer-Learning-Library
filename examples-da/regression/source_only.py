@@ -15,12 +15,12 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.modules.regressor import Regressor
-import dalib.vision.datasets.regression as datasets
-import dalib.vision.models as models
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
+from common.modules.regressor import Regressor
+import common.vision.datasets.regression as datasets
+import common.vision.models as models
+from common.utils.data import ForeverDataIterator
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

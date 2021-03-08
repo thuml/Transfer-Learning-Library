@@ -16,3 +16,6 @@ Welcome to Transfer Learning Library
     :titlesonly:
 
     dalib/index
+    ftlib/index
+    common/index
+

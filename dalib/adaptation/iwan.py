@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 import torch
 import torch.nn as nn
 
-from dalib.modules.classifier import Classifier as ClassifierBase
+from common.modules.classifier import Classifier as ClassifierBase
 
 
 class ImportanceWeightModule(object):

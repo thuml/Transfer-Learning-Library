@@ -1,9 +1,10 @@
 from typing import Optional, Sequence
 import torch
 import torch.nn as nn
-from dalib.modules.classifier import Classifier as ClassifierBase
-from dalib.modules.grl import GradientReverseLayer
-from dalib.modules.kernels import GaussianKernel
+
+from common.modules.classifier import Classifier as ClassifierBase
+from ..modules.grl import GradientReverseLayer
+from ..modules.kernels import GaussianKernel
 from .dan import _update_index_matrix
 
 

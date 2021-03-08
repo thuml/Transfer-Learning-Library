@@ -2,7 +2,8 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from dalib.modules.classifier import Classifier as ClassifierBase
+
+from common.modules.classifier import Classifier as ClassifierBase
 from ..modules.entropy import entropy
 
 

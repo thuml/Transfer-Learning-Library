@@ -1,7 +1,8 @@
 from typing import Optional, Sequence
 import torch
 import torch.nn as nn
-from dalib.modules.classifier import Classifier as ClassifierBase
+
+from common.modules.classifier import Classifier as ClassifierBase
 
 
 __all__ = ['MultipleKernelMaximumMeanDiscrepancy', 'ImageClassifier']

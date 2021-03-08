@@ -92,7 +92,7 @@ class FourierTransform(nn.Module):
     Examples:
 
         >>> from dalib.translation.fourier_transform import FourierTransform
-        >>> import dalib.vision.datasets.segmentation.transforms as T
+        >>> import common.vision.datasets.segmentation.transforms as T
         >>> from PIL import Image
         >>> target_image_list = ["target_image_path1", "target_image_path2"]
         >>> amplitude_dir = "path/to/amplitude_dir"
@@ -122,7 +122,7 @@ class FourierTransform(nn.Module):
     @staticmethod
     def build_amplitude(image_list, amplitude_dir):
         # extract amplitudes from target domain
-        for i, image_name in tqdm.tqdm(enumerate(image_list)):
+        for i, image_name in enumerate(tqdm.tqdm(image_list)):
             image = Image.open(image_name).convert('RGB')
             image = np.asarray(image, np.float32)
             image = image.transpose((2, 0, 1))

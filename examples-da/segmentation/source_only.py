@@ -15,14 +15,14 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../..')
-import dalib.vision.models.segmentation as models
-import dalib.vision.datasets.segmentation as datasets
-import dalib.vision.transforms.segmentation as T
-from dalib.vision.transforms import DeNormalizeAndTranspose
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter, Meter
-from dalib.utils.logger import CompleteLogger
+import common.vision.models.segmentation as models
+import common.vision.datasets.segmentation as datasets
+import common.vision.transforms.segmentation as T
+from common.vision.transforms import DeNormalizeAndTranspose
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter, Meter
+from common.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,7 +47,7 @@ def main(args: argparse.Namespace):
     train_source_dataset = source_dataset(
         root=args.source_root,
         transforms=T.Compose([
-            T.RandomResizedCrop(size=args.train_size, ratio=args.resize_ratio, scale=(0.5, 1.)),
+            T.RandomResizedCrop(size=args.train_size, ratio=args.resize_ratio, scale=args.resize_scale),
             T.ColorJitter(brightness=0.3, contrast=0.3),
             T.RandomHorizontalFlip(),
             T.NormalizeAndTranspose(),
@@ -122,16 +122,16 @@ def main(args: argparse.Namespace):
 
         # train for one epoch
         train(train_source_iter, model, interp_train, criterion, optimizer,
-              lr_scheduler, epoch, None, args)
+              lr_scheduler, epoch, visualize if args.debug else None, args)
 
         # evaluate on validation set
-        confmat = validate(val_target_loader, model, interp_val, criterion, None, args)
+        confmat = validate(val_target_loader, model, interp_val, criterion, visualize if args.debug else None, args)
         print(confmat.format(train_source_dataset.classes))
         acc_global, acc, iu = confmat.compute()
 
         # calculate the mean iou over partial classes
         indexes = [train_source_dataset.classes.index(name) for name
-                   in train_source_dataset.EVALUATE_CLASSES]
+                   in train_source_dataset.evaluate_classes]
         iu = iu[indexes]
         mean_iou = iu.mean()
 
@@ -272,6 +272,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)')
     parser.add_argument('--resize-ratio', nargs='+', type=float, default=(1.5, 8 / 3.),
                         help='the resize ratio for the random resize crop')
+    parser.add_argument('--resize-scale', nargs='+', type=float, default=(0.5, 1.),
+                        help='the resize scale for the random resize crop')
     parser.add_argument('--train-size', nargs='+', type=int, default=(1024, 512),
                         help='the input and output image size during training')
     parser.add_argument('--test-input-size', nargs='+', type=int, default=(1024, 512),
@@ -315,6 +317,8 @@ if __name__ == '__main__':
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model.")
+    parser.add_argument('--debug', action="store_true",
+                        help='In the debug mode, save images and predictions during training')
     args = parser.parse_args()
     print(args)
     main(args)

@@ -17,13 +17,13 @@ from torch.utils.data.dataset import ConcatDataset
 
 sys.path.append('../..')
 from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy as MarginDisparityDiscrepancy, ImageClassifier
-import dalib.vision.datasets as datasets
-import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy, ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
+import common.vision.datasets as datasets
+import common.vision.models as models
+from common.vision.transforms import ResizeImage
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
