@@ -1,4 +1,4 @@
-<img width="550" height="250" src="https://github.com/thuml/Transfer-Learning-Library/blob/dev/TransLearn.png"/>
+<img src="https://github.com/thuml/Transfer-Learning-Library/blob/dev/TransLearn.png"/>
 
 ## Introduction
 
