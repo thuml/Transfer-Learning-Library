@@ -22,6 +22,7 @@ from common.vision.transforms import ResizeImage
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+from common.utils.data import ForeverDataIterator
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -61,7 +62,7 @@ def main(args: argparse.Namespace):
     train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate, download=True, transform=train_transform)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-
+    train_iter = ForeverDataIterator(train_loader)
 
     determin_train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate, download=True,
                             transform=val_transform)
@@ -74,19 +75,14 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__['ResNet50_F'](pretrained=True)
+    backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_dataset.num_classes
-    pretrained_head = models.__dict__['ResNet50_C'](pretrained=True)
+    pretrained_head = backbone.copy_head()
     classifier = Classifier(backbone, num_classes, source_head=pretrained_head).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    milestones = []
-    for milestone in args.lr_decay_epochs.split(','):
-        milestones.append(int(milestone))
-
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones, gamma=args.lr_gamma)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -115,9 +111,10 @@ def main(args: argparse.Namespace):
 
     # start training
     best_acc1 = 0.0
+
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_loader, classifier, optimizer,
+        train(train_iter, classifier, optimizer,
               epoch, relationship, args)
         lr_scheduler.step()
         # evaluate on validation set
@@ -139,7 +136,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_loader: DataLoader, model: Classifier, optimizer: SGD,
+def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
           epoch: int, relationship: dict, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
@@ -150,18 +147,13 @@ def train(train_loader: DataLoader, model: Classifier, optimizer: SGD,
         args.iters_per_epoch,
         [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
-    train_iter = iter(train_loader)
 
     # switch to train mode
     model.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        try:
-            x, labels = next(train_iter)
-        except StopIteration:
-            train_iter = iter(train_loader)
-            x, labels = next(train_iter)
+        x, labels = next(train_iter)
 
         x = x.to(device)
         label = labels.to(device)
@@ -276,17 +268,17 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--t', default=2.3, type=float,
                         metavar='P', help='weight of pretrained loss')
 
-    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=str, default='40, 70', help='where to decay lr, can be a list')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(6, 20), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=30, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')

@@ -158,6 +158,10 @@ class Classifier(nn.Module):
         if source_head is not None:
             self.source_head = source_head
 
+        self.bottleneck = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten()
+        )
         self._features_dim = self.backbone.out_features
         self.head = nn.Linear(self._features_dim, num_classes)
         self.finetune = finetune
@@ -170,6 +174,7 @@ class Classifier(nn.Module):
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
         f = self.backbone(x)
+        f = self.bottleneck(f)
         source_prediction = self.source_head(f)
         prediction = self.head(f)
         return source_prediction, prediction, f
@@ -181,6 +186,7 @@ class Classifier(nn.Module):
         params = [
             {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
             {"params": self.source_head.parameters(), "lr": 0.1 * base_lr},
+            {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
         return params
