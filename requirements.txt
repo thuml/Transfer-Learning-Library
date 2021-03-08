@@ -4,3 +4,4 @@ numpy
 prettytable
 tqdm
 scikit-learn
+webcolors
