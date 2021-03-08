@@ -17,15 +17,15 @@ import torch.nn.functional as F
 sys.path.append('../..')
 from dalib.adaptation.afn import AdaptiveFeatureNorm, ImageClassifier
 from dalib.modules.entropy import entropy
-import dalib.vision.datasets.partial as datasets
-from dalib.vision.datasets.partial import default_partial as partial
-import dalib.vision.models as models
-from dalib.vision.transforms import ResizeImage
-from dalib.utils.data import ForeverDataIterator
-from dalib.utils.metric import accuracy, ConfusionMatrix
-from dalib.utils.meter import AverageMeter, ProgressMeter
-from dalib.utils.logger import CompleteLogger
-from dalib.utils.analysis import collect_feature, tsne, a_distance
+import common.vision.datasets.partial as datasets
+from common.vision.datasets.partial import default_partial as partial
+import common.vision.models as models
+from common.vision.transforms import ResizeImage
+from common.utils.data import ForeverDataIterator
+from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.meter import AverageMeter, ProgressMeter
+from common.utils.logger import CompleteLogger
+from common.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
