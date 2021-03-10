@@ -37,13 +37,7 @@ class Human36M(Body16KeypointDataset):
             annotations/
     """
     def __init__(self, root, split='train', task='all', download=True, **kwargs):
-        raise NotImplementedError("Not support downloading for now.")
-        if download:
-            download_data(root, "crop_images", "Human3.6M.tgz", "")
-        else:
-            check_exits(root, "crop_images")
-            check_exits(root, "annotations")
-
+        raise NotImplementedError("Need preprocess on Human3.6M. Not support for now.")
         assert split in ['train', 'test', 'all']
         self.split = split
 
