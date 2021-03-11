@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 
-__all__ = ['relationship_learning', 'direct_relationship_learning', 'get_feature', 'Classifier']
+__all__ = ['Classifier', 'CoTuningLoss', 'Relationship']
 
 
 def calibrate(logits, labels):
@@ -127,7 +127,6 @@ def direct_relationship_learning(train_logits, train_labels, validation_logits, 
         conditional.append(average)
     return np.concatenate(conditional)
 
-
 def get_feature(loader, net):
     train_labels_list = []
     pretrained_labels_list = []
@@ -139,12 +138,13 @@ def get_feature(loader, net):
         train_inputs, train_labels = train_inputs.cuda(), train_labels.cuda()
         pretrained_labels, _, _ = net(train_inputs)
         pretrained_labels = pretrained_labels.detach().cpu().numpy()
-
         pretrained_labels_list.append(pretrained_labels)
 
     all_train_labels = np.concatenate(train_labels_list, 0)
     all_pretrained_labels = np.concatenate(pretrained_labels_list, 0)
     return all_pretrained_labels, all_train_labels
+
+
 
 
 class Classifier(nn.Module):
@@ -158,6 +158,10 @@ class Classifier(nn.Module):
         if source_head is not None:
             self.source_head = source_head
 
+        self.bottleneck = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten()
+        )
         self._features_dim = self.backbone.out_features
         self.head = nn.Linear(self._features_dim, num_classes)
         self.finetune = finetune
@@ -170,6 +174,7 @@ class Classifier(nn.Module):
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
         f = self.backbone(x)
+        f = self.bottleneck(f)
         source_prediction = self.source_head(f)
         prediction = self.head(f)
         return source_prediction, prediction, f
@@ -181,6 +186,31 @@ class Classifier(nn.Module):
         params = [
             {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
             {"params": self.source_head.parameters(), "lr": 0.1 * base_lr},
+            {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
         return params
+
+
+class CoTuningLoss(nn.Module):
+    def __init__(self):
+        super(CoTuningLoss, self).__init__()
+
+    def forward(self, pretrained_targets: torch.Tensor, pretrained_outputs: torch.Tensor) -> torch.Tensor:
+        y = - pretrained_targets * nn.LogSoftmax(dim=-1)(pretrained_outputs)
+        y = torch.mean(torch.sum(y, dim=-1))
+        return y
+
+
+
+class Relationship(object):
+    def __init__(self, train_loader, val_loader, classifier):
+        super(Relationship, self).__init__()
+        self.train_source_labels, self.train_target_labels = get_feature(train_loader, classifier)
+        self.val_source_labels, self.val_target_labels = get_feature(val_loader, classifier)
+
+    def get_relationship(self, direct=True):
+        if direct:
+            return direct_relationship_learning(self.train_source_labels, self.train_target_labels, self.val_source_labels, self.val_target_labels)
+        else:
+            return relationship_learning(self.train_source_labels, self.train_target_labels, self.val_source_labels, self.val_target_labels)
