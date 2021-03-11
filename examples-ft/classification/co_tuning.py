@@ -5,7 +5,7 @@ import sys
 import argparse
 import shutil
 import numpy as np
-
+import os
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -13,6 +13,8 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
+
+
 
 sys.path.append('../..')
 from ftlib.finetune.co_tuning import *
@@ -97,14 +99,10 @@ def main(args: argparse.Namespace):
 
     # compute relationship
 
-    relationship_path = 'relationship_d.npy'
-    # if not os.path.exists(relationship_path):
-    if 1 == 1:
-        train_source_labels, train_target_labels = get_feature(determin_train_loader, classifier)
-
-        val_source_labels, val_target_labels = get_feature(val_loader, classifier)
-        relationship = direct_relationship_learning(train_source_labels, train_target_labels, val_source_labels, val_target_labels)
-
+    relationship_path = args.relationship
+    if not os.path.exists(relationship_path):
+        r = Relationship(determin_train_loader, val_loader, classifier)
+        relationship = r.get_relationship(direct=args.direct)
         np.save(relationship_path, relationship)
     else:
         relationship = np.load(relationship_path)
@@ -151,6 +149,8 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
     # switch to train mode
     model.train()
 
+    co_loss = CoTuningLoss()
+
     end = time.time()
     for i in range(args.iters_per_epoch):
         x, labels = next(train_iter)
@@ -165,13 +165,10 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
         pretrained_outputs, train_outputs, f = model(x)
         cls_loss = F.cross_entropy(train_outputs, label)
 
-        pretrained_loss = - pretrained_targets * nn.LogSoftmax(dim=-1)(pretrained_outputs)
-
-        pretrained_loss = torch.mean(torch.sum(pretrained_loss, dim=-1))
+        pretrained_loss = co_loss(pretrained_targets, pretrained_outputs)
 
         loss = cls_loss + args.t * pretrained_loss
 
-        # loss = cls_loss
         cls_acc = accuracy(train_outputs, label)[0]
 
         losses.update(loss.item(), x.size(0))
@@ -267,9 +264,11 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', '--t', default=2.3, type=float,
                         metavar='P', help='weight of pretrained loss')
+    parser.add_argument('-direct', '--direct', default=True, type=bool)
 
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay-epochs', type=int, default=(6, 20), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -286,6 +285,8 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
+    parser.add_argument("--relationship", type=str, default='relationship.npy',
+                        help="Where to save relationship file.")
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],

@@ -81,21 +81,16 @@ def main(args: argparse.Namespace):
     source_classifier.eval()
 
     # register hooks
-    hook_layers = ['layer1.2.conv3', 'layer2.3.conv3', 'layer3.5.conv3', 'layer4.2.conv3']
-    source_layers = []
-    target_layers = []
-    register_hook(classifier, hook_function_wrapper(target_layers), hook_layers)
-    register_hook(source_classifier, hook_function_wrapper(source_layers), hook_layers)
+    hook_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
 
-    source_dict = {}
+    source_getter = IntermediateLayerGetter(source_classifier, return_layers=hook_layers)
+    target_getter = IntermediateLayerGetter(classifier, return_layers=hook_layers)
+
     source_weight = {}
     for name, param in source_classifier.backbone.named_parameters():
         source_weight[name] = param.detach()
 
-    source_dict['weight'] = source_weight
-    source_dict['layer'] = source_layers
-
-        # define optimizer and lr scheduler
+    # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
@@ -111,14 +106,21 @@ def main(args: argparse.Namespace):
 
     # start training
     best_acc1 = 0.0
+
+    reg_classifier = ClassifierRegLoss(classifier)
+    if args.reg_type == 'l2_sp':
+        reg_backbone = L2spRegLoss(source_classifier, classifier)
+    elif args.reg_type == 'fea_map':
+        reg_backbone = FeatureRegLoss()
+
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_iter, classifier, optimizer,
-               epoch, target_layers, source_classifier, source_dict, args)
+        train(train_iter, classifier, reg_classifier, reg_backbone, target_getter, source_getter, source_weight,
+              optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, target_layers, args)
+        acc1 = validate(val_loader, classifier, args)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -130,27 +132,27 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, target_layers, args)
+    acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-           epoch: int, target_layers, source_model, source_dict,  args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, model: Classifier, reg_classifier:nn.Module,reg_backbone:nn.Module,
+          target_getter: IntermediateLayerGetter,
+          source_getter: IntermediateLayerGetter,
+          source_weight: dict,
+          optimizer: SGD, epoch: int,  args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    losses_fc = AverageMeter('Losses_fc', ':3.2f')
-    losses_feature = AverageMeter('Losses_feature', ':3.2f')
+    losses_classifier = AverageMeter('Losses_fc', ':3.2f')
+    losses_backbone = AverageMeter('Losses_feature', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-
-    source_weight = source_dict['weight']
-    source_layers = source_dict['layer']
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, losses_fc, losses_feature, cls_accs],
+        [batch_time, data_time, losses, losses_classifier, losses_backbone, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -158,8 +160,6 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        target_layers.clear()
-        source_layers.clear()
         x, labels = next(train_iter)
         x = x.to(device)
         label = labels.to(device)
@@ -168,24 +168,22 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
         data_time.update(time.time() - end)
 
         # compute output
-        y, f = model(x)
-
+        intermediate_output_s, output_s = source_getter(x)
+        intermediate_output_t, output_t = target_getter(x)
+        y, f = output_t
         cls_loss = F.cross_entropy(y, label)
 
-        loss_fc = reg_classifier(model)
-        loss_feature = -10.0
-
+        loss_classifier = reg_classifier()
         if args.reg_type == 'l2_sp':
-            loss_feature = reg_l2sp(model, source_weight)
+            loss_backbone = reg_backbone(model, source_weight)
         elif args.reg_type == 'fea_map':
-            loss_feature = reg_fea_map(x, source_layers, target_layers, source_model)
+            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
 
-        loss = cls_loss + args.alpha * loss_feature + args.beta * loss_fc
-
+        loss = cls_loss + args.alpha * loss_backbone + args.beta * loss_classifier
         cls_acc = accuracy(y, label)[0]
 
-        losses_fc.update(loss_fc.item() * args.beta, x.size(0))
-        losses_feature.update(loss_feature.item() * args.alpha, x.size(0))
+        losses_classifier.update(loss_classifier.item() * args.beta, x.size(0))
+        losses_backbone.update(loss_backbone.item() * args.alpha, x.size(0))
         losses.update(loss.item(), x.size(0))
         cls_accs.update(cls_acc.item(), x.size(0))
 
@@ -202,7 +200,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Classifier, target_layers:list, args: argparse.Namespace) -> float:
+def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -224,7 +222,7 @@ def validate(val_loader: DataLoader, model: Classifier, target_layers:list, args
             # compute output
             output, _ = model(images)
             loss = F.cross_entropy(output, target)
-            target_layers.clear()
+
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
 
