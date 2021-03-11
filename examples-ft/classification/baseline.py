@@ -131,13 +131,12 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
 
         # compute output
         y, f = model(x)
-
         cls_loss = F.cross_entropy(y, label)
         loss = cls_loss
 
-        cls_acc = accuracy(y, label)[0]
-
+        # measure accuracy and record loss
         losses.update(loss.item(), x.size(0))
+        cls_acc = accuracy(y, label)[0]
         cls_accs.update(cls_acc.item(), x.size(0))
 
         # compute gradient and do SGD step
@@ -228,14 +227,14 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(6, 20), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=30, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')

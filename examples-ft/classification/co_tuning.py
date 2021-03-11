@@ -4,7 +4,6 @@ import warnings
 import sys
 import argparse
 import shutil
-import numpy as np
 import os
 import torch
 import torch.nn as nn
@@ -14,10 +13,8 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
 
-
-
 sys.path.append('../..')
-from ftlib.finetune.co_tuning import *
+from ftlib.finetune.co_tuning import CoTuningLoss, Relationship, Classifier
 import common.vision.datasets as datasets
 import common.vision.models as models
 from common.vision.transforms import ResizeImage
@@ -73,47 +70,34 @@ def main(args: argparse.Namespace):
 
     val_dataset = dataset(root=args.root, split='test', sample_rate=100, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_loader = val_loader
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     num_classes = train_dataset.num_classes
-    pretrained_head = backbone.copy_head()
-    classifier = Classifier(backbone, num_classes, source_head=pretrained_head).to(device)
+    classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
-    if args.phase != 'train':
+    if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
-
-    if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = validate(val_loader, classifier, args)
         print(acc1)
         return
 
-
-    # compute relationship
-
-    relationship_path = args.relationship
-    if not os.path.exists(relationship_path):
-        r = Relationship(determin_train_loader, val_loader, classifier)
-        relationship = r.get_relationship(direct=args.direct)
-        np.save(relationship_path, relationship)
-    else:
-        relationship = np.load(relationship_path)
+    # build relationship between source classes and target classes
+    relationship = Relationship(determin_train_loader, classifier, device, os.path.join(logger.root, args.relationship))
+    co_tuning_loss = CoTuningLoss()
 
     # start training
     best_acc1 = 0.0
-
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_iter, classifier, optimizer,
-              epoch, relationship, args)
+        train(train_iter, classifier, optimizer, epoch, relationship, co_tuning_loss, args)
         lr_scheduler.step()
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
@@ -125,17 +109,11 @@ def main(args: argparse.Namespace):
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
-
-    # evaluate on test set
-    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
-    print("test_acc1 = {:3.1f}".format(acc1))
-
     logger.close()
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-          epoch: int, relationship: dict, args: argparse.Namespace):
+          epoch: int, relationship, co_tuning_loss, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -149,29 +127,26 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
     # switch to train mode
     model.train()
 
-    co_loss = CoTuningLoss()
-
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x, labels = next(train_iter)
+        x, label_t = next(train_iter)
 
         x = x.to(device)
-        label = labels.to(device)
-        pretrained_targets = torch.from_numpy(relationship[labels]).cuda().float()
+        label_s = torch.from_numpy(relationship[label_t]).cuda().float()
+        label_t = label_t.to(device)
+
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        pretrained_outputs, train_outputs, f = model(x)
-        cls_loss = F.cross_entropy(train_outputs, label)
+        y_s, y_t = model(x)
+        tgt_loss = F.cross_entropy(y_t, label_t)
+        src_loss = co_tuning_loss(y_s, label_s)
+        loss = tgt_loss + args.trade_off * src_loss
 
-        pretrained_loss = co_loss(pretrained_targets, pretrained_outputs)
-
-        loss = cls_loss + args.t * pretrained_loss
-
-        cls_acc = accuracy(train_outputs, label)[0]
-
+        # measure accuracy and record loss
         losses.update(loss.item(), x.size(0))
+        cls_acc = accuracy(y_t, label_t)[0]
         cls_accs.update(cls_acc.item(), x.size(0))
 
         # compute gradient and do SGD step
@@ -207,12 +182,11 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
             target = target.to(device)
 
             # compute output
-            _, output, _ = model(images)
+            _, output = model(images)
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
             top5.update(acc5.item(), images.size(0))
@@ -245,39 +219,36 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
-                             ' (default: Office31)')
+    parser.add_argument('-d', '--data', metavar='DATA',
+                        help='dataset: ' + ' | '.join(dataset_names))
+    parser.add_argument('-sr', '--sample-rate', default=100, type=int,
+                        metavar='N',
+                        help='sample rate of training dataset (default: 100)')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
+    parser.add_argument('--trade-off', default=2.3, type=float,
+                        metavar='P', help='weight of pretrained loss')
+    parser.add_argument("--relationship", type=str, default='relationship.npy',
+                        help="Where to save relationship file.")
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 32)')
-    parser.add_argument('-sr', '--sample-rate', default=100, type=int,
-                        metavar='N',
-                        help='sample rate of training dataset (default: 100)')
-
-    parser.add_argument('-t', '--t', default=2.3, type=float,
-                        metavar='P', help='weight of pretrained loss')
-    parser.add_argument('-direct', '--direct', default=True, type=bool)
-
+                        help='mini-batch size (default: 48)')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(6, 20), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=30, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
@@ -285,9 +256,7 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--relationship", type=str, default='relationship.npy',
-                        help="Where to save relationship file.")
-    parser.add_argument("--log", type=str, default='baseline',
+    parser.add_argument("--log", type=str, default='cotuning',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model."

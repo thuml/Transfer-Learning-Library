@@ -80,11 +80,9 @@ def main(args: argparse.Namespace):
         param.requires_grad = False
     source_classifier.eval()
 
-    # register hooks
-    hook_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
-
-    source_getter = IntermediateLayerGetter(source_classifier, return_layers=hook_layers)
-    target_getter = IntermediateLayerGetter(classifier, return_layers=hook_layers)
+    return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
+    source_getter = IntermediateLayerGetter(source_classifier, return_layers=return_layers)
+    target_getter = IntermediateLayerGetter(classifier, return_layers=return_layers)
 
     source_weight = {}
     for name, param in source_classifier.backbone.named_parameters():
@@ -100,14 +98,14 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(checkpoint)
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, target_layers, args)
+        acc1 = validate(test_loader, classifier, args)
         print(acc1)
         return
 
     # start training
     best_acc1 = 0.0
 
-    reg_classifier = ClassifierRegLoss(classifier)
+    reg_classifier = ClassifierRegularization(classifier)
     if args.reg_type == 'l2_sp':
         reg_backbone = L2spRegLoss(source_classifier, classifier)
     elif args.reg_type == 'fea_map':
@@ -280,19 +278,19 @@ if __name__ == '__main__':
     parser.add_argument('--beta', default=0.01, type=float,
                          help='hyper-parameter beta')
 
-    parser.add_argument('--reg_type', choices=['l2', 'l2_sp', 'fea_map', 'att_fea_map'], default='l2_sp')
+    parser.add_argument('--reg_type', choices=['l2', 'l2_sp', 'fea_map', 'att_fea_map'], default='fea_map')
 
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(6, 20), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=30, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')

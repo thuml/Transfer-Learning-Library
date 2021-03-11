@@ -3,8 +3,10 @@ import torch.nn as nn
 import functools
 from collections import OrderedDict
 
+
 def flatten_outputs(fea):
     return torch.reshape(fea, (fea.shape[0], fea.shape[1], fea.shape[2] * fea.shape[3]))
+
 
 def reg_att_fea_map(inputs, layer_outputs_source, layer_outputs_target, model_source, channel_weights):
     fea_loss = 0.0
@@ -20,6 +22,7 @@ def reg_att_fea_map(inputs, layer_outputs_source, layer_outputs_target, model_so
         fea_loss += 0.5 * torch.sum(distance)
     return fea_loss
 
+
 class ClassifierRegLoss(nn.Module):
     def __init__(self, model: nn.Module):
         super(ClassifierRegLoss, self).__init__()
@@ -32,6 +35,7 @@ class ClassifierRegLoss(nn.Module):
         for name, param in self.model.bottleneck.named_parameters():
             output += 0.5 * torch.norm(param) ** 2
         return output
+
 
 class L2spRegLoss(nn.Module):
     def __init__(self, source_model: nn.Module, target_model: nn.Module):
@@ -47,6 +51,7 @@ class L2spRegLoss(nn.Module):
         for name, param in self.target_model.backbone.named_parameters():
             output += 0.5 * torch.norm(param - self.source_weight[name]) ** 2
         return output
+
 
 class FeatureRegLoss(nn.Module):
     def __init__(self):
@@ -65,6 +70,7 @@ def rgetattr(obj, attr, *args):
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
     return functools.reduce(_getattr, [obj] + attr.split('.'))
+
 
 class IntermediateLayerGetter:
     def __init__(self, model, return_layers, keep_output=True):
