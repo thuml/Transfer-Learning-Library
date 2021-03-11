@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #CUB-200-2011
-CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 100 --seed 0 --log logs/stochnorm/cub200_10
+CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 100 --seed 0 --log logs/stochnorm/cub200_100
 CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 50 --seed 0 --log logs/stochnorm/cub200_50
 CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 30 --seed 0 --log logs/stochnorm/cub200_30
 CUDA_VISIBLE_DEVICES=0 python stochnorm.py data/cub200 -d CUB200 -sr 15 --seed 0 --log logs/stochnorm/cub200_15
