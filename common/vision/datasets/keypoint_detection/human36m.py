@@ -25,7 +25,7 @@ class Human36M(Body16KeypointDataset):
         heatmap_size (tuple): (width, height) of the heatmap. Default: (64, 64)
         sigma (int): sigma parameter when generate the heatmap. Default: 2
 
-    .. note:: You need to download Cityscapes manually.
+    .. note:: You need to download Human36M manually.
         Ensure that there exist following files in the `root` directory before you using this class.
         ::
             annotations/
