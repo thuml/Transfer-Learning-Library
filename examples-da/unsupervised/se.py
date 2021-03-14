@@ -19,9 +19,9 @@ import torch.nn.functional as F
 sys.path.append('../..')
 from dalib.adaptation.se import ema_model_update, ImageClassifier
 from dalib.translation.cyclegan.util import set_requires_grad
-import dalib.vision.datasets.selftraining as datasets
-from dalib.vision.datasets.selftraining import double_input_dataset as self_training_dataset
-import dalib.vision.models as models
+import common.vision.datasets.selftraining as datasets
+from common.vision.datasets.selftraining import double_input_dataset as self_training_dataset
+import common.vision.models as models
 from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
@@ -122,11 +122,31 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
-    if args.pretrain:
-        print("Loading pretrain classification model from", args.pretrain)
-        checkpoint = torch.load(args.pretrain, map_location='cpu')
-        classifier.load_state_dict(checkpoint)
-        teacher = copy.deepcopy(classifier)
+    if args.pretrain is None:
+        # first pretrain the classifier wish source data
+        print("Pretraining the model on source domain.")
+        args.pretrain = logger.get_checkpoint_path('pretrain')
+        pretrained_model = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.lr)
+        pretrain_lr_scheduler = LambdaLR(optimizer,
+                                         lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+        # start pretraining
+        for epoch in range(args.pretrain_epochs):
+            # pretrain for one epoch
+            pretrain(train_source_iter, pretrained_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args)
+            # validate to show pretrain process
+            acc1 = validate(val_loader, pretrained_model, args)
+
+        torch.save(pretrained_model.state_dict(), args.pretrain)
+
+        # show pretrain result
+        pretrain_acc = validate(val_loader, pretrained_model, args)
+        print("pretrain_acc1 = {:3.1f}".format(pretrain_acc))
+
+    checkpoint = torch.load(args.pretrain, map_location='cpu')
+    classifier.load_state_dict(checkpoint)
+    teacher = copy.deepcopy(classifier)
 
     # start training
     set_requires_grad(teacher, False)
@@ -153,6 +173,55 @@ def main(args: argparse.Namespace):
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
+
+
+def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, optimizer: Adam, lr_scheduler: LambdaLR,
+             epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':3.1f')
+    data_time = AverageMeter('Data', ':3.1f')
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        x_s = x_s.to(device)
+        labels_s = labels_s.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # compute output
+        y_s, f_s = model(x_s)
+
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        loss = cls_loss
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
@@ -333,6 +402,8 @@ if __name__ == '__main__':
                         help='trade off parameter for class balance loss')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
+    parser.add_argument('--pretrain_epochs', default=5, type=int, metavar='N',
+                        help='number of total epochs(pretrain) to run')
     parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
