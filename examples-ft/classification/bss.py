@@ -207,7 +207,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='BSS')
+    parser = argparse.ArgumentParser(description='BSS for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')

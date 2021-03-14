@@ -169,3 +169,56 @@ Synthia
 Foggy Cityscapes
 ---------------------------------------
 .. autoclass:: common.vision.datasets.segmentation.cityscapes.FoggyCityscapes
+
+
+Unsupervised DA for Keypoint Detection
+-----------------------------------------------
+
+---------------------------------------
+Dataset Base for Keypoint Detection
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.keypoint_dataset.KeypointDataset
+   :members:
+
+.. autoclass:: common.vision.datasets.keypoint_detection.keypoint_dataset.Body16KeypointDataset
+   :members:
+
+.. autoclass:: common.vision.datasets.keypoint_detection.keypoint_dataset.Hand21KeypointDataset
+   :members:
+
+---------------------------------------
+Rendered Handpose Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.rendered_hand_pose.RenderedHandPose
+   :members:
+
+---------------------------------------
+Hand-3d-Studio Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.hand_3d_studio.Hand3DStudio
+   :members:
+
+---------------------------------------
+FreiHAND Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.freihand.FreiHand
+   :members:
+
+---------------------------------------
+Surreal Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.surreal.SURREAL
+   :members:
+
+---------------------------------------
+LSP Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.lsp.LSP
+   :members:
+
+---------------------------------------
+Human3.6M Dataset
+---------------------------------------
+.. autoclass:: common.vision.datasets.keypoint_detection.human36m.Human36M
+   :members:
+

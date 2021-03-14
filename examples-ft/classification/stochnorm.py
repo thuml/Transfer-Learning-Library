@@ -90,7 +90,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_loader, classifier, optimizer, epoch, args)
+        train(train_iter, classifier, optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
@@ -208,7 +208,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='StochNorm')
+    parser = argparse.ArgumentParser(description='StochNorm for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
