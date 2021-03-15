@@ -127,9 +127,10 @@ def main(args: argparse.Namespace):
         print("Pretraining the model on source domain.")
         args.pretrain = logger.get_checkpoint_path('pretrain')
         pretrained_model = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
-        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.lr)
-        pretrain_lr_scheduler = LambdaLR(optimizer,
-                                         lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.pretrain_lr)
+        pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
+                                         lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
+                                             -args.lr_decay))
 
         # start pretraining
         for epoch in range(args.pretrain_epochs):
@@ -183,7 +184,7 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
-        args.iters_per_epoch,
+        args.iters_per_pretrain_epoch,
         [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
@@ -191,7 +192,7 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
     model.train()
 
     end = time.time()
-    for i in range(args.iters_per_epoch):
+    for i in range(args.iters_per_pretrain_epoch):
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
@@ -393,6 +394,8 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 36)')
     parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--pretrain-lr', '--pretrain-learning-rate', default=3e-5, type=float,
+                        help='initial pretrain learning rate', dest='pretrain_lr')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--alpha', default=0.99, type=float, help='ema decay rate (default: 0.99)')
@@ -402,12 +405,14 @@ if __name__ == '__main__':
                         help='trade off parameter for class balance loss')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--pretrain_epochs', default=5, type=int, metavar='N',
+    parser.add_argument('--pretrain-epochs', default=5, type=int, metavar='N',
                         help='number of total epochs(pretrain) to run')
     parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('--iters-per-pretrain-epoch', default=500, type=int,
+                        help='Number of iterations per pretrain epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
