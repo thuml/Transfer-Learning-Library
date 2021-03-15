@@ -184,7 +184,7 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
-        args.iters_per_pretrain_epoch,
+        args.iters_per_epoch,
         [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
@@ -192,7 +192,7 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
     model.train()
 
     end = time.time()
-    for i in range(args.iters_per_pretrain_epoch):
+    for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
@@ -411,8 +411,6 @@ if __name__ == '__main__':
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
-    parser.add_argument('--iters-per-pretrain-epoch', default=500, type=int,
-                        help='Number of iterations per pretrain epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
