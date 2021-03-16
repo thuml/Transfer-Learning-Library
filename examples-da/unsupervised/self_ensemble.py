@@ -17,7 +17,7 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.adaptation.se import ema_model_update, ImageClassifier
+from dalib.adaptation.self_ensemble import ema_model_update, consistent_loss, class_balance_loss, ImageClassifier
 from dalib.translation.cyclegan.util import set_requires_grad
 import common.vision.datasets.selftraining as datasets
 from common.vision.datasets.selftraining import perform_multiple_transforms as self_training_dataset
@@ -264,21 +264,16 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         # classification loss
         cls_loss = F.cross_entropy(y_s, labels_s)
-        # consistent loss
+        # compute output and mask
         y_t = F.softmax(y_t, dim=1)
         y_t_teacher = F.softmax(y_t_teacher, dim=1)
-
-        cons_loss = ((y_t - y_t_teacher) ** 2).sum(dim=1)
         max_prob, _ = y_t_teacher.max(dim=1)
         mask = (max_prob > args.threshold).float()
-        cons_loss = (cons_loss * mask).mean()
 
+        # consistent loss
+        cons_loss = consistent_loss(y_t, y_t_teacher, mask)
         # balance loss
-        class_distribution = y_t.mean(dim=0)
-        num_classes = y_t.shape[1]
-        uniform_distribution = torch.ones(num_classes).to(device) / num_classes
-        balance_loss = F.binary_cross_entropy(class_distribution, uniform_distribution)
-        balance_loss = mask.mean() * balance_loss
+        balance_loss = class_balance_loss(y_t, mask)
 
         loss = cls_loss + args.trade_off_cons * cons_loss + args.trade_off_balance * balance_loss
 
