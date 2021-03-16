@@ -14,31 +14,27 @@ from common.utils.metric import accuracy
 
 
 class ClassifierRegularization(nn.Module):
-    def __init__(self, model: nn.Module):
+    def __init__(self, parameters: list):
         super(ClassifierRegularization, self).__init__()
-        self.model = model
-
+        self.parameters = parameters
     def forward(self):
         output = 0.0
-        for name, param in self.model.head.named_parameters():
-            output += 0.5 * torch.norm(param) ** 2
-        for name, param in self.model.bottleneck.named_parameters():
+        for name, param in self.parameters:
             output += 0.5 * torch.norm(param) ** 2
         return output
 
 
 class L2spRegularization(nn.Module):
-    def __init__(self, source_model: nn.Module, target_model: nn.Module):
+    def __init__(self, backbone_source: nn.Module, backbone_target: nn.Module):
         super(L2spRegularization, self).__init__()
-        self.source_model = source_model
-        self.target_model = target_model
+        self.backbone_target = backbone_target
         self.source_weight = {}
-        for name, param in self.source_model.backbone.named_parameters():
+        for name, param in backbone_source.named_parameters():
             self.source_weight[name] = param.detach()
 
     def forward(self):
         output = 0.0
-        for name, param in self.target_model.backbone.named_parameters():
+        for name, param in self.backbone_target.named_parameters():
             output += 0.5 * torch.norm(param - self.source_weight[name]) ** 2
         return output
 

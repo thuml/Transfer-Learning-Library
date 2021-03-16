@@ -105,7 +105,7 @@ def main(args: argparse.Namespace):
 
     # get regularization
     if args.regularization_type == 'l2_sp':
-        reg_backbone = L2spRegularization(source_classifier, classifier)
+        reg_backbone = L2spRegularization(source_classifier.backbone, classifier.backbone)
     elif args.regularization_type == 'feature_map':
         reg_backbone = FeatureRegularization()
     elif args.regularization_type == 'attention_feature_map':
@@ -118,7 +118,8 @@ def main(args: argparse.Namespace):
             calculate_channel_weight(temporary_classifier, criterion, temporary_optimizer, temporary_loader, temporary_scheduler, return_layers, device, args.channel_weight, args)
         channel_weight = get_channel_weight(args.channel_weight, device)
         reg_backbone = AttentionFeatureRegularization(channel_weight)
-    reg_classifier = ClassifierRegularization(classifier)
+
+    reg_classifier = ClassifierRegularization(list(classifier.head.named_parameters()) + list(classifier.bottleneck.named_parameters()))
 
     # start training
     best_acc1 = 0.0
