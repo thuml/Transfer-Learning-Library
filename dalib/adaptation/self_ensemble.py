@@ -1,21 +1,11 @@
 from typing import Optional
+import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from common.modules.classifier import Classifier as ClassifierBase
-
-
-def ema_model_update(model, ema_model, alpha):
-    """Exponential moving average of model parameters.
-    Args:
-        model (nn.Module): model being trained.
-        ema_model (nn.Module): ema of the model.
-        alpha (float): ema decay rate.
-    """
-    one_minus_alpha = 1 - alpha
-    for ema_param, param in zip(ema_model.parameters(), model.parameters()):
-        ema_param.data.mul_(alpha).add_(param.data * one_minus_alpha)
+from dalib.translation.cyclegan.util import set_requires_grad
 
 
 def consistent_loss(y: torch.Tensor, y_teacher: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
@@ -36,6 +26,41 @@ def class_balance_loss(y: torch.Tensor, mask) -> torch.Tensor:
     balance_loss = F.binary_cross_entropy(class_distribution, uniform_distribution)
     balance_loss = mask.mean() * balance_loss
     return balance_loss
+
+
+class EmaTeacher(object):
+    r"""Exponential moving average model
+    Examples::
+
+        >>> #initialize classifier
+        >>> classifier = ImageClassifier()
+        >>> teacher = EmaTeacher(classifier, 0.9)
+        >>> num_iterations = 10000
+        >>> for _ in range(num_iterations):
+        >>>     # compute teacher output
+        >>>     x = torch.randn(32, 31)
+        >>>     y_teacher = teacher(x)
+        >>>     # update teacher with current classifier (eg. after optimizer.step())
+        >>>     teacher.update()
+    """
+
+    def __init__(self, model, alpha):
+        self.model = model
+        self.alpha = alpha
+        self.teacher = copy.deepcopy(model)
+        set_requires_grad(self.teacher, False)
+
+    def update(self):
+        """Perform ema update
+        """
+        for teacher_param, param in zip(self.teacher.parameters(), self.model.parameters()):
+            teacher_param.data = self.alpha * teacher_param + (1 - self.alpha) * param
+
+    def __call__(self, x: torch.Tensor):
+        return self.teacher(x)
+
+    def train(self, mode: Optional[bool] = True):
+        self.teacher.train(mode)
 
 
 class ImageClassifier(ClassifierBase):

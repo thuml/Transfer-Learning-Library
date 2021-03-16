@@ -2,7 +2,6 @@ import random
 import time
 import warnings
 import sys
-import copy
 import argparse
 import shutil
 import os.path as osp
@@ -17,8 +16,7 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.adaptation.self_ensemble import ema_model_update, consistent_loss, class_balance_loss, ImageClassifier
-from dalib.translation.cyclegan.util import set_requires_grad
+from dalib.adaptation.self_ensemble import EmaTeacher, consistent_loss, class_balance_loss, ImageClassifier
 import common.vision.datasets.selftraining as datasets
 from common.vision.datasets.selftraining import perform_multiple_transforms as self_training_dataset
 import common.vision.models as models
@@ -89,9 +87,7 @@ def main(args: argparse.Namespace):
     # create model
     num_classes = train_source_dataset.num_classes
     backbone = models.__dict__[args.arch](pretrained=True)
-
     classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
-    teacher = copy.deepcopy(classifier)
 
     # define optimizer and lr scheduler
     optimizer = Adam(classifier.get_parameters(), args.lr)
@@ -147,10 +143,9 @@ def main(args: argparse.Namespace):
 
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
-    teacher = copy.deepcopy(classifier)
+    teacher = EmaTeacher(classifier, alpha=args.alpha)
 
     # start training
-    set_requires_grad(teacher, False)
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
@@ -226,7 +221,7 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          teacher: ImageClassifier, optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+          teacher: EmaTeacher, optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
@@ -284,7 +279,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         lr_scheduler.step()
 
         # update teacher
-        ema_model_update(model, teacher, args.alpha)
+        teacher.update()
 
         # update statistics
         cls_acc = accuracy(y_s, labels_s)[0]
