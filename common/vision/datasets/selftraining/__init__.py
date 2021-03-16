@@ -10,13 +10,13 @@ from typing import ClassVar, Tuple, Any
 __all__ = ['Office31', 'OfficeHome', 'VisDA2017', 'DomainNet', 'OfficeCaltech']
 
 
-def double_input_dataset(dataset_class: ClassVar):
+def perform_multiple_transforms(dataset_class: ClassVar):
     if not (issubclass(dataset_class, ImageList)):
         raise Exception("Only subclass of ImageList can be used as double_input_dataset")
 
-    class DoubleInputDataset(dataset_class):
+    class MultipleTransformsDataset(dataset_class):
         def __init__(self, **kwargs):
-            super(DoubleInputDataset, self).__init__(**kwargs)
+            super(MultipleTransformsDataset, self).__init__(**kwargs)
 
         def __getitem__(self, index: int) -> Tuple[Any, Any, int]:
             """
@@ -35,4 +35,4 @@ def double_input_dataset(dataset_class: ClassVar):
 
             return img1, img2, target
 
-    return DoubleInputDataset
+    return MultipleTransformsDataset

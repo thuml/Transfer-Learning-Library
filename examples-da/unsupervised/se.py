@@ -20,7 +20,7 @@ sys.path.append('../..')
 from dalib.adaptation.se import ema_model_update, ImageClassifier
 from dalib.translation.cyclegan.util import set_requires_grad
 import common.vision.datasets.selftraining as datasets
-from common.vision.datasets.selftraining import double_input_dataset as self_training_dataset
+from common.vision.datasets.selftraining import perform_multiple_transforms as self_training_dataset
 import common.vision.models as models
 from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
