@@ -25,6 +25,8 @@ Domain Adaptation Library
     adaptation/mcd
     adaptation/mdd
     adaptation/mcc
+    adaptation/afn
+    adaptation/self_ensemble
     adaptation/pada
     adaptation/iwan
     adaptation/osbp

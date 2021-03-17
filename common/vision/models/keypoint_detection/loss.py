@@ -48,7 +48,8 @@ class JointsMSELoss(nn.Module):
 
 class JointsKLLoss(nn.Module):
     """
-    KL Divergence for keypoint detection proposed by `Regressive Domain Adaptation for Unsupervised Keypoint Detection`_.
+    KL Divergence for keypoint detection proposed by
+    `Regressive Domain Adaptation for Unsupervised Keypoint Detection <https://arxiv.org/abs/2103.06175>`_.
 
     Args:
         reduction (str, optional): Specifies the reduction to apply to the output:

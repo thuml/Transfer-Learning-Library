@@ -8,6 +8,9 @@ Welcome to Transfer Learning Library
    :titlesonly:
 
    get_started/installing
+   get_started/introduction
+   get_started/visualization
+   get_started/faq
 
 
 .. toctree::

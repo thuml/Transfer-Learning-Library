@@ -41,11 +41,11 @@ class SURREAL(Body16KeypointDataset):
         self.split = split
 
         if download:
-            download_data(root, "train/run0", "train0.tgz", "https://cloud.tsinghua.edu.cn/f/bdcce15628a544d6aeb2/?dl=1")
-            download_data(root, "train/run1", "train1.tgz", "https://cloud.tsinghua.edu.cn/f/bf99d43405394a4e8ed4/?dl=1")
-            download_data(root, "train/run1", "train2.tgz", "https://cloud.tsinghua.edu.cn/f/cae28f9e110449ec9c63/?dl=1")
-            download_data(root, "val", "val.tgz", "https://cloud.tsinghua.edu.cn/f/067ea0d6b469405d9c66/?dl=1")
-            download_data(root, "test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/d94de21d4cd04fb4a061/?dl=1")
+            download_data(root, "train/run0", "train0.tgz", "https://cloud.tsinghua.edu.cn/f/b13604f06ff1445c830a/?dl=1")
+            download_data(root, "train/run1", "train1.tgz", "https://cloud.tsinghua.edu.cn/f/919aefe2de3541c3b940/?dl=1")
+            download_data(root, "train/run1", "train2.tgz", "https://cloud.tsinghua.edu.cn/f/34864760ad4945b9bcd6/?dl=1")
+            download_data(root, "val", "val.tgz", "https://cloud.tsinghua.edu.cn/f/16b20f2e76684f848dc1/?dl=1")
+            download_data(root, "test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/36c72d86e43540e0a913/?dl=1")
         else:
             check_exits(root, "train/run0")
             check_exits(root, "train/run1")

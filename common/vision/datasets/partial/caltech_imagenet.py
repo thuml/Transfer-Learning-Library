@@ -156,7 +156,7 @@ class CaltechImageNetUniversal(ImageList):
 
 
 download_list = [
-    ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/904af0171c82403c9a36/?dl=1"),
+    ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/a0d7ea37026946f98965/?dl=1"),
     ("256_ObjectCategories", "256_ObjectCategories.tar",
      "http://www.vision.caltech.edu/Image_Datasets/Caltech256/256_ObjectCategories.tar"),
 ]

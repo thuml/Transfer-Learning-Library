@@ -38,7 +38,7 @@ class LSP(Body16KeypointDataset):
     def __init__(self, root, split='train', task='all', download=True, image_size=(256, 256), transforms=None, **kwargs):
         if download:
             download_data(root, "images", "lsp_dataset.zip",
-                          "https://cloud.tsinghua.edu.cn/f/a51ef9cf64c348f7aeac/?dl=1")
+                          "https://cloud.tsinghua.edu.cn/f/46ea73c89abc46bfb125/?dl=1")
         else:
             check_exits(root, "lsp")
 

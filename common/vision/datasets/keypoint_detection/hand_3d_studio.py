@@ -49,7 +49,7 @@ class Hand3DStudio(Hand21KeypointDataset):
         self.task = task
 
         if download:
-            download_data(root, "H3D_crop", "H3D_crop.tar", "https://cloud.tsinghua.edu.cn/f/14ccc5f862b9493b9fe1/?dl=1")
+            download_data(root, "H3D_crop", "H3D_crop.tar", "https://cloud.tsinghua.edu.cn/f/d4e612e44dc04d8eb01f/?dl=1")
         else:
             check_exits(root, "H3D_crop")
 

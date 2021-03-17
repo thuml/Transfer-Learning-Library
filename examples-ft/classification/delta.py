@@ -1,3 +1,5 @@
+import math
+import os
 import random
 import time
 import warnings
@@ -66,7 +68,6 @@ def main(args: argparse.Namespace):
     val_dataset = dataset(root=args.root, split='test', sample_rate=100, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     test_loader = val_loader
-
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -80,41 +81,53 @@ def main(args: argparse.Namespace):
         param.requires_grad = False
     source_classifier.eval()
 
-    return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
-    source_getter = IntermediateLayerGetter(source_classifier, return_layers=return_layers)
-    target_getter = IntermediateLayerGetter(classifier, return_layers=return_layers)
-
-    source_weight = {}
-    for name, param in source_classifier.backbone.named_parameters():
-        source_weight[name] = param.detach()
-
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
-    if args.phase != 'train':
+    if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
-
-    if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = validate(val_loader, classifier, args)
         print(acc1)
         return
+
+    # create intermediate layer getter
+    if args.arch == 'resnet50':
+        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
+    elif args.arch == 'resnet101':
+        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
+    else:
+        assert False
+    source_getter = IntermediateLayerGetter(source_classifier, return_layers=return_layers)
+    target_getter = IntermediateLayerGetter(classifier, return_layers=return_layers)
+
+    # get regularization
+    if args.regularization_type == 'l2_sp':
+        reg_backbone = L2spRegularization(source_classifier.backbone, classifier.backbone)
+    elif args.regularization_type == 'feature_map':
+        reg_backbone = FeatureRegularization()
+    elif args.regularization_type == 'attention_feature_map':
+        if not os.path.exists(args.channel_weight):
+            temporary_classifier = Classifier(backbone, num_classes).to(device)
+            temporary_optimizer = SGD(temporary_classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+            temporary_loader = DataLoader(train_dataset, batch_size=args.batch_size_channel_weight, shuffle=True, num_workers=args.workers, drop_last=False)
+            temporary_scheduler = torch.optim.lr_scheduler.ExponentialLR(temporary_optimizer, gamma=math.exp(math.log(0.1) / args.lr_decay_epochs_channel_weight))
+            criterion = nn.CrossEntropyLoss()
+            calculate_channel_weight(temporary_classifier, criterion, temporary_optimizer, temporary_loader, temporary_scheduler, return_layers, device, args.channel_weight, args)
+        channel_weight = get_channel_weight(args.channel_weight, device)
+        reg_backbone = AttentionFeatureRegularization(channel_weight)
+
+    reg_classifier = ClassifierRegularization(list(classifier.head.named_parameters()) + list(classifier.bottleneck.named_parameters()))
 
     # start training
     best_acc1 = 0.0
 
-    reg_classifier = ClassifierRegularization(classifier)
-    if args.reg_type == 'l2_sp':
-        reg_backbone = L2spRegLoss(source_classifier, classifier)
-    elif args.reg_type == 'fea_map':
-        reg_backbone = FeatureRegLoss()
-
     for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, reg_classifier, reg_backbone, target_getter, source_getter, source_weight,
-              optimizer, epoch, args)
+        train(train_iter, classifier, reg_backbone, reg_classifier, target_getter, source_getter, optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
@@ -136,21 +149,20 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, reg_classifier:nn.Module,reg_backbone:nn.Module,
+def train(train_iter: ForeverDataIterator, model: Classifier, reg_backbone:nn.Module,  reg_classifier:nn.Module,
           target_getter: IntermediateLayerGetter,
           source_getter: IntermediateLayerGetter,
-          source_weight: dict,
           optimizer: SGD, epoch: int,  args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    losses_classifier = AverageMeter('Losses_fc', ':3.2f')
-    losses_backbone = AverageMeter('Losses_feature', ':3.2f')
+    losses_classifier = AverageMeter('Losses_classifier', ':3.2f')
+    losses_backbone = AverageMeter('Losses_backbone', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, losses_classifier, losses_backbone, cls_accs],
+        [batch_time, data_time, losses, losses_backbone, losses_classifier, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -169,19 +181,21 @@ def train(train_iter: ForeverDataIterator, model: Classifier, reg_classifier:nn.
         intermediate_output_s, output_s = source_getter(x)
         intermediate_output_t, output_t = target_getter(x)
         y, f = output_t
-        cls_loss = F.cross_entropy(y, label)
 
-        loss_classifier = reg_classifier()
-        if args.reg_type == 'l2_sp':
-            loss_backbone = reg_backbone(model, source_weight)
-        elif args.reg_type == 'fea_map':
-            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
-
-        loss = cls_loss + args.alpha * loss_backbone + args.beta * loss_classifier
+        # measure accuracy and record loss
         cls_acc = accuracy(y, label)[0]
+        cls_loss = F.cross_entropy(y, label)
+        if args.regularization_type == 'l2_sp':
+            loss_backbone = reg_backbone()
+        elif args.regularization_type == 'feature_map':
+            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
+        elif args.regularization_type == 'attention_feature_map':
+            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
+        loss_classifier = reg_classifier()
+        loss = cls_loss + args.alpha * loss_backbone + args.beta * loss_classifier
 
-        losses_classifier.update(loss_classifier.item() * args.beta, x.size(0))
         losses_backbone.update(loss_backbone.item() * args.alpha, x.size(0))
+        losses_classifier.update(loss_classifier.item() * args.beta, x.size(0))
         losses.update(loss.item(), x.size(0))
         cls_accs.update(cls_acc.item(), x.size(0))
 
@@ -251,47 +265,49 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='Baseline for Finetuning')
+    parser = argparse.ArgumentParser(description='Delta for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
-                             ' (default: Office31)')
+    parser.add_argument('-d', '--data', metavar='DATA',
+                        help='dataset: ' + ' | '.join(dataset_names))
+    parser.add_argument('-sr', '--sample-rate', default=100, type=int,
+                        metavar='N',
+                        help='sample rate of training dataset (default: 100)')
+
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
+
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
                         help='mini-batch size (default: 48)')
-    parser.add_argument('-sr', '--sample-rate', default=100, type=int,
-                        metavar='N',
-                        help='sample rate of training dataset (default: 100)')
-
     parser.add_argument('--alpha', default=0.01, type=float,
                          help='hyper-parameter alpha')
-
     parser.add_argument('--beta', default=0.01, type=float,
-                         help='hyper-parameter beta')
+                        help='hyper-parameter beta')
 
-    parser.add_argument('--reg_type', choices=['l2', 'l2_sp', 'fea_map', 'att_fea_map'], default='fea_map')
-
+    parser.add_argument("--channel-weight", type=str, default='channel_weight.json',
+                        help="Where to save and find channel weight file.")
+    parser.add_argument('--regularization-type', choices=['l2_sp', 'feature_map', 'attention_feature_map'], default='attention_feature_map')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
-                        metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('--wd', '--weight-decay', default=0.0, type=float,
+                        metavar='W', help='weight decay (default: 0.0d)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
+
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
+
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -303,6 +319,20 @@ if __name__ == '__main__':
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
+
+    # training parameters for calculating channel weighting
+    parser.add_argument('--batch-size-channel-weight', default=32, type=int,
+                        metavar='N',
+                        help='mini-batch size for calculating channel weight (default: 32)')
+    parser.add_argument('--lr-decay-epochs-channel-weight', default=6, type=int, metavar='N',
+                        help='number of epochs to train for training before calculating channel weight')
+
+    parser.add_argument('--epochs-channel-weight', default=10, type=int, metavar='N',
+                        help='epochs to decay lr for training before calculating channel weight')
+
+    parser.add_argument('--iteration-limit', default=10, type=int, metavar='N',
+                        help='iteration limits for calculating channel weight, -1 means no limits')
+
     args = parser.parse_args()
     print(args)
     main(args)
