@@ -29,7 +29,7 @@ class VisDA2017(ImageList):
                 validation.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/58034129e0204ef6b840/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/b25b2b990e8f42e691f0/?dl=1"),
         ("train", "train.tar", "http://csr.bu.edu/ftp/visda17/clf/train.tar"),
         ("validation", "validation.tar", "http://csr.bu.edu/ftp/visda17/clf/validation.tar")
     ]

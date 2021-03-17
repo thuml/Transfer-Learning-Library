@@ -222,3 +222,49 @@ Human3.6M Dataset
 .. autoclass:: common.vision.datasets.keypoint_detection.human36m.Human36M
    :members:
 
+
+Finetune for Classification
+---------------------------------------------------------
+
+
+-------------------------------------
+Stanford Dogs
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.stanford_dogs.StanfordDogs
+   :members:
+
+-------------------------------------
+Stanford Cars
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.stanford_cars.StanfordCars
+   :members:
+
+-------------------------------------
+CUB-200-2011
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.cub200.CUB200
+   :members:
+
+-------------------------------------
+FVGC Aircraft
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.aircrafts.Aircraft
+   :members:
+
+-------------------------------------
+Oxford-IIIT Pet
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.oxfordpet.OxfordIIITPet
+   :members:
+
+-------------------------------------
+COCO-70
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.coco70.COCO70
+   :members:

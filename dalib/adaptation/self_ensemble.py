@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, ClassVar, Sequence
 import copy
 import torch
 import torch.nn as nn
@@ -8,24 +8,31 @@ from common.modules.classifier import Classifier as ClassifierBase
 from dalib.translation.cyclegan.util import set_requires_grad
 
 
-def consistent_loss(y: torch.Tensor, y_teacher: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+class ConsistentLoss(nn.Module):
     """Consistent loss between model output y and teacher output y_teacher
     """
-    cons_loss = ((y - y_teacher) ** 2).sum(dim=1)
-    cons_loss = (cons_loss * mask).mean()
-    return cons_loss
+    def __init__(self, reduction='mean'):
+        super(ConsistentLoss, self).__init__()
+        self.reduction = reduction
+
+    def forward(self, y: torch.Tensor, y_teacher: torch.Tensor, mask: torch.Tensor):
+        cons_loss = ((y - y_teacher) ** 2).sum(dim=1)
+        cons_loss = cons_loss * mask
+        if self.reduction == 'mean':
+            return cons_loss.mean()
+        else:
+            return cons_loss
 
 
-def class_balance_loss(y: torch.Tensor, mask) -> torch.Tensor:
+class ClassBalanceLoss(nn.Module):
     """Class balance loss
     """
-    class_distribution = y.mean(dim=0)
-    num_classes = y.shape[1]
-    uniform_distribution = torch.ones(num_classes) / num_classes
-    uniform_distribution = uniform_distribution.to(class_distribution.device)
-    balance_loss = F.binary_cross_entropy(class_distribution, uniform_distribution)
-    balance_loss = mask.mean() * balance_loss
-    return balance_loss
+    def __init__(self, num_classes):
+        super(ClassBalanceLoss, self).__init__()
+        self.uniform_distribution = torch.ones(num_classes) / num_classes
+
+    def forward(self, y: torch.Tensor):
+        return F.binary_cross_entropy(y.mean(dim=0), self.uniform_distribution.to(y.device))
 
 
 class EmaTeacher(object):

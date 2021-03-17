@@ -16,11 +16,10 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.adaptation.self_ensemble import EmaTeacher, consistent_loss, class_balance_loss, ImageClassifier
-import common.vision.datasets.selftraining as datasets
-from common.vision.datasets.selftraining import perform_multiple_transforms as self_training_dataset
+from dalib.adaptation.self_ensemble import EmaTeacher, ConsistentLoss, ClassBalanceLoss, ImageClassifier
+import common.vision.datasets as datasets
 import common.vision.models as models
-from common.vision.transforms import ResizeImage
+from common.vision.transforms import ResizeImage, AllApply
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -65,11 +64,10 @@ def main(args: argparse.Namespace):
     ])
 
     dataset = datasets.__dict__[args.data]
-    st_dataset = self_training_dataset(dataset)
     train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = st_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
+    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=AllApply([train_transform, train_transform]))
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
@@ -133,7 +131,7 @@ def main(args: argparse.Namespace):
             # pretrain for one epoch
             pretrain(train_source_iter, pretrained_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args)
             # validate to show pretrain process
-            acc1 = validate(val_loader, pretrained_model, args)
+            validate(val_loader, pretrained_model, args)
 
         torch.save(pretrained_model.state_dict(), args.pretrain)
 
@@ -144,12 +142,14 @@ def main(args: argparse.Namespace):
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
     teacher = EmaTeacher(classifier, alpha=args.alpha)
+    consistent_loss = ConsistentLoss().to(device)
+    class_balance_loss = ClassBalanceLoss(num_classes).to(device)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, teacher, optimizer,
+        train(train_source_iter, train_target_iter, classifier, teacher, consistent_loss, class_balance_loss, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
@@ -221,7 +221,8 @@ def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, opt
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          teacher: EmaTeacher, optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+          teacher: EmaTeacher, consistent_loss, class_balance_loss,
+          optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
@@ -241,7 +242,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     end = time.time()
     for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
-        x_t1, x_t2, labels_t = next(train_target_iter)
+        (x_t1, x_t2), labels_t = next(train_target_iter)
 
         x_s = x_s.to(device)
         x_t1 = x_t1.to(device)
@@ -268,7 +269,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # consistent loss
         cons_loss = consistent_loss(y_t, y_t_teacher, mask)
         # balance loss
-        balance_loss = class_balance_loss(y_t, mask)
+        balance_loss = class_balance_loss(y_t) * mask.mean()
 
         loss = cls_loss + args.trade_off_cons * cons_loss + args.trade_off_balance * balance_loss
 

@@ -32,11 +32,11 @@ class OfficeHome(ImageList):
                 Real_World.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/ee615d5ad5e146278a80/?dl=1"),
-        ("Art", "Art.tgz", "https://cloud.tsinghua.edu.cn/f/81a4f30c7e894298b435/?dl=1"),
-        ("Clipart", "Clipart.tgz", "https://cloud.tsinghua.edu.cn/f/d4ad15137c734917aa5c/?dl=1"),
-        ("Product", "Product.tgz", "https://cloud.tsinghua.edu.cn/f/a6b643999c574184bbcd/?dl=1"),
-        ("Real_World", "Real_World.tgz", "https://cloud.tsinghua.edu.cn/f/60ca8452bcf743408245/?dl=1")
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/ca3a3b6a8d554905b4cd/?dl=1"),
+        ("Art", "Art.tgz", "https://cloud.tsinghua.edu.cn/f/e93f2e07d93243d6b57e/?dl=1"),
+        ("Clipart", "Clipart.tgz", "https://cloud.tsinghua.edu.cn/f/0d41e7da4558408ea5aa/?dl=1"),
+        ("Product", "Product.tgz", "https://cloud.tsinghua.edu.cn/f/76186deacd7c4fa0a679/?dl=1"),
+        ("Real_World", "Real_World.tgz", "https://cloud.tsinghua.edu.cn/f/dee961894cc64b1da1d7/?dl=1")
     ]
     image_list = {
         "Ar": "image_list/Art.txt",

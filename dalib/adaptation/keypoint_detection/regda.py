@@ -67,7 +67,7 @@ class PseudoLabelGenerator(nn.Module):
 
 class RegressionDisparity(nn.Module):
     """
-    Regression Disparity proposed by `Regressive Domain Adaptation for Unsupervised Keypoint Detection`_.
+    Regression Disparity proposed by `Regressive Domain Adaptation for Unsupervised Keypoint Detection <https://arxiv.org/abs/2103.06175>`_.
 
     Args:
         pseudo_label_generator (PseudoLabelGenerator): generate ground truth heatmap and ground false heatmap

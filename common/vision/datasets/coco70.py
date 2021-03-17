@@ -5,7 +5,31 @@ from ._util import download as download_data, check_exits
 
 
 class COCO70(ImageList):
-    """
+    """COCO-70 dataset is a large-scale classification dataset (1000 images per class) created from
+    `COCO <https://cocodataset.org/>`_ Dataset.
+    It is used to explore the effect of fine-tuning with a large amount of data.
+
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        sample_rate (int): The sampling rates to sample random ``training`` images for each category.
+            Choices include 100, 50, 30, 15. Default: 100.
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            train/
+            test/
+            image_list/
+                train_100.txt
+                train_50.txt
+                train_30.txt
+                train_15.txt
+                test.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/d2ffb62fe3d140f1a73c/?dl=1"),

@@ -5,7 +5,29 @@ from ._util import download as download_data, check_exits
 
 
 class StanfordDogs(ImageList):
-    """
+    """`The Stanford Dogs <http://vision.stanford.edu/aditya86/ImageNetDogs/>`_ Dataset.
+
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        sample_rate (int): The sampling rates to sample random ``training`` images for each category.
+            Choices include 100, 50, 30, 15. Default: 100.
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            train/
+            test/
+            image_list/
+                train_100.txt
+                train_50.txt
+                train_30.txt
+                train_15.txt
+                test.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/b7b3dd297ec54e038238/?dl=1"),

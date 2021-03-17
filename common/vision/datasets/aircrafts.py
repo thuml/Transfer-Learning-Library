@@ -6,6 +6,28 @@ from ._util import download as download_data, check_exits
 
 class Aircraft(ImageList):
     """`FVGC-Aircraft <https://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/>`_ Dataset.
+
+    Args:
+        root (str): Root directory of dataset
+        split (str, optional): The dataset split, supports ``train``, or ``test``.
+        sample_rate (int): The sampling rates to sample random ``training`` images for each category.
+            Choices include 100, 50, 30, 15. Default: 100.
+        download (bool, optional): If true, downloads the dataset from the internet and puts it \
+            in root directory. If dataset is already downloaded, it is not downloaded again.
+        transform (callable, optional): A function/transform that  takes in an PIL image and returns a \
+            transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
+        target_transform (callable, optional): A function/transform that takes in the target and transforms it.
+
+    .. note:: In `root`, there will exist following files after downloading.
+        ::
+            train/
+            test/
+            image_list/
+                train_100.txt
+                train_50.txt
+                train_30.txt
+                train_15.txt
+                test.txt
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/04356d49d0054092b07e/?dl=1"),
@@ -32,7 +54,7 @@ class Aircraft(ImageList):
                'Hawk T1', 'Il-76', 'L-1011', 'MD-11', 'MD-80', 'MD-87', 'MD-90', 'Metroliner', 'Model B200', 'PA-28', 'SR-20',
                'Saab 2000', 'Saab 340', 'Spitfire', 'Tornado', 'Tu-134', 'Tu-154', 'Yak-42']
 
-    def __init__(self, root: str, split: str, sample_rate: Optional[int] =100, download: Optional[bool] = False, **kwargs):
+    def __init__(self, root: str, split: str, sample_rate: Optional[int]=100, download: Optional[bool] = False, **kwargs):
 
         if split == 'train':
             list_name = 'train' + str(sample_rate)

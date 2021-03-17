@@ -34,10 +34,10 @@ class DSprites(ImageRegression):
                 scream_test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/af802d55a7c847c0a908/?dl=1"),
-        ("color", "color.tgz", "https://cloud.tsinghua.edu.cn/f/d40fec2ff73745afb260/?dl=1"),
-        ("noisy", "noisy.tgz", "https://cloud.tsinghua.edu.cn/f/7aa3f51aece14478960e/?dl=1"),
-        ("scream", "scream.tgz", "https://cloud.tsinghua.edu.cn/f/ae5f00dfc8634426b429/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/fbbb6b1a43034712b34d/?dl=1"),
+        ("color", "color.tgz", "https://cloud.tsinghua.edu.cn/f/9ce9f2abc61f49ed995a/?dl=1"),
+        ("noisy", "noisy.tgz", "https://cloud.tsinghua.edu.cn/f/674435c8cb914ca0ad10/?dl=1"),
+        ("scream", "scream.tgz", "https://cloud.tsinghua.edu.cn/f/0613675916ac4c3bb6bd/?dl=1"),
     ]
     image_list = {
         "C": "color",

@@ -44,7 +44,7 @@ class Cityscapes(SegmentationList):
                                   (255, 0, 0), (0, 0, 142), (0, 0, 70), (0, 60, 100), (0, 80, 100),
                                   (0, 0, 230), (119, 11, 32), [0, 0, 0]]
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/cfbe840d5bb649a38cf5/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/08745e798b16483db4bf/?dl=1"),
     ]
     EVALUATE_CLASSES = CLASSES
 
