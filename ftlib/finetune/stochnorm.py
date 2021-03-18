@@ -5,19 +5,19 @@ import torch.nn.functional as F
 
 from torch.nn.parameter import Parameter
 
-__all__ = ['StochNorm1d', 'StochNorm2d']
+__all__ = ['StochNorm1d', 'StochNorm2d', 'convert_model']
 
 
 class _StochNorm(nn.Module):
 
-    def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True):
+    def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True, p=0.5):
         super(_StochNorm, self).__init__()
         self.num_features = num_features
         self.eps = eps
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
-        self.p = 0.0
+        self.p = p
         if self.affine:
             self.weight = Parameter(torch.Tensor(num_features))
             self.bias = Parameter(torch.Tensor(num_features))
@@ -81,6 +81,53 @@ class _StochNorm(nn.Module):
 
 
 class StochNorm1d(_StochNorm):
+    r"""Applies Stochastic Normalization over a 2D or 3D input (a mini-batch of 1D inputs with optional additional channel dimension)
+
+
+    .. math::
+
+        \hat{x}_{i,0} = \frac{x_i - \tilde{\mu}}{ \sqrt{\tilde{\sigma} + \epsilon}}
+
+        \hat{x}_{i,1} = \frac{x_i - \mu}{ \sqrt{\sigma + \epsilon}}
+
+        \hat{x}_i = (1-s)\cdot \hat{x}_{i,0} + s\cdot \hat{x}_{i,1}
+
+         y_i = \gamma \hat{x}_i + \beta
+
+    where :math:`\mu` and :math:`\sigma` are mean and variance of current mini-batch data.
+
+    :math:`\tilde{\mu}` and :math:`\tilde{\sigma}` are current moving statistics of training data.
+
+    :math:`s` is a branch-selection variable generated from a Bernoulli distribution, where :math:`P(s=1)=p`.
+
+
+    During training, there are two normalization branches. One uses mean and
+    variance of current mini-batch data, while the other uses current moving
+    statistics of the training data as usual batch normalization.
+
+    During evaluation, the moving statistics is used for normalization.
+
+
+    Args:
+        num_features (int): :math:`c` from an expected input of size :math:`(b, c, l)` or  :math:`l` from an expected input of size :math:`(b, l)`.
+        eps (float): A value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum (float): The value used for the running_mean and running_var
+            computation. Default: 0.1
+        affine (bool): A boolean value that when set to ``True``, gives the layer learnable
+            affine parameters. Default: ``True``
+        track_running_stats (bool): A boolean value that when set to True, this module tracks
+         the running mean and variance, and when set to False, this module does not
+         track such statistics, and initializes statistics buffers running_mean and
+         running_var as None. When these buffers are None, this module always uses
+         batch statistics in both training and eval modes. Default: True
+         p (float): The probability to choose the second branch (usual BN). Default: 0.5
+
+    Shape:
+        - Input: :math:`(b, l)` or :math:`(b, c, l)`
+        - Output: :math:`(b, l)` or :math:`(b, c, l)` (same shape as input)
+    """
+
     def _check_input_dim(self, input):
         if input.dim() != 2 and input.dim() != 3:
             raise ValueError('expected 2D or 3D input (got {}D input)'
@@ -88,6 +135,54 @@ class StochNorm1d(_StochNorm):
 
 
 class StochNorm2d(_StochNorm):
+
+    r"""Applies Stochastic  Normalization over a 4D input (a mini-batch of 2D inputs with additional channel dimension)
+
+
+    .. math::
+
+        \hat{x}_{i,0} = \frac{x_i - \tilde{\mu}}{ \sqrt{\tilde{\sigma} + \epsilon}}
+
+        \hat{x}_{i,1} = \frac{x_i - \mu}{ \sqrt{\sigma + \epsilon}}
+
+        \hat{x}_i = (1-s)\cdot \hat{x}_{i,0} + s\cdot \hat{x}_{i,1}
+
+         y_i = \gamma \hat{x}_i + \beta
+
+    where :math:`\mu` and :math:`\sigma` are mean and variance of current mini-batch data.
+
+    :math:`\tilde{\mu}` and :math:`\tilde{\sigma}` are current moving statistics of training data.
+
+    :math:`s` is a branch-selection variable generated from a Bernoulli distribution, where :math:`P(s=1)=p`.
+
+
+    During training, there are two normalization branches. One uses mean and
+    variance of current mini-batch data, while the other uses current moving
+    statistics of the training data as usual batch normalization.
+
+    During evaluation, the moving statistics is used for normalization.
+
+
+    Args:
+        num_features (int): :math:`c` from an expected input of size :math:`(b, c, h, w)`.
+        eps (float): A value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum (float): The value used for the running_mean and running_var
+            computation. Default: 0.1
+        affine (bool): A boolean value that when set to ``True``, gives the layer learnable
+            affine parameters. Default: ``True``
+        track_running_stats (bool): A boolean value that when set to True, this module tracks
+         the running mean and variance, and when set to False, this module does not
+         track such statistics, and initializes statistics buffers running_mean and
+         running_var as None. When these buffers are None, this module always uses
+         batch statistics in both training and eval modes. Default: True
+         p (float): The probability to choose the second branch (usual BN). Default: 0.5
+
+    Shape:
+        - Input: :math:`(b, c, h, w)`
+        - Output: :math:`(b, c, h, w)` (same shape as input)
+    """
+
     def _check_input_dim(self, input):
         if input.dim() != 4:
             raise ValueError('expected 4D input (got {}D input)'
@@ -95,6 +190,52 @@ class StochNorm2d(_StochNorm):
 
 
 class StochNorm3d(_StochNorm):
+    r"""Applies Stochastic  Normalization over a 5D input (a mini-batch of 3D inputs with additional channel dimension)
+
+
+    .. math::
+
+        \hat{x}_{i,0} = \frac{x_i - \tilde{\mu}}{ \sqrt{\tilde{\sigma} + \epsilon}}
+
+        \hat{x}_{i,1} = \frac{x_i - \mu}{ \sqrt{\sigma + \epsilon}}
+
+        \hat{x}_i = (1-s)\cdot \hat{x}_{i,0} + s\cdot \hat{x}_{i,1}
+
+         y_i = \gamma \hat{x}_i + \beta
+
+    where :math:`\mu` and :math:`\sigma` are mean and variance of current mini-batch data.
+
+    :math:`\tilde{\mu}` and :math:`\tilde{\sigma}` are current moving statistics of training data.
+
+    :math:`s` is a branch-selection variable generated from a Bernoulli distribution, where :math:`P(s=1)=p`.
+
+
+    During training, there are two normalization branches. One uses mean and
+    variance of current mini-batch data, while the other uses current moving
+    statistics of the training data as usual batch normalization.
+
+    During evaluation, the moving statistics is used for normalization.
+
+
+    Args:
+        num_features (int): :math:`c` from an expected input of size :math:`(b, c, d, h, w)`
+        eps (float): A value added to the denominator for numerical stability.
+            Default: 1e-5
+        momentum (float): The value used for the running_mean and running_var
+            computation. Default: 0.1
+        affine (bool): A boolean value that when set to ``True``, gives the layer learnable
+            affine parameters. Default: ``True``
+        track_running_stats (bool): A boolean value that when set to True, this module tracks
+         the running mean and variance, and when set to False, this module does not
+         track such statistics, and initializes statistics buffers running_mean and
+         running_var as None. When these buffers are None, this module always uses
+         batch statistics in both training and eval modes. Default: True
+         p (float): The probability to choose the second branch (usual BN). Default: 0.5
+
+    Shape:
+        - Input: :math:`(b, c, d, h, w)`
+        - Output: :math:`(b, c, d, h, w)` (same shape as input)
+    """
     def _check_input_dim(self, input):
         if input.dim() != 5:
             raise ValueError('expected 4D input (got {}D input)'
@@ -102,17 +243,17 @@ class StochNorm3d(_StochNorm):
 
 
 def convert_model(module, p):
-    """Traverse the input module and its child recursively
-       and replace all instance of torch.nn.modules.batchnorm.BatchNorm*N*d
-       to StochNorm*N*d
-    Args:
-        module: the input module needs to be convert to StochNorm model
     """
-    # if isinstance(module, torch.nn.DataParallel):
-    #     mod = module.module
-    #     mod = convert_model(mod)
-    #     mod = DataParallelWithCallback(mod, device_ids=module.device_ids)
-    #     return mod
+    Traverses the input module and its child recursively and replaces all
+    instance of BatchNorm to StochNorm.
+
+    Args:
+        module (torch.nn.Module): The input module needs to be convert to StochNorm model.
+        p (float): The hyper-parameter for StochNorm layer.
+
+    Returns:
+         The module converted to StochNorm version.
+    """
 
     mod = module
     for pth_module, stoch_module in zip([torch.nn.modules.batchnorm.BatchNorm1d,
@@ -122,10 +263,10 @@ def convert_model(module, p):
                                         StochNorm2d,
                                         StochNorm3d]):
         if isinstance(module, pth_module):
-            mod = stoch_module(module.num_features, module.eps, module.momentum, module.affine)
+            mod = stoch_module(module.num_features, module.eps, module.momentum, module.affine, p)
             mod.running_mean = module.running_mean
             mod.running_var = module.running_var
-            mod.p = p
+
             if module.affine:
                 mod.weight.data = module.weight.data.clone().detach()
                 mod.bias.data = module.bias.data.clone().detach()
