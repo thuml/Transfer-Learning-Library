@@ -6,7 +6,6 @@ import warnings
 import sys
 import argparse
 import shutil
-import os.path as osp
 
 import torch
 import torch.nn as nn
@@ -67,7 +66,6 @@ def main(args: argparse.Namespace):
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, split='test', sample_rate=100, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_loader = val_loader
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -99,27 +97,29 @@ def main(args: argparse.Namespace):
     elif args.arch == 'resnet101':
         return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
     else:
-        assert False
+        raise NotImplementedError(args.arch)
     source_getter = IntermediateLayerGetter(source_classifier, return_layers=return_layers)
     target_getter = IntermediateLayerGetter(classifier, return_layers=return_layers)
 
     # get regularization
     if args.regularization_type == 'l2_sp':
-        reg_backbone = L2spRegularization(source_classifier.backbone, classifier.backbone)
+        backbone_regularization = L2SPRegularization(source_classifier.backbone, classifier.backbone)
     elif args.regularization_type == 'feature_map':
-        reg_backbone = FeatureRegularization()
+        backbone_regularization = FeatureRegularization()
     elif args.regularization_type == 'attention_feature_map':
-        if not os.path.exists(args.channel_weight):
-            temporary_classifier = Classifier(backbone, num_classes).to(device)
-            temporary_optimizer = SGD(temporary_classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-            temporary_loader = DataLoader(train_dataset, batch_size=args.batch_size_channel_weight, shuffle=True, num_workers=args.workers, drop_last=False)
-            temporary_scheduler = torch.optim.lr_scheduler.ExponentialLR(temporary_optimizer, gamma=math.exp(math.log(0.1) / args.lr_decay_epochs_channel_weight))
-            criterion = nn.CrossEntropyLoss()
-            calculate_channel_weight(temporary_classifier, criterion, temporary_optimizer, temporary_loader, temporary_scheduler, return_layers, device, args.channel_weight, args)
-        channel_weight = get_channel_weight(args.channel_weight, device)
-        reg_backbone = AttentionFeatureRegularization(channel_weight)
+        attention_file = os.path.join(logger.root, args.attention_file)
+        if not os.path.exists(attention_file):
+            attention = calculate_channel_attention(train_dataset, return_layers, args)
+            torch.save(attention, attention_file)
+        else:
+            print("Loading channel attention from", attention_file)
+            attention = torch.load(attention_file)
+            attention = [a.to(device) for a in attention]
+        backbone_regularization = AttentionFeatureRegularization(attention)
+    else:
+        raise NotImplementedError(args.regularization_type)
 
-    reg_classifier = ClassifierRegularization(list(classifier.head.named_parameters()) + list(classifier.bottleneck.named_parameters()))
+    head_regularization = L2Regularization(nn.ModuleList([classifier.head, classifier.bottleneck]))
 
     # start training
     best_acc1 = 0.0
@@ -127,7 +127,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, reg_backbone, reg_classifier, target_getter, source_getter, optimizer, epoch, args)
+        train(train_iter, classifier, backbone_regularization, head_regularization, target_getter, source_getter, optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
@@ -140,29 +140,113 @@ def main(args: argparse.Namespace):
         best_acc1 = max(acc1, best_acc1)
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
-
-    # evaluate on test set
-    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
-    print("test_acc1 = {:3.1f}".format(acc1))
-
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, reg_backbone:nn.Module,  reg_classifier:nn.Module,
+def calculate_channel_attention(dataset, return_layers, args):
+    backbone = models.__dict__[args.arch](pretrained=True)
+    classifier = Classifier(backbone, dataset.num_classes).to(device)
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    data_loader = DataLoader(dataset, batch_size=args.attention_batch_size, shuffle=True,
+                        num_workers=args.workers, drop_last=False)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=math.exp(math.log(0.1) / args.attention_lr_decay_epochs))
+    criterion = nn.CrossEntropyLoss()
+
+    channel_weights = []
+    for layer_id, name in enumerate(return_layers):
+        layer = get_attribute(classifier, name)
+        layer_channel_weight = [0] * layer.out_channels
+        channel_weights.append(layer_channel_weight)
+
+    # train the classifier
+    classifier.train()
+    classifier.backbone.requires_grad = False
+    print("Pretrain a classifier to calculate channel attention.")
+    for epoch in range(args.attention_epochs):
+        losses = AverageMeter('Loss', ':3.2f')
+        cls_accs = AverageMeter('Cls Acc', ':3.1f')
+        progress = ProgressMeter(
+            len(data_loader),
+            [losses, cls_accs],
+            prefix="Epoch: [{}]".format(epoch))
+
+        for i, data in enumerate(data_loader):
+            inputs, labels = data
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs, _ = classifier(inputs)
+            loss = criterion(outputs, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            cls_acc = accuracy(outputs, labels)[0]
+
+            losses.update(loss.item(), inputs.size(0))
+            cls_accs.update(cls_acc.item(), inputs.size(0))
+
+            if i % args.print_freq == 0:
+                progress.display(i)
+        lr_scheduler.step()
+
+    # calculate the channel attention
+    print('Calculating channel attention.')
+    classifier.eval()
+    if args.attention_iteration_limit > 0:
+        total_iteration = min(len(data_loader), args.attention_iteration_limit)
+    else:
+        total_iteration = len(args.data_loader)
+
+    progress = ProgressMeter(
+        total_iteration,
+        [],
+        prefix="Iteration: ")
+
+    for i, data in enumerate(data_loader):
+        if i >= total_iteration:
+            break
+        inputs, labels = data
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        outputs, _ = classifier(inputs)
+        loss_0 = criterion(outputs, labels)
+        progress.display(i)
+        for layer_id, name in enumerate(tqdm(return_layers)):
+            layer = get_attribute(classifier, name)
+            for j in range(layer.out_channels):
+                tmp = classifier.state_dict()[name + '.weight'][j,].clone()
+                classifier.state_dict()[name + '.weight'][j,] = 0.0
+                outputs, _ = classifier(inputs)
+                loss_1 = criterion(outputs, labels)
+                difference = loss_1 - loss_0
+                difference = difference.detach().cpu().numpy().item()
+                history_value = channel_weights[layer_id][j]
+                channel_weights[layer_id][j] = 1.0 * (i * history_value + difference) / (i + 1)
+                classifier.state_dict()[name + '.weight'][j, ] = tmp
+
+    channel_attention = []
+    for weight in channel_weights:
+        weight = np.array(weight)
+        weight = (weight - np.mean(weight)) / np.std(weight)
+        weight = torch.from_numpy(weight).float().to(device)
+        channel_attention.append(F.softmax(weight / 5).detach())
+    return channel_attention
+
+
+def train(train_iter: ForeverDataIterator, model: Classifier, backbone_regularization:nn.Module,  head_regularization:nn.Module,
           target_getter: IntermediateLayerGetter,
           source_getter: IntermediateLayerGetter,
           optimizer: SGD, epoch: int,  args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    losses_classifier = AverageMeter('Losses_classifier', ':3.2f')
-    losses_backbone = AverageMeter('Losses_backbone', ':3.2f')
+    losses_reg_head = AverageMeter('Loss (reg, head)', ':3.2f')
+    losses_reg_backbone = AverageMeter('Loss (reg, backbone)', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, losses_backbone, losses_classifier, cls_accs],
+        [batch_time, data_time, losses, losses_reg_head, losses_reg_backbone, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -185,17 +269,17 @@ def train(train_iter: ForeverDataIterator, model: Classifier, reg_backbone:nn.Mo
         # measure accuracy and record loss
         cls_acc = accuracy(y, label)[0]
         cls_loss = F.cross_entropy(y, label)
-        if args.regularization_type == 'l2_sp':
-            loss_backbone = reg_backbone()
-        elif args.regularization_type == 'feature_map':
-            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
+        if args.regularization_type == 'feature_map':
+            loss_reg_backbone = backbone_regularization(intermediate_output_s, intermediate_output_t)
         elif args.regularization_type == 'attention_feature_map':
-            loss_backbone = reg_backbone(intermediate_output_s, intermediate_output_t)
-        loss_classifier = reg_classifier()
-        loss = cls_loss + args.alpha * loss_backbone + args.beta * loss_classifier
+            loss_reg_backbone = backbone_regularization(intermediate_output_s, intermediate_output_t)
+        else:
+            loss_reg_backbone = backbone_regularization()
+        loss_reg_head = head_regularization()
+        loss = cls_loss + args.trade_off_backbone * loss_reg_backbone + args.trade_off_head * loss_reg_head
 
-        losses_backbone.update(loss_backbone.item() * args.alpha, x.size(0))
-        losses_classifier.update(loss_classifier.item() * args.beta, x.size(0))
+        losses_reg_backbone.update(loss_reg_backbone.item() * args.trade_off_backbone, x.size(0))
+        losses_reg_head.update(loss_reg_head.item() * args.trade_off_head, x.size(0))
         losses.update(loss.item(), x.size(0))
         cls_accs.update(cls_acc.item(), x.size(0))
 
@@ -281,19 +365,17 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
+    parser.add_argument('--regularization-type', choices=['l2_sp', 'feature_map', 'attention_feature_map'],
+                        default='attention_feature_map')
+    parser.add_argument('--trade-off-backbone', default=0.01, type=float,
+                         help='trade-off for backbone regularization')
+    parser.add_argument('--trade-off-head', default=0.01, type=float,
+                        help='trade-off for head regularization')
 
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
                         help='mini-batch size (default: 48)')
-    parser.add_argument('--alpha', default=0.01, type=float,
-                         help='hyper-parameter alpha')
-    parser.add_argument('--beta', default=0.01, type=float,
-                        help='hyper-parameter beta')
-
-    parser.add_argument("--channel-weight", type=str, default='channel_weight.json',
-                        help="Where to save and find channel weight file.")
-    parser.add_argument('--regularization-type', choices=['l2_sp', 'feature_map', 'attention_feature_map'], default='attention_feature_map')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
@@ -304,10 +386,8 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 0.0d)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -320,18 +400,18 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
 
-    # training parameters for calculating channel weighting
-    parser.add_argument('--batch-size-channel-weight', default=32, type=int,
+    # parameters for calculating channel attention
+    parser.add_argument("--attention-file", type=str, default='channel_attention.pt',
+                        help="Where to save and load channel attention file.")
+    parser.add_argument('--attention-batch-size', default=32, type=int,
                         metavar='N',
-                        help='mini-batch size for calculating channel weight (default: 32)')
-    parser.add_argument('--lr-decay-epochs-channel-weight', default=6, type=int, metavar='N',
+                        help='mini-batch size for calculating channel attention (default: 32)')
+    parser.add_argument('--attention-epochs', default=10, type=int, metavar='N',
                         help='number of epochs to train for training before calculating channel weight')
-
-    parser.add_argument('--epochs-channel-weight', default=10, type=int, metavar='N',
+    parser.add_argument('--attention-lr-decay-epochs', default=6, type=int, metavar='N',
                         help='epochs to decay lr for training before calculating channel weight')
-
-    parser.add_argument('--iteration-limit', default=10, type=int, metavar='N',
-                        help='iteration limits for calculating channel weight, -1 means no limits')
+    parser.add_argument('--attention-iteration-limit', default=10, type=int, metavar='N',
+                        help='iteration limits for calculating channel attention, -1 means no limits')
 
     args = parser.parse_args()
     print(args)
