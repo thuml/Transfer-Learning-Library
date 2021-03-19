@@ -4,6 +4,7 @@ import torch.nn as nn
 import functools
 from collections import OrderedDict
 
+
 class L2Regularization(nn.Module):
     r"""The L2 regularization of parameters :math:`w` can be described as:
 
@@ -29,7 +30,10 @@ class L2Regularization(nn.Module):
 
 class SPRegularization(nn.Module):
     r"""
-    The SP (Starting Point) regularization of parameters :math:`w` can be described as:
+    The SP (Starting Point) regularization from `Explicit inductive bias for transfer learning with convolutional networks
+    (ICML 2018) <https://arxiv.org/abs/1802.01483>`_
+
+    The SP regularization of parameters :math:`w` can be described as:
 
     .. math::
         {\Omega} (w) = \dfrac{1}{2}  \Vert w-w^0\Vert_2^2 ,
@@ -60,8 +64,10 @@ class SPRegularization(nn.Module):
 
 class BehavioralRegularization(nn.Module):
     r"""
+    The behavioral regularization from `DELTA:DEep Learning Transfer using Feature Map with Attention
+    for convolutional networks (ICLR 2019) <https://openreview.net/pdf?id=rkgbwsAcYm>`_
 
-    The behavioral regularization can be described as:
+    It can be described as:
 
     .. math::
         {\Omega} (w) = \sum_{j=1}^{N}   \Vert FM_j(w, \boldsymbol x)-FM_j(w^0, \boldsymbol x)\Vert_2^2 ,
@@ -91,7 +97,10 @@ class BehavioralRegularization(nn.Module):
 
 class AttentionBehavioralRegularization(nn.Module):
     r"""
-    The behavioral regularization with attention can be described as:
+    The behavioral regularization with attention from `DELTA:DEep Learning Transfer using Feature Map with Attention
+    for convolutional networks (ICLR 2019) <https://openreview.net/pdf?id=rkgbwsAcYm>`_
+
+    It can be described as:
 
     .. math::
         {\Omega} (w) = \sum_{j=1}^{N}  W_j(w) \Vert FM_j(w, \boldsymbol x)-FM_j(w^0, \boldsymbol x)\Vert_2^2 ,

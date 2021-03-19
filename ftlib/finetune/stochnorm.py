@@ -83,6 +83,7 @@ class _StochNorm(nn.Module):
 class StochNorm1d(_StochNorm):
     r"""Applies Stochastic Normalization over a 2D or 3D input (a mini-batch of 1D inputs with optional additional channel dimension)
 
+    Stochastic  Normalization is proposed in `Stochastic Normalization (NIPS 2020) <https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf>`_
 
     .. math::
 
@@ -135,9 +136,10 @@ class StochNorm1d(_StochNorm):
 
 
 class StochNorm2d(_StochNorm):
+    r"""
+    Applies Stochastic  Normalization over a 4D input (a mini-batch of 2D inputs with additional channel dimension)
 
-    r"""Applies Stochastic  Normalization over a 4D input (a mini-batch of 2D inputs with additional channel dimension)
-
+    Stochastic  Normalization is proposed in `Stochastic Normalization (NIPS 2020) <https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf>`_
 
     .. math::
 
@@ -190,8 +192,10 @@ class StochNorm2d(_StochNorm):
 
 
 class StochNorm3d(_StochNorm):
-    r"""Applies Stochastic  Normalization over a 5D input (a mini-batch of 3D inputs with additional channel dimension)
+    r"""
+    Applies Stochastic  Normalization over a 5D input (a mini-batch of 3D inputs with additional channel dimension)
 
+    Stochastic  Normalization is proposed in `Stochastic Normalization (NIPS 2020) <https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf>`_
 
     .. math::
 

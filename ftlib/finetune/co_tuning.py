@@ -11,7 +11,8 @@ __all__ = ['Classifier', 'CoTuningLoss', 'Relationship']
 
 class CoTuningLoss(nn.Module):
     """
-    The Co-Tuning loss in `Co-Tuning for Transfer Learning <http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf>`_.
+    The Co-Tuning loss in `Co-Tuning for Transfer Learning (NIPS 2020)
+    <http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf>`_.
 
     Inputs:
         - input: p(y_s) predicted by source classifier.

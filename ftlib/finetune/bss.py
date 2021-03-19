@@ -3,11 +3,11 @@ import torch.nn as nn
 
 __all__ = ['BatchSpectralShrinkage']
 
+
 class BatchSpectralShrinkage(nn.Module):
     r"""
-
     The regularization term in `Catastrophic Forgetting Meets Negative Transfer:
-    Batch Spectral Shrinkage for Safe Transfer Learning <https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf>`_.
+    Batch Spectral Shrinkage for Safe Transfer Learning (NIPS 2019) <https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf>`_.
 
 
     The BSS regularization of feature matrix :math:`F` can be described as:
