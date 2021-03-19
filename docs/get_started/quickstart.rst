@@ -68,19 +68,28 @@ Step4: Tune it
 ===================
 We provide you hyper parameters settings corresponding to our reported results. Feel free to
 change them by passing in different command-line arguments. Walking through ``dann.py`` will be helpful.
-For example, in ``dann.py``, you can find following code:
 
-.. code-block:: python
+``dalib`` supports mainstream benchmark datasets and backbone architecture. But for real world needs, it's likely to
+use your own datasets or specific network architecture. Below we will briefly talk about how to do so (for unsupervised image classification task).
 
-    parser.add_argument('--bottleneck-dim', default=256, type=int,
-                        help='Dimension of bottleneck')
+Our implements for network mainly consist of three parts, namely ``backbone``, ``bottleneck`` and ``head``. You can implement
+customized network on one or many of them. Finally you put them together.
 
-If you want to change dimension of your bottleneck layer to 512, you can simply pass in ``--bottleneck-dim 512``.
+One example is `MCD <https://arxiv.org/abs/1712.02560>`_, two classifier heads are used. In directory ``dalib/adaptation``
+you can find our solution. In ``dalib/adaptation/mcd.py`` we define ``ImageClassifierHead`` class corresponding to something like
+``bottleneck`` plus ``head`` component. Then in ``examples-da/unsupervised/mcd.py``, we simply construct classifier.
 
-.. code-block:: shell
+One thing you should notice is your ``backbone`` should implement ``out_features`` method, so that following blocks can take
+that (usually an integer scalar) as input dimension.
 
-    CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31
-        -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W --bottleneck-dim 512
+At last, it's time to show how to support your own dataset. Again we use ``Office31`` dataset that we have implemented as
+an example. Similar to our implementation in  ``common/vision/datasets/office31.py``, your dataset should inherit ``ImageList`` class. Then you should specify
+where to download data as ``download_list`` does. Your task should be defined in ``image_list`` dictionary where the key
+is your task name, the value is a ``txt`` file, which contains relative path for image and its label (an integer).
+Here are some examples::
 
-Also, we provide you the most important parameters to tune. Approaches such as adjusting network
-structures will be covered in another section.
+    amazon/images/calculator/frame_0001.jpg 5
+    amazon/images/back_pack/frame_0061.jpg 0
+
+If you are still confused, we find it helpful to run some algorithms like `DANN`, then in directory ``examples-da/unsupervised/data/office31``
+you can watch these files.
