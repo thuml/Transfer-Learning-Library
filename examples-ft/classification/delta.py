@@ -9,6 +9,8 @@ import shutil
 
 import torch
 import torch.nn as nn
+import numpy as np
+from tqdm import tqdm
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
@@ -103,9 +105,9 @@ def main(args: argparse.Namespace):
 
     # get regularization
     if args.regularization_type == 'l2_sp':
-        backbone_regularization = L2SPRegularization(source_classifier.backbone, classifier.backbone)
+        backbone_regularization = SPRegularization(source_classifier.backbone, classifier.backbone)
     elif args.regularization_type == 'feature_map':
-        backbone_regularization = FeatureRegularization()
+        backbone_regularization = BehavioralRegularization()
     elif args.regularization_type == 'attention_feature_map':
         attention_file = os.path.join(logger.root, args.attention_file)
         if not os.path.exists(attention_file):
@@ -115,7 +117,7 @@ def main(args: argparse.Namespace):
             print("Loading channel attention from", attention_file)
             attention = torch.load(attention_file)
             attention = [a.to(device) for a in attention]
-        backbone_regularization = AttentionFeatureRegularization(attention)
+        backbone_regularization = AttentionBehavioralRegularization(attention)
     else:
         raise NotImplementedError(args.regularization_type)
 

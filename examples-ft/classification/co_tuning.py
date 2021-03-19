@@ -215,7 +215,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='Baseline for Finetuning')
+    parser = argparse.ArgumentParser(description='Co-Tuning for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -259,8 +259,7 @@ if __name__ == '__main__':
     parser.add_argument("--log", type=str, default='cotuning',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
-                        help="When phase is 'test', only test the model."
-                             "When phase is 'analysis', only analysis the model.")
+                        help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     print(args)
     main(args)
