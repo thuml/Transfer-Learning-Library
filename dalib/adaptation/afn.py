@@ -8,7 +8,9 @@ from common.modules.classifier import Classifier as ClassfierBase
 
 class AdaptiveFeatureNorm(nn.Module):
     r"""
-    Stepwise feature norm loss
+    Stepwise feature norm loss proposed in
+    `Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised Domain
+    Adaptation (ICCV 2019) <https://arxiv.org/abs/1811.07456>`_
 
     Examples::
 
@@ -83,7 +85,7 @@ class ImageClassifier(ClassfierBase):
                 m.weight.data.normal_(0.0, 0.01)
                 m.bias.data.normal_(0.0, 0.01)
 
-    def get_parameters(self) -> List[Dict]:
+    def get_parameters(self, base_lr=1.0) -> List[Dict]:
         params = [
             {"params": self.backbone.parameters()},
             {"params": self.bottleneck.parameters(), "momentum": 0.9},

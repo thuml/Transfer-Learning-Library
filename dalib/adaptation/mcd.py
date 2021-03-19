@@ -4,7 +4,8 @@ import torch
 
 
 def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tensor) -> torch.Tensor:
-    r"""The `Classifier Discrepancy` in `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation <https://arxiv.org/abs/1712.02560>`_.
+    r"""The `Classifier Discrepancy` in
+    `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation (CVPR 2018) <https://arxiv.org/abs/1712.02560>`_.
 
     The classfier discrepancy between predictions :math:`p_1` and :math:`p_2` can be described as:
 

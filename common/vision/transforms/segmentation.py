@@ -7,7 +7,7 @@ import torch
 import torchvision.transforms.functional as F
 import torchvision.transforms.transforms as T
 import torch.nn as nn
-from . import AllApply as AllApplyBase, NormalizeAndTranspose as NormalizeAndTransposeBase
+from . import MultipleApply as MultipleApplyBase, NormalizeAndTranspose as NormalizeAndTransposeBase
 
 
 def wrapper(transform: ClassVar):
@@ -31,8 +31,9 @@ ColorJitter = wrapper(T.ColorJitter)
 Normalize = wrapper(T.Normalize)
 ToTensor = wrapper(T.ToTensor)
 ToPILImage = wrapper(T.ToPILImage)
-AllApply = wrapper(AllApplyBase)
+MultipleApply = wrapper(MultipleApplyBase)
 NormalizeAndTranspose = wrapper(NormalizeAndTransposeBase)
+
 
 class Compose:
     """Composes several transforms together.

@@ -14,7 +14,7 @@ __all__ = ['JointMultipleKernelMaximumMeanDiscrepancy', 'ImageClassifier']
 
 class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
     r"""The Joint Multiple Kernel Maximum Mean Discrepancy (JMMD) used in
-    `Deep Transfer Learning with Joint Adaptation Networks <https://arxiv.org/abs/1605.06636>`_
+    `Deep Transfer Learning with Joint Adaptation Networks (ICML 2017) <https://arxiv.org/abs/1605.06636>`_
 
     Given source domain :math:`\mathcal{D}_s` of :math:`n_s` labeled points and target domain :math:`\mathcal{D}_t`
     of :math:`n_t` unlabeled points drawn i.i.d. from P and Q respectively, the deep networks will generate

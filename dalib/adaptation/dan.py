@@ -10,7 +10,7 @@ __all__ = ['MultipleKernelMaximumMeanDiscrepancy', 'ImageClassifier']
 
 class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
     r"""The Multiple Kernel Maximum Mean Discrepancy (MK-MMD) used in
-    `Learning Transferable Features with Deep Adaptation Networks <https://arxiv.org/pdf/1502.02791>`_
+    `Learning Transferable Features with Deep Adaptation Networks (ICML 2015) <https://arxiv.org/pdf/1502.02791>`_
 
     Given source domain :math:`\mathcal{D}_s` of :math:`n_s` labeled points and target domain :math:`\mathcal{D}_t`
     of :math:`n_t` unlabeled points drawn i.i.d. from P and Q respectively, the deep networks will generate

@@ -7,7 +7,7 @@ import numpy as np
 class Discriminator(nn.Sequential):
     """
     Domain discriminator model from
-    `"ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation" <https://arxiv.org/abs/1811.12833>`_
+    `ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation (CVPR 2019) <https://arxiv.org/abs/1811.12833>`_
 
     Distinguish pixel-by-pixel whether the input predictions come from the source domain or the target domain.
     The source domain label is 1 and the target domain label is 0.

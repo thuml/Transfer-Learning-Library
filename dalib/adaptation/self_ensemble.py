@@ -36,7 +36,8 @@ class ClassBalanceLoss(nn.Module):
 
 
 class EmaTeacher(object):
-    r"""Exponential moving average model
+    r"""Exponential moving average model used in `Self-ensembling for Visual Domain Adaptation (ICLR 2018) <https://arxiv.org/abs/1706.05208>`_
+
     Examples::
 
         >>> #initialize classifier

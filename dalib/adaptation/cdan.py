@@ -14,7 +14,7 @@ __all__ = ['ConditionalDomainAdversarialLoss', 'ImageClassifier']
 
 
 class ConditionalDomainAdversarialLoss(nn.Module):
-    r"""The `Conditional Domain Adversarial Loss <https://arxiv.org/abs/1705.10667>`_
+    r"""The Conditional Domain Adversarial Loss used in `Conditional Adversarial Domain Adaptation (NIPS 2018) <https://arxiv.org/abs/1705.10667>`_
 
     Conditional Domain adversarial loss measures the domain discrepancy through training a domain discriminator in a
     conditional manner. Given domain discriminator :math:`D`, feature representation :math:`f` and

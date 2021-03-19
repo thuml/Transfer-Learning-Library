@@ -7,7 +7,9 @@ from dalib.modules.grl import WarmStartGradientReverseLayer
 
 
 class MarginDisparityDiscrepancy(nn.Module):
-    r"""The margin disparity discrepancy (MDD) is proposed to measure the distribution discrepancy in domain adaptation.
+    r"""The margin disparity discrepancy (MDD) proposed in `Bridging Theory and Algorithm for Domain Adaptation (ICML 2019) <https://arxiv.org/abs/1904.05801>`_.
+
+    MDD can measure the distribution discrepancy in domain adaptation.
 
     The :math:`y^s` and :math:`y^t` are logits output by the main head on the source and target domain respectively.
     The :math:`y_{adv}^s` and :math:`y_{adv}^t` are logits output by the adversarial head.
@@ -21,7 +23,6 @@ class MarginDisparityDiscrepancy(nn.Module):
 
     where :math:`\gamma` is a margin hyper-parameter, :math:`L_s` refers to the disparity function defined on the source domain
     and :math:`L_t` refers to the disparity function defined on the target domain.
-    You can see more details in `Bridging Theory and Algorithm for Domain Adaptation <https://arxiv.org/abs/1904.05801>`_.
 
     Args:
         source_disparity (callable): The disparity function defined on the source domain, :math:`L_s`.
@@ -81,7 +82,10 @@ class MarginDisparityDiscrepancy(nn.Module):
 
 
 class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
-    r"""The margin disparity discrepancy (MDD) that measures the distribution discrepancy in domain adaptation
+    r"""
+    The margin disparity discrepancy (MDD) proposed in `Bridging Theory and Algorithm for Domain Adaptation (ICML 2019) <https://arxiv.org/abs/1904.05801>`_.
+
+    It measures the distribution discrepancy in domain adaptation
     for classification.
 
     When margin is equal to 1, it's also called disparity discrepancy (DD).
@@ -145,7 +149,10 @@ class ClassificationMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
 
 
 class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
-    r"""The margin disparity discrepancy (MDD) that measures the distribution discrepancy in domain adaptation
+    r"""
+    The margin disparity discrepancy (MDD) proposed in `Bridging Theory and Algorithm for Domain Adaptation (ICML 2019) <https://arxiv.org/abs/1904.05801>`_.
+
+    It measures the distribution discrepancy in domain adaptation
     for regression.
 
     The :math:`y^s` and :math:`y^t` are logits output by the main regressor on the source and target domain respectively.
@@ -254,16 +261,16 @@ class GeneralModule(nn.Module):
         """
         self.grl_layer.step()
 
-    def get_parameters(self) -> List[Dict]:
+    def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """
         Return a parameters list which decides optimization hyper-parameters,
         such as the relative learning rate of each layer.
         """
         params = [
-            {"params": self.backbone.parameters(), "lr": 0.1 if self.finetune else 1.},
-            {"params": self.bottleneck.parameters(), "lr": 1.},
-            {"params": self.head.parameters(), "lr": 1.},
-            {"params": self.adv_head.parameters(), "lr": 1.}
+            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else base_lr},
+            {"params": self.bottleneck.parameters(), "lr": base_lr},
+            {"params": self.head.parameters(), "lr": base_lr},
+            {"params": self.adv_head.parameters(), "lr": base_lr}
         ]
         return params
 
@@ -281,6 +288,8 @@ class ImageClassifier(GeneralModule):
         num_classes (int): Number of classes
         bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
         width (int, optional): Feature dimension of the classifier head. Default: 1024
+        grl (nn.Module): Gradient reverse layer. Will use default parameters if None. Default: None.
+        finetune (bool, optional): Whether use 10x smaller learning rate in the backbone. Default: True
 
     Inputs:
         - x (tensor): input data
@@ -355,6 +364,7 @@ class ImageRegressor(GeneralModule):
         num_factors (int): Number of factors
         bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
         width (int, optional): Feature dimension of the classifier head. Default: 1024
+        finetune (bool, optional): Whether use 10x smaller learning rate in the backbone. Default: True
 
     Inputs:
         - x (Tensor): input data

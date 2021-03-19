@@ -94,7 +94,7 @@ class AutomaticUpdateClassWeightModule(object):
 class ClassWeightModule(nn.Module):
     """
     Calculating class weight based on the output of classifier.
-    Introduced by `"Partial Adversarial Domain Adaptation" <https://arxiv.org/abs/1808.04205>`_
+    Introduced by `Partial Adversarial Domain Adaptation (ECCV 2018) <https://arxiv.org/abs/1808.04205>`_
 
     Given classification logits outputs :math:`\{\hat{y}_i\}_{i=1}^n`, where :math:`n` is the dataset size,
     the weight indicating the contribution of each class to the training can be calculated as

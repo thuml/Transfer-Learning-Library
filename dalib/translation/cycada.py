@@ -4,7 +4,8 @@ from torch import Tensor
 
 class SemanticConsistency(nn.Module):
     """
-    Semantic consistency loss is introduced by `CyCADA: Cycle-Consistent Adversarial Domain Adaptation <https://arxiv.org/abs/1711.03213>`_
+    Semantic consistency loss is introduced by
+    `CyCADA: Cycle-Consistent Adversarial Domain Adaptation (ICML 2018) <https://arxiv.org/abs/1711.03213>`_
 
     This helps to prevent label flipping during image translation.
 
