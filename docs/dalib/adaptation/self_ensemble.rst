@@ -3,7 +3,10 @@
 Self Ensemble
 -----------------------------
 
-.. autoclass:: dalib.adaptation.self_ensemble.ConsistentLoss
+.. autoclass:: dalib.adaptation.self_ensemble.ConsistencyLoss
+
+
+.. autoclass:: dalib.adaptation.self_ensemble.L2ConsistencyLoss
 
 
 .. autoclass:: dalib.adaptation.self_ensemble.ClassBalanceLoss
