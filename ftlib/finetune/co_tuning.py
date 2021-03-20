@@ -10,6 +10,20 @@ __all__ = ['Classifier', 'CoTuningLoss', 'Relationship']
 
 
 class CoTuningLoss(nn.Module):
+    """
+    The Co-Tuning loss in `Co-Tuning for Transfer Learning (NIPS 2020)
+    <http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf>`_.
+
+    Inputs:
+        - input: p(y_s) predicted by source classifier.
+        - target: p(y_s|y_t), where y_t is the ground truth class label in target dataset.
+
+    Shape:
+        - input:  (b, N_p), where b is the batch size and N_p is the number of classes in source dataset
+        - target: (b, N_p), where b is the batch size and N_p is the number of classes in source dataset
+        - Outputs: scalar.
+    """
+
     def __init__(self):
         super(CoTuningLoss, self).__init__()
 
@@ -20,6 +34,15 @@ class CoTuningLoss(nn.Module):
 
 
 class Relationship(object):
+    """Learns the category relationship p(y_s|y_t) between source dataset and target dataset.
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): A data loader of target dataset.
+        classifier (torch.nn.Module): A classifier for Co-Tuning.
+        device (torch.nn.Module): The device to run classifier.
+        cache (str, optional): Path to find and save the relationship file.
+
+    """
     def __init__(self, data_loader, classifier, device, cache=None):
         super(Relationship, self).__init__()
         self.data_loader = data_loader
@@ -37,6 +60,14 @@ class Relationship(object):
         return self.relationship[category]
 
     def collect_labels(self):
+        """
+        Collects predictions of target dataset by source model and corresponding ground truth class labels.
+
+        Returns:
+            - source_probabilities, [N, N_p], where N_p is the number of classes in source dataset
+            - target_labels, [N], where 0 <= each number < N_t, and N_t is the number of classes in target dataset
+        """
+
         print("Collecting labels to calculate relationship")
         source_predictions = []
         target_labels = []
@@ -57,11 +88,11 @@ class Relationship(object):
         The direct approach of learning category relationship p(y_s | y_t).
 
         Args:
-            source_probabilities: [N, N_p], where N_p is the number of classes in source dataset
-            target_labels: [N], where 0 <= each number < N_t, and N_t is the number of classes in target dataset
+            source_probabilities (numpy.array): [N, N_p], where N_p is the number of classes in source dataset
+            target_labels (numpy.array): [N], where 0 <= each number < N_t, and N_t is the number of classes in target dataset
 
         Returns:
-            [N_c, N_p] matrix representing the conditional probability p(pre-trained class | target_class)
+            Conditional probability, [N_c, N_p] matrix representing the conditional probability p(pre-trained class | target_class)
         """
         N_t = np.max(target_labels) + 1  # the number of target classes
         conditional = []
@@ -73,9 +104,29 @@ class Relationship(object):
 
 
 class Classifier(nn.Module):
-    """
-    """
+    """A Classifier class for Co-Tuning.
 
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 2-d features from data.
+        num_classes (int): Number of classes.
+        head_source (torch.nn.Module): Classifier head of source model.
+        head_target (torch.nn.Module, optional): Any classifier head. Use :class:`torch.nn.Linear` by default
+        finetune (bool): Whether finetune the classifier or train from scratch. Default: True
+
+
+    Inputs:
+        - x (tensor): input data fed to backbone
+
+    Outputs:
+        - y_s: predictions of source classifier head
+        - y_t: predictions of target classifier head
+
+    Shape:
+        - Inputs: (b, *) where b is the batch size and * means any number of additional dimensions
+        - y_s: (b, N), where b is the batch size and N is the number of classes
+        - y_t: (b, N), where b is the batch size and N is the number of classes
+
+    """
     def __init__(self, backbone: nn.Module, num_classes: int,  head_source,
                  head_target: Optional[nn.Module] = None, finetune=True):
         super(Classifier, self).__init__()

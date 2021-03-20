@@ -12,7 +12,8 @@ __all__ = ['DomainAdversarialLoss']
 
 class DomainAdversarialLoss(nn.Module):
     """
-    The `Domain Adversarial Loss <https://arxiv.org/abs/1505.07818>`_
+    The Domain Adversarial Loss proposed in
+    `Domain-Adversarial Training of Neural Networks (ICML 2015) <https://arxiv.org/abs/1505.07818>`_
 
     Domain adversarial loss measures the domain discrepancy through training a domain discriminator.
     Given domain discriminator :math:`D`, feature representation :math:`f`, the definition of DANN loss is

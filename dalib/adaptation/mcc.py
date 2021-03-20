@@ -14,7 +14,7 @@ class MinimumClassConfusionLoss(nn.Module):
     r"""
     Minimum Class Confusion loss minimizes the class confusion in the target predictions.
 
-    You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation <https://arxiv.org/abs/1912.03699>`_
+    You can see more details in `Minimum Class Confusion for Versatile Domain Adaptation (ECCV 2020) <https://arxiv.org/abs/1912.03699>`_
 
     Args:
         temperature (float) : The temperature for rescaling, the prediction will shrink to vanilla softmax if

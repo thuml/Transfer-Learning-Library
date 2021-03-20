@@ -10,7 +10,7 @@ from ..modules.grl import GradientReverseLayer
 class UnknownClassBinaryCrossEntropy(nn.Module):
     r"""
     Binary cross entropy loss to make a boundary for unknown samples, proposed by
-    `Open Set Domain Adaptation by Backpropagation <https://arxiv.org/abs/1804.10427>`_.
+    `Open Set Domain Adaptation by Backpropagation (ECCV 2018) <https://arxiv.org/abs/1804.10427>`_.
 
     Given a sample on target domain :math:`x_t` and its classifcation outputs :math:`y`, the binary cross entropy
     loss is defined as

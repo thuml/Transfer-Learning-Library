@@ -1,74 +1,140 @@
-import json
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 import functools
 from collections import OrderedDict
 
-from tqdm import tqdm
 
-from common.utils import AverageMeter, ProgressMeter
-from common.utils.metric import accuracy
+class L2Regularization(nn.Module):
+    r"""The L2 regularization of parameters :math:`w` can be described as:
 
+    .. math::
+        {\Omega} (w) = \dfrac{1}{2}  \Vert w\Vert_2^2 ,
 
-class ClassifierRegularization(nn.Module):
-    def __init__(self, parameters: list):
-        super(ClassifierRegularization, self).__init__()
-        self.parameters = parameters
+    Args:
+        model (torch.nn.Module):  The model to apply L2 penalty.
+
+    Shape:
+        - Output: scalar.
+    """
+    def __init__(self, model: nn.Module):
+        super(L2Regularization, self).__init__()
+        self.model = model
+
     def forward(self):
         output = 0.0
-        for name, param in self.parameters:
+        for param in self.model.parameters():
             output += 0.5 * torch.norm(param) ** 2
         return output
 
 
-class L2spRegularization(nn.Module):
-    def __init__(self, backbone_source: nn.Module, backbone_target: nn.Module):
-        super(L2spRegularization, self).__init__()
-        self.backbone_target = backbone_target
+class SPRegularization(nn.Module):
+    r"""
+    The SP (Starting Point) regularization from `Explicit inductive bias for transfer learning with convolutional networks
+    (ICML 2018) <https://arxiv.org/abs/1802.01483>`_
+
+    The SP regularization of parameters :math:`w` can be described as:
+
+    .. math::
+        {\Omega} (w) = \dfrac{1}{2}  \Vert w-w^0\Vert_2^2 ,
+
+    where :math:`w^0` is the parameter vector of the model pretrained on the source problem, acting as the starting point (SP) in fine-tuning.
+
+
+    Args:
+        source_model (torch.nn.Module):  The source (starting point) model.
+        target_model (torch.nn.Module):  The target (fine-tuning) model.
+
+    Shape:
+        - Output: scalar.
+    """
+    def __init__(self, source_model: nn.Module, target_model: nn.Module):
+        super(SPRegularization, self).__init__()
+        self.target_model = target_model
         self.source_weight = {}
-        for name, param in backbone_source.named_parameters():
+        for name, param in source_model.named_parameters():
             self.source_weight[name] = param.detach()
 
     def forward(self):
         output = 0.0
-        for name, param in self.backbone_target.named_parameters():
+        for name, param in self.target_model.named_parameters():
             output += 0.5 * torch.norm(param - self.source_weight[name]) ** 2
         return output
 
 
-class FeatureRegularization(nn.Module):
+class BehavioralRegularization(nn.Module):
+    r"""
+    The behavioral regularization from `DELTA:DEep Learning Transfer using Feature Map with Attention
+    for convolutional networks (ICLR 2019) <https://openreview.net/pdf?id=rkgbwsAcYm>`_
+
+    It can be described as:
+
+    .. math::
+        {\Omega} (w) = \sum_{j=1}^{N}   \Vert FM_j(w, \boldsymbol x)-FM_j(w^0, \boldsymbol x)\Vert_2^2 ,
+
+    where :math:`w^0` is the parameter vector of the model pretrained on the source problem, acting as the starting point (SP) in fine-tuning,
+    :math:`FM_j(w, \boldsymbol x)` is feature maps generated from the :math:`j`-th layer of the model parameterized with :math:`w`, given the input :math:`\boldsymbol x`.
+
+
+    Inputs:
+        layer_outputs_source (OrderedDict):  The dictionary for source model, where the keys are layer names and the values are feature maps correspondingly.
+
+        layer_outputs_target (OrderedDict):  The dictionary for target model, where the keys are layer names and the values are feature maps correspondingly.
+
+    Shape:
+        - Output: scalar.
+
+    """
     def __init__(self):
-        super(FeatureRegularization, self).__init__()
+        super(BehavioralRegularization, self).__init__()
 
     def forward(self, layer_outputs_source, layer_outputs_target):
         output = 0.0
-        for fm_src, fm_tgt in zip(layer_outputs_source, layer_outputs_target):
-            fm_src = layer_outputs_source[fm_src]
-            fm_tgt = layer_outputs_target[fm_tgt]
+        for fm_src, fm_tgt in zip(layer_outputs_source.values(), layer_outputs_target.values()):
             output += 0.5 * (torch.norm(fm_tgt - fm_src.detach()) ** 2)
         return output
 
 
-class AttentionFeatureRegularization(nn.Module):
-    def __init__(self, channel_weight):
-        super(AttentionFeatureRegularization, self).__init__()
-        self.channel_weight = channel_weight
+class AttentionBehavioralRegularization(nn.Module):
+    r"""
+    The behavioral regularization with attention from `DELTA:DEep Learning Transfer using Feature Map with Attention
+    for convolutional networks (ICLR 2019) <https://openreview.net/pdf?id=rkgbwsAcYm>`_
+
+    It can be described as:
+
+    .. math::
+        {\Omega} (w) = \sum_{j=1}^{N}  W_j(w) \Vert FM_j(w, \boldsymbol x)-FM_j(w^0, \boldsymbol x)\Vert_2^2 ,
+
+    where
+    :math:`w^0` is the parameter vector of the model pretrained on the source problem, acting as the starting point (SP) in fine-tuning.
+    :math:`FM_j(w, \boldsymbol x)` is feature maps generated from the :math:`j`-th layer of the model parameterized with :math:`w`, given the input :math:`\boldsymbol x`.
+    :math:`W_j(w)` is the channel attention of the :math:`j`-th layer of the model parameterized with :math:`w`.
+
+    Args:
+        channel_attention (list): The channel attentions of feature maps generated by each selected layer. For the layer with C channels, the channel attention is a tensor of shape [C].
+
+    Inputs:
+        layer_outputs_source (OrderedDict):  The dictionary for source model, where the keys are layer names and the values are feature maps correspondingly.
+
+        layer_outputs_target (OrderedDict):  The dictionary for target model, where the keys are layer names and the values are feature maps correspondingly.
+
+    Shape:
+        - Output: scalar.
+
+    """
+    def __init__(self, channel_attention):
+        super(AttentionBehavioralRegularization, self).__init__()
+        self.channel_attention = channel_attention
 
     def forward(self, layer_outputs_source, layer_outputs_target):
         output = 0.0
-        for i, (fm_src, fm_tgt) in enumerate(zip(layer_outputs_source, layer_outputs_target)):
-            fm_src = layer_outputs_source[fm_src]
-            fm_tgt = layer_outputs_target[fm_tgt]
-
+        for i, (fm_src, fm_tgt) in enumerate(zip(layer_outputs_source.values(), layer_outputs_target.values())):
             b, c, h, w = fm_src.shape
             fm_src = fm_src.reshape(b, c, h * w)
             fm_tgt = fm_tgt.reshape(b, c, h * w)
 
             distance = torch.norm(fm_tgt - fm_src.detach(), 2, 2)
-            distance = c * torch.mul(self.channel_weight[i], distance ** 2) / (h * w)
+            distance = c * torch.mul(self.channel_attention[i], distance ** 2) / (h * w)
             output += 0.5 * torch.sum(distance)
 
         return output
@@ -81,6 +147,19 @@ def get_attribute(obj, attr, *args):
 
 
 class IntermediateLayerGetter:
+    r"""
+    Wraps a model to get intermediate output values of selected layers.
+
+    Args:
+       model (torch.nn.Module): The model to collect intermediate layer feature maps.
+       return_layers (list): The names of selected modules to return the output.
+       keep_output (bool): If True, `model_output` contains the final model's output, else return None. Default: True
+
+    Returns:
+       - An OrderedDict of intermediate outputs. The keys are selected layer names in `return_layers` and the values are the feature map outputs. The order is the same as `return_layers`.
+       - The model's final output. If `keep_output` is False, return None.
+
+    """
     def __init__(self, model, return_layers, keep_output=True):
         self._model = model
         self.return_layers = return_layers
@@ -109,109 +188,3 @@ class IntermediateLayerGetter:
             h.remove()
 
         return ret, output
-
-
-class ChannelWeightCalculator:
-    def __init__(self, model, return_layers, criterion, data_loader, device, iteration_limit=-1):
-        self._model = model
-        self.return_layers = return_layers
-        self.channel_weight = []
-        self.criterion = criterion
-        self.data_loader = data_loader
-        self.iteration_limit = iteration_limit
-        self.device = device
-        for layer_id, name in enumerate(self.return_layers):
-            layer = get_attribute(self._model, name)
-            layer_channel_weight = [0] * layer.out_channels
-            self.channel_weight.append(layer_channel_weight)
-
-    def train_classifier(self, optimizer, scheduler, num_epochs):
-        iterations_per_epoch = len(self.data_loader)
-        self._model.train()
-        self._model.backbone.requires_grad = False
-
-        for epoch in range(num_epochs):
-            losses = AverageMeter('Loss', ':3.2f')
-            cls_accs = AverageMeter('Cls Acc', ':3.1f')
-            progress = ProgressMeter(
-                iterations_per_epoch,
-                [losses, cls_accs],
-                prefix="Epoch: [{}]".format(epoch))
-
-            for i, data in enumerate(self.data_loader):
-                inputs, labels = data
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
-                outputs, _ = self._model(inputs)
-                loss = self.criterion(outputs, labels)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                cls_acc = accuracy(outputs, labels)[0]
-
-                losses.update(loss.item(), inputs.size(0))
-                cls_accs.update(cls_acc.item(), inputs.size(0))
-
-                if i % 10 == 0:
-                    progress.display(i)
-            scheduler.step()
-
-    def calculate(self):
-        print('Calculating channel weights...')
-        self._model.eval()
-
-        if self.iteration_limit > 0:
-            total_iteration = min(len(self.data_loader), self.iteration_limit)
-        else:
-            total_iteration = len(self.data_loader)
-
-        progress = ProgressMeter(
-            total_iteration,
-            [],
-            prefix="Iteration: ")
-
-        for i, data in enumerate(self.data_loader):
-            if i >= total_iteration:
-                break
-            inputs, labels = data
-            inputs = inputs.to(self.device)
-            labels = labels.to(self.device)
-            outputs, _ = self._model(inputs)
-            loss_0 = self.criterion(outputs, labels)
-            progress.display(i)
-            for layer_id, name in enumerate(tqdm(self.return_layers)):
-                layer = get_attribute(self._model, name)
-                for j in range(layer.out_channels):
-                    tmp = self._model.state_dict()[name + '.weight'][j, ].clone()
-                    self._model.state_dict()[name + '.weight'][j, ] = 0.0
-                    outputs, _ = self._model(inputs)
-                    loss_1 = self.criterion(outputs, labels)
-                    difference = loss_1 - loss_0
-                    difference = difference.detach().cpu().numpy().item()
-                    history_value = self.channel_weight[layer_id][j]
-                    self.channel_weight[layer_id][j] = 1.0 * (i * history_value + difference) / (i + 1)
-                    self._model.state_dict()[name + '.weight'][j, ] = tmp
-
-    def save_channel_weight(self, file_path):
-        json.dump(self.channel_weight, open(file_path, 'w'))
-
-
-def calculate_channel_weight(classifier, criterion, optimizer, loader, scheduler, return_layers, device, channel_weight_path, args):
-    calculator = ChannelWeightCalculator(classifier, return_layers=return_layers,
-                                         criterion=criterion, data_loader=loader, device=device, iteration_limit=args.iteration_limit)
-    calculator.train_classifier(optimizer=optimizer, scheduler=scheduler,
-                                num_epochs=args.epochs_channel_weight)
-    calculator.calculate()
-    calculator.save_channel_weight(channel_weight_path)
-
-
-def get_channel_weight(file_path, device):
-    channel_weights = []
-    for weight in json.load(open(file_path)):
-        weight = np.array(weight)
-        weight = (weight - np.mean(weight)) / np.std(weight)
-        weight = torch.from_numpy(weight).float().to(device)
-        weight = F.softmax(weight / 5).detach()
-        channel_weights.append(weight)
-    return channel_weights

@@ -8,7 +8,7 @@ from common.modules.classifier import Classifier as ClassfierBase
 
 class AdaptiveFeatureNorm(nn.Module):
     r"""
-    The `Stepwise Adaptive Feature Norm loss <https://arxiv.org/pdf/1811.07456v2.pdf>`_
+    The `Stepwise Adaptive Feature Norm loss (ICCV 2019) <https://arxiv.org/pdf/1811.07456v2.pdf>`_
 
     Instead of using restrictive scalar R to match the corresponding feature norm, Stepwise Adaptive Feature Norm
     is used in order to learn task-specific features with large norms in a progressive manner.
@@ -123,7 +123,7 @@ class ImageClassifier(ClassfierBase):
                 m.weight.data.normal_(0.0, 0.01)
                 m.bias.data.normal_(0.0, 0.01)
 
-    def get_parameters(self) -> List[Dict]:
+    def get_parameters(self, base_lr=1.0) -> List[Dict]:
         params = [
             {"params": self.backbone.parameters()},
             {"params": self.bottleneck.parameters(), "momentum": 0.9},

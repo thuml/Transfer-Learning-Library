@@ -8,7 +8,7 @@ from common.modules.classifier import Classifier as ClassifierBase
 class ImportanceWeightModule(object):
     r"""
     Calculating class weight based on the output of discriminator.
-    Introduced by `"Importance Weighted Adversarial Nets for Partial Domain Adaptation" <https://arxiv.org/abs/1803.09210>`_
+    Introduced by `Importance Weighted Adversarial Nets for Partial Domain Adaptation (CVPR 2018) <https://arxiv.org/abs/1803.09210>`_
 
     Args:
         discriminator (torch.nn.Module): A domain discriminator object, which predicts the domains of features.

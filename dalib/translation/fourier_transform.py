@@ -42,7 +42,7 @@ def low_freq_mutate(amp_src: np.ndarray, amp_trg: np.ndarray, beta: Optional[int
 
 class FourierTransform(nn.Module):
     """
-    Fourier Transform is introduced by `Fourier Domain Adaptation <https://arxiv.org/abs/2004.05498>`_
+    Fourier Transform is introduced by `FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020) <https://arxiv.org/abs/2004.05498>`_
 
     Fourier Transform replace the low frequency component of the amplitude of the source image to that of the target image.
     Denote with :math:`M_{β}` a mask, whose value is zero except for the center region:

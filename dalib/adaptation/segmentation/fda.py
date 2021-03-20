@@ -3,7 +3,7 @@ import math
 
 
 def robust_entropy(y, ita=1.5, num_classes=19, reduction='mean'):
-    """ Robust entropy proposed in `Fourier Domain Adaptation <https://arxiv.org/abs/2004.05498>`_
+    """ Robust entropy proposed in `FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020) <https://arxiv.org/abs/2004.05498>`_
 
     Args:
         y (tensor): logits output of segmentation model in shape of :math:`(N, C, H, W)`

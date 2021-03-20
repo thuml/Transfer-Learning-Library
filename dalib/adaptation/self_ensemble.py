@@ -101,7 +101,8 @@ class ClassBalanceLoss(nn.Module):
 
 class EmaTeacher(object):
     r"""
-    Exponential moving average model as teacher model, so called `Mean Teacher <https://arxiv.org/pdf/1703.01780.pdf>`_.
+    Exponential moving average model used in `Self-ensembling for Visual Domain Adaptation (ICLR 2018) <https://arxiv.org/abs/1706.05208>`_
+    
     We define :math:`\theta_t'` at training step t as the EMA of successive :math:`\theta` weights, :math:`\alpha` as
     decay rate. Then
 

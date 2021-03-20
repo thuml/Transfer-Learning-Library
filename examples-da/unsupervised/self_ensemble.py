@@ -19,7 +19,7 @@ sys.path.append('../..')
 from dalib.adaptation.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
 import common.vision.datasets as datasets
 import common.vision.models as models
-from common.vision.transforms import ResizeImage, AllApply
+from common.vision.transforms import ResizeImage, MultipleApply
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -67,7 +67,7 @@ def main(args: argparse.Namespace):
     train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=AllApply([train_transform, train_transform]))
+    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=MultipleApply([train_transform, val_transform]))
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
@@ -148,6 +148,7 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, teacher, consistent_loss, class_balance_loss, optimizer,
               lr_scheduler, epoch, args)
@@ -396,7 +397,7 @@ if __name__ == '__main__':
                         help='trade off parameter for class balance loss')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--pretrain-epochs', default=5, type=int, metavar='N',
+    parser.add_argument('--pretrain-epochs', default=0, type=int, metavar='N',
                         help='number of total epochs(pretrain) to run')
     parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
