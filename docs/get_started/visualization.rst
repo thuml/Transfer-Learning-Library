@@ -2,9 +2,26 @@
 Visualization
 *************
 
-
 How to visualize the representations using t-SNE?
 ===================================================================
+
+Many algorithms aim to align feature representations between ``source`` and ``target`` domain. 
+Through visualization, you can find and analysis the mis-alignment between different domains. 
+
+After training `DANN`, in directory ``examples-da/unsupervised``, run the following command
+
+.. code-block:: shell
+
+    CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31
+        -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W --phase analysis
+
+It may take a while, then in directory ``examples-da/unsupervised/dann/Office31_A2W/visualize``, you can find
+``TSNE.png``.
+
+.. figure:: /docs/_static/images/dann_A2W.png
+    :width 300
+    
+    t-SNE of representations from DANN.
 
 
 How to visualize the segmentation predictions?

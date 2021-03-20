@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, List, Dict
 import torch
 import torch.nn as nn
 import math
@@ -8,9 +8,24 @@ from common.modules.classifier import Classifier as ClassfierBase
 
 class AdaptiveFeatureNorm(nn.Module):
     r"""
-    Stepwise feature norm loss proposed in
-    `Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised Domain
-    Adaptation (ICCV 2019) <https://arxiv.org/abs/1811.07456>`_
+    The `Stepwise Adaptive Feature Norm loss (ICCV 2019) <https://arxiv.org/pdf/1811.07456v2.pdf>`_
+
+    Instead of using restrictive scalar R to match the corresponding feature norm, Stepwise Adaptive Feature Norm
+    is used in order to learn task-specific features with large norms in a progressive manner.
+    Given feature representations :math:`f` on source or target domain, the definition of Stepwise Adaptive Feature Norm loss is
+
+    .. math::
+        norm\_loss = \mathbb{E}_{i}(\Vert f_i \Vert_2.detach() + delta - \Vert f_i \Vert_2)^2\\
+
+    Args:
+        delta (float): positive residual scalar to control the feature norm enlargement.
+
+    Inputs:
+        - f (tensor): feature representations on source or target domain.
+
+    Shape:
+        - f: :math:`(N, F)` where F means the dimension of input features.
+        - Outputs: scalar.
 
     Examples::
 
@@ -33,7 +48,24 @@ class AdaptiveFeatureNorm(nn.Module):
 
 
 class Block(nn.Module):
-    r"""Basic building block for Image Classifier with structure: FC-BN-ReLU-Dropout order
+    r"""
+    Basic building block for Image Classifier with structure: FC-BN-ReLU-Dropout.
+    We use :math:`L_2` preserved dropout layers.
+    Given mask probability :math:`p`, input :math:`x_k`, generated mask :math:`a_k`,
+    vanilla dropout layers calculate
+
+    .. math::
+        \hat{x}_k = a_k\frac{1}{1-p}x_k\\
+
+    While in :math:`L_2` preserved dropout layers
+
+    .. math::
+        \hat{x}_k = a_k\frac{1}{\sqrt{1-p}}x_k\\
+
+    Args:
+        in_features (int): Dimension of input features
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1000
+        dropout_p (float, optional): dropout probability. Default: 0.5
     """
 
     def __init__(self, in_features: int, bottleneck_dim: Optional[int] = 1000, dropout_p: Optional[float] = 0.5):
@@ -55,9 +87,15 @@ class Block(nn.Module):
 
 
 class ImageClassifier(ClassfierBase):
-    r"""The Image Classifier for 'Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised
-        Domain Adaptation'
+    r"""
+    ImageClassifier for AFN.
 
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 2-d features from data
+        num_classes (int): Number of classes
+        num_blocks (int, optional): Number of basic blocks. Default: 1
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1000
+        dropout_p (float, optional): dropout probability. Default: 0.5
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, num_blocks: Optional[int] = 1,

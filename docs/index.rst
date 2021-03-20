@@ -9,6 +9,7 @@ Welcome to Transfer Learning Library
 
    get_started/installing
    get_started/introduction
+   get_started/quickstart
    get_started/visualization
    get_started/faq
 

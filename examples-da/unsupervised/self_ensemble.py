@@ -16,7 +16,7 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
-from dalib.adaptation.self_ensemble import EmaTeacher, ConsistentLoss, ClassBalanceLoss, ImageClassifier
+from dalib.adaptation.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
 import common.vision.datasets as datasets
 import common.vision.models as models
 from common.vision.transforms import ResizeImage, MultipleApply
@@ -142,7 +142,7 @@ def main(args: argparse.Namespace):
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
     teacher = EmaTeacher(classifier, alpha=args.alpha)
-    consistent_loss = ConsistentLoss().to(device)
+    consistent_loss = L2ConsistencyLoss().to(device)
     class_balance_loss = ClassBalanceLoss(num_classes).to(device)
 
     # start training
