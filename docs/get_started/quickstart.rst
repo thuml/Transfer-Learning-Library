@@ -82,6 +82,9 @@ you can find our solution. In ``dalib/adaptation/mcd.py`` we define ``ImageClass
 One thing you should notice is your ``backbone`` should implement ``out_features`` method, so that following blocks can take
 that (usually an integer scalar) as input dimension.
 
+Besides, in ``DA`` settings, it's common to finetune ``backbone`` with smaller learning rate, typically ``0.1x`` compared to other parts. If you want to use
+other strategies, you should overload ``get_parameters`` function. One example is ``dalib/adatation/afn.py``.
+
 At last, it's time to show how to support your own dataset. Again we use ``Office31`` dataset that we have implemented as
 an example. Similar to our implementation in  ``common/vision/datasets/office31.py``, your dataset should inherit ``ImageList`` class. Then you should specify
 where to download data as ``download_list`` does. Your task should be defined in ``image_list`` dictionary where the key
@@ -92,4 +95,6 @@ Here are some examples::
     amazon/images/back_pack/frame_0061.jpg 0
 
 If you are still confused, we find it helpful to run some algorithms like `DANN`, then in directory ``examples-da/unsupervised/data/office31``
-you can watch these files.
+you can see how these files are organised.
+
+In next section, we will introduce how to visualize your results.

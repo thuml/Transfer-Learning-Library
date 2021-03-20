@@ -97,6 +97,8 @@ def main(args: argparse.Namespace):
 
     # analysis the model
     if args.phase == 'analysis':
+        # using shuffled val loader
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
