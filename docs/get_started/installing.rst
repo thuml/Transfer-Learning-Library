@@ -17,6 +17,3 @@ Check that you have install all the dependency.
 
 It's recommended to use pytorch==1.7.1 and torchvision==0.8.2 in order to better reproduce the benchmark results.
 
-In the directory ``examples-da``, you can find all the necessary running scripts to
-reproduce the domain adaptation benchmarks with specified hyper-parameters.
-
