@@ -25,7 +25,7 @@ Also, warnings during ``make`` process doesn't matter and can be ignored.
 
 Finally, you can open the docs in ``docs/build/html/index.html``
 
-2. How to use customize model?
+2. How to customize model?
 ===============================
 A typical classifier has 3 components.
 
@@ -33,7 +33,7 @@ A typical classifier has 3 components.
 - bottleneck: random initialized bottleneck layers between ``backbone`` and ``head`` to increase model capacity
 - head: classifier head which outputs final predictions.
 
-The way we construct an image classifier is
+The way we construct an image classifier is as follows.
 
 .. code-block:: python
 
@@ -43,8 +43,7 @@ The way we construct an image classifier is
     classifier = Classifier(backbone=your_backbone, num_classes=num_classes, bottleneck=your_bottleneck,
         bottleneck_dim=your_bottleneck_dim, finetune=True)
 
-To change one or many of these components, you can implement your model and pass it as parameters.
-Below are some examples.
+Below are some examples on how to change these components.
 
 2.1 Define a new backbone
 '''''''''''''''''''''''''''
@@ -111,7 +110,7 @@ And momentum factor of ``0.9`` is used for ``bottleneck`` and ``head``.
             ]
             return params
 
-3. How to use customize datasets?
+3. How to customize datasets?
 ==================================
 
 If you want to implement your own vision datasets, you can use ``torchvision.datasets.VisionDataset``

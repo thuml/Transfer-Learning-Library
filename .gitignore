@@ -129,5 +129,5 @@ dmypy.json
 
 exp/*
 trash/*
-examples-da/digits/logs/*
-examples-da/digits/data/*
+examples/domain_adaptation/digits/logs/*
+examples/domain_adaptation/digits/data/*
