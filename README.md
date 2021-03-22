@@ -22,8 +22,6 @@ We are planning to add
 
 The performance of these algorithms were fairly evaluated in this [benchmark](http://microhhh.com/dalib/index.html).
 
-There might be many errors and changes in this branch. Please refer [master](https://github.com/thuml/Transfer-Learning-Library) for stable version. Also, any suggestions are welcome!
-
 ## Installation
 
 For flexible use and modification, please git clone the library.
