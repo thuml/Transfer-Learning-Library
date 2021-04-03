@@ -1,9 +1,5 @@
-<img src="https://github.com/thuml/Transfer-Learning-Library/blob/dev/TransLearn.png"/>
-
 ## Introduction
-
-*Trans-Learn* is a Transfer Learning library based on pure PyTorch with high performance and friendly API. 
-Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or easily apply existing algorithms..
+*Transfer-Learn* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
 On July 24th, 2020, we released the v0.1 (preview version), the first sub-library is for Domain Adaptation (DALIB). The currently supported algorithms include:
 
