@@ -1,6 +1,7 @@
 import torch
 import prettytable
 
+__all__ = ['keypoint_detection']
 
 def binary_accuracy(output: torch.Tensor, target: torch.Tensor) -> float:
     """Computes the accuracy for binary classification"""
@@ -75,13 +76,13 @@ class ConfusionMatrix(object):
         iu = torch.diag(h) / (h.sum(1) + h.sum(0) - torch.diag(h))
         return acc_global, acc, iu
 
-    def reduce_from_all_processes(self):
-        if not torch.distributed.is_available():
-            return
-        if not torch.distributed.is_initialized():
-            return
-        torch.distributed.barrier()
-        torch.distributed.all_reduce(self.mat)
+    # def reduce_from_all_processes(self):
+    #     if not torch.distributed.is_available():
+    #         return
+    #     if not torch.distributed.is_initialized():
+    #         return
+    #     torch.distributed.barrier()
+    #     torch.distributed.all_reduce(self.mat)
 
     def __str__(self):
         acc_global, acc, iu = self.compute()

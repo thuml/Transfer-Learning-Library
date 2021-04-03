@@ -28,6 +28,7 @@ class ImportanceWeightModule(object):
         >>>     # importance weights for source instance
         >>>     w_s = importance_weight_module.get_importance_weight(f_s)
     """
+
     def __init__(self, discriminator: nn.Module, partial_classes_index: Optional[List[int]] = None):
         self.discriminator = discriminator
         self.partial_classes_index = partial_classes_index
