@@ -1,9 +1,6 @@
-from typing import Optional, List
+from typing import Optional
 import torch
 import torch.nn as nn
-from numpy import array, dot
-import numpy as np
-from qpsolvers import solve_qp
 
 
 __all__ = ['GaussianKernel']
@@ -30,11 +27,11 @@ class GaussianKernel(nn.Module):
     If :attr:`track_running_stats` is set to ``False``, this layer then does not
     keep running estimates, and use a fixed :math:`\sigma` instead.
 
-    Parameters:
-        - sigma (float, optional): bandwidth :math:`\sigma`. Default: None
-        - track_running_stats (bool, optional): If ``True``, this module tracks the running mean of :math:`\sigma^2`.
+    Args:
+        sigma (float, optional): bandwidth :math:`\sigma`. Default: None
+        track_running_stats (bool, optional): If ``True``, this module tracks the running mean of :math:`\sigma^2`.
           Otherwise, it won't track such statistics and always uses fix :math:`\sigma^2`. Default: ``True``
-        - alpha (float, optional): :math:`\alpha` which decides the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
+        alpha (float, optional): :math:`\alpha` which decides the magnitude of :math:`\sigma^2` when track_running_stats is set to ``True``
 
     Inputs:
         - X (tensor): input group :math:`X`
@@ -59,29 +56,3 @@ class GaussianKernel(nn.Module):
             self.sigma_square = self.alpha * torch.mean(l2_distance_square.detach())
 
         return torch.exp(-l2_distance_square / (2 * self.sigma_square))
-
-
-def optimal_kernel_combinations(kernel_values: List[torch.Tensor]) -> torch.Tensor:
-    # use quadratic program to get optimal kernel
-    num_kernel = len(kernel_values)
-    kernel_values_numpy = array([float(k.detach().cpu().data.item()) for k in kernel_values])
-    if np.all(kernel_values_numpy <= 0):
-        beta = solve_qp(
-            P=-np.eye(num_kernel),
-            q=np.zeros(num_kernel),
-            A=kernel_values_numpy,
-            b=np.array([-1.]),
-            G=-np.eye(num_kernel),
-            h=np.zeros(num_kernel),
-        )
-    else:
-        beta = solve_qp(
-            P=np.eye(num_kernel),
-            q=np.zeros(num_kernel),
-            A=kernel_values_numpy,
-            b=np.array([1.]),
-            G=-np.eye(num_kernel),
-            h=np.zeros(num_kernel),
-        )
-    beta = beta / beta.sum(axis=0) * num_kernel  # normalize
-    return sum([k * b for (k, b) in zip(kernel_values, beta)])

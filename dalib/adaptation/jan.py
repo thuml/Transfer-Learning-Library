@@ -1,9 +1,10 @@
 from typing import Optional, Sequence
 import torch
 import torch.nn as nn
-from dalib.modules.classifier import Classifier as ClassifierBase
-from dalib.modules.grl import GradientReverseLayer
-from dalib.modules.kernels import GaussianKernel
+
+from common.modules.classifier import Classifier as ClassifierBase
+from ..modules.grl import GradientReverseLayer
+from ..modules.kernels import GaussianKernel
 from .dan import _update_index_matrix
 
 
@@ -13,7 +14,7 @@ __all__ = ['JointMultipleKernelMaximumMeanDiscrepancy', 'ImageClassifier']
 
 class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
     r"""The Joint Multiple Kernel Maximum Mean Discrepancy (JMMD) used in
-    `Deep Transfer Learning with Joint Adaptation Networks <https://arxiv.org/abs/1605.06636>`_
+    `Deep Transfer Learning with Joint Adaptation Networks (ICML 2017) <https://arxiv.org/abs/1605.06636>`_
 
     Given source domain :math:`\mathcal{D}_s` of :math:`n_s` labeled points and target domain :math:`\mathcal{D}_t`
     of :math:`n_t` unlabeled points drawn i.i.d. from P and Q respectively, the deep networks will generate
@@ -28,14 +29,14 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         &+ \dfrac{1}{n_t^2} \sum_{i=1}^{n_t}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{tl}, z_j^{tl}) \\
         &- \dfrac{2}{n_s n_t} \sum_{i=1}^{n_s}\sum_{j=1}^{n_t} \prod_{l\in\mathcal{L}} k^l(z_i^{sl}, z_j^{tl}). \\
 
-    Parameters:
-        - **kernels** (tuple(tuple(`nn.Module`))): kernel functions, where `kernels[r]` corresponds to kernel :math:`k^{\mathcal{L}[r]}`.
-        - **linear** (bool): whether use the linear version of JAN. Default: False
-        - **thetas** (list(`Theta`): use adversarial version JAN if not None. Default: None
+    Args:
+        kernels (tuple(tuple(torch.nn.Module))): kernel functions, where `kernels[r]` corresponds to kernel :math:`k^{\mathcal{L}[r]}`.
+        linear (bool): whether use the linear version of JAN. Default: False
+        thetas (list(Theta): use adversarial version JAN if not None. Default: None
 
-    Inputs: z_s, z_t
-        - **z_s** (tuple(tensor)): multiple layers' activations from the source domain, :math:`z^s`
-        - **z_t** (tuple(tensor)): multiple layers' activations from the target domain, :math:`z^t`
+    Inputs:
+        - z_s (tuple(tensor)): multiple layers' activations from the source domain, :math:`z^s`
+        - z_t (tuple(tensor)): multiple layers' activations from the target domain, :math:`z^t`
 
     Shape:
         - :math:`z^{sl}` and :math:`z^{tl}`: :math:`(minibatch, *)`  where * means any dimension
@@ -48,6 +49,7 @@ class JointMultipleKernelMaximumMeanDiscrepancy(nn.Module):
         The kernel values will add up when there are multiple kernels for a certain layer.
 
     Examples::
+
         >>> feature_dim = 1024
         >>> batch_size = 10
         >>> layer1_kernels = (GaussianKernel(alpha=0.5), GaussianKernel(1.), GaussianKernel(2.))
@@ -106,12 +108,13 @@ class Theta(nn.Module):
 
 
 class ImageClassifier(ClassifierBase):
-    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        head = nn.Linear(bottleneck_dim, num_classes)
-        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, head)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)

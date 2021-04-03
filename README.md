@@ -11,15 +11,26 @@ On July 24th, 2020, we released the v0.1 (preview version), the first sub-librar
 (CDAN)](https://arxiv.org/abs/1705.10667)
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
+- Regression DA （including Source Only, DD)
+- Unsupervised DA (including MCC, AFN)
+- Partial DA (DANN, PADA, IWAN)
+- Open Set DA (DANN, OSBP)
+- Segmentation DA (ADVENT, FDA, CycleGAN, Cycada)
+- Keypoint Detection DA (RegDA)
 
-The performance of these algorithms were fairly evaluated in this [benchmark](https://dalib.readthedocs.io/en/latest/dalib.adaptation.html).
+We are planning to add
+- Segmentation DA (Self-training methods)
+- Finetune Library (ftlib)
+- Object Detection DA
+
+The performance of these algorithms were fairly evaluated in this [benchmark](http://microhhh.com/dalib/index.html).
 
 ## Installation
 
 For flexible use and modification, please git clone the library.
 
 ## Documentation
-You can find the tutorial and API documentation on the website: [DALIB API](https://dalib.readthedocs.io/en/latest/index.html)
+You can find the tutorial and API documentation on the website: [Documentation (please open in Firefox or Safari)](http://170.106.108.162/index.html). Note that this link is only for temporary use. You can also build the doc by yourself following the instructions in http://170.106.108.162/get_started/faq.html.
 
 Also, we have examples in the directory `examples`. A typical usage is 
 ```shell script
@@ -33,8 +44,6 @@ In the directory `examples`, you can find all the necessary running scripts to r
 
 ## Contributing
 We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us. 
-
-You can find the latest code on the [dev](https://github.com/thuml/Transfer-Learning-Library/tree/dev) branch.
 
 ## Disclaimer on Datasets
 
