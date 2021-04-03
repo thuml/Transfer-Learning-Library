@@ -3,6 +3,7 @@
 
 The currently supported algorithms include:
 
+### Domain Adaptation for Classification
 - Domain-Adversarial Training of Neural Networks (DANN, ICML 2015)
 - Learning Transferable Features with Deep Adaptation Networks (DAN, ICML 2015)
 - Deep Transfer Learning with Joint Adaptation Networks (JAN, ICML 2017)
@@ -12,16 +13,26 @@ The currently supported algorithms include:
 Unsupervised Domain Adaptation (AFN, ICCV 2019)
 - Bridging Theory and Algorithm for Domain Adaptation (MDD, ICML 2019)
 - Minimum Class Confusion for Versatile Domain Adaptation (MCC, ECCV 2020)
+
+### Partial Domain Adaptation
 - Partial Adversarial Domain Adaptation (PADA, ECCV 2018)
 - Importance Weighted Adversarial Nets for Partial Domain Adaptation (IWAN, CVPR 2018)
+
+### Open-set Domain Adaptation
 - Open Set Domain Adaptation by Backpropagation (OSBP, ECCV 2018)
+
+### Domain Adaptation for Segmentation
 - Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks (CycleGAN, ICCV 2017)
 - CyCADA: Cycle-Consistent Adversarial Domain Adaptation (ICML 2018)
 - ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation (CVPR 2019)
 - FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020)
+
+### Domain Adaptation for Keypoint Detection
 - Regressive Domain Adaptation for Unsupervised Keypoint Detection (RegDA, CVPR 2021)
-- Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)
+
+### Finetune for Classification
 - Explicit inductive bias for transfer learning with convolutional networks (DELTA, ICML 2018)
+- Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)
 - Stochastic Normalization (StochNorm, NIPS 2020)
 - Co-Tuning for Transfer Learning (Co-Tuning, NIPS 2020).
 
