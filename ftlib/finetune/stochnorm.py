@@ -240,6 +240,7 @@ class StochNorm3d(_StochNorm):
         - Input: :math:`(b, c, d, h, w)`
         - Output: :math:`(b, c, d, h, w)` (same shape as input)
     """
+
     def _check_input_dim(self, input):
         if input.dim() != 5:
             raise ValueError('expected 4D input (got {}D input)'
@@ -261,11 +262,11 @@ def convert_model(module, p):
 
     mod = module
     for pth_module, stoch_module in zip([torch.nn.modules.batchnorm.BatchNorm1d,
-                                        torch.nn.modules.batchnorm.BatchNorm2d,
-                                        torch.nn.modules.batchnorm.BatchNorm3d],
-                                       [StochNorm1d,
-                                        StochNorm2d,
-                                        StochNorm3d]):
+                                         torch.nn.modules.batchnorm.BatchNorm2d,
+                                         torch.nn.modules.batchnorm.BatchNorm3d],
+                                        [StochNorm1d,
+                                         StochNorm2d,
+                                         StochNorm3d]):
         if isinstance(module, pth_module):
             mod = stoch_module(module.num_features, module.eps, module.momentum, module.affine, p)
             mod.running_mean = module.running_mean
