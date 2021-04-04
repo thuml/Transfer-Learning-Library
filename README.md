@@ -1,40 +1,68 @@
+<img src="https://github.com/thuml/Transfer-Learning-Library/blob/dev/TransLearn.png"/>
+
 ## Introduction
-*Trans-Learn* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
+*Transfer-Learn* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
-On July 24th, 2020, we released the v0.1 (preview version), the first sub-library is for Domain Adaptation (DALIB). The currently supported algorithms include:
+The currently supported algorithms include:
 
-- [Domain Adversarial Neural Network 
-(DANN)](https://arxiv.org/abs/1505.07818)
-- [Deep Adaptation Network (DAN)](https://arxiv.org/abs/1502.02791)
-- [Joint Adaptation Network (JAN)](https://arxiv.org/abs/1605.06636)
-- [Conditional Domain Adversarial Network 
-(CDAN)](https://arxiv.org/abs/1705.10667)
-- [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
-- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
+##### Domain Adaptation for Classification
+- Domain-Adversarial Training of Neural Networks (DANN, ICML 2015)
+- Learning Transferable Features with Deep Adaptation Networks (DAN, ICML 2015)
+- Deep Transfer Learning with Joint Adaptation Networks (JAN, ICML 2017)
+- Conditional Adversarial Domain Adaptation (CDAN, NIPS 2018)
+- Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation (MCD, CVPR 2018)
+- Larger Norm More Transferable: An Adaptive Feature Norm Approach for
+Unsupervised Domain Adaptation (AFN, ICCV 2019)
+- Bridging Theory and Algorithm for Domain Adaptation (MDD, ICML 2019)
+- Minimum Class Confusion for Versatile Domain Adaptation (MCC, ECCV 2020)
 
-The performance of these algorithms were fairly evaluated in this [benchmark](https://dalib.readthedocs.io/en/latest/dalib.adaptation.html).
+##### Partial Domain Adaptation
+- Partial Adversarial Domain Adaptation (PADA, ECCV 2018)
+- Importance Weighted Adversarial Nets for Partial Domain Adaptation (IWAN, CVPR 2018)
+
+##### Open-set Domain Adaptation
+- Open Set Domain Adaptation by Backpropagation (OSBP, ECCV 2018)
+
+##### Domain Adaptation for Segmentation
+- Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks (CycleGAN, ICCV 2017)
+- CyCADA: Cycle-Consistent Adversarial Domain Adaptation (ICML 2018)
+- ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation (CVPR 2019)
+- FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020)
+
+##### Domain Adaptation for Keypoint Detection
+- Regressive Domain Adaptation for Unsupervised Keypoint Detection (RegDA, CVPR 2021)
+
+##### Finetune for Classification
+- Explicit inductive bias for transfer learning with convolutional networks (DELTA, ICML 2018)
+- Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)
+- Stochastic Normalization (StochNorm, NIPS 2020)
+- Co-Tuning for Transfer Learning (Co-Tuning, NIPS 2020).
+
+We are planning to add
+- More DA methods for Segmentation
+- DA for Object Detection
+
+The performance of these algorithms were fairly evaluated in this [benchmark](http://170.106.108.162/index.html).
 
 ## Installation
 
 For flexible use and modification, please git clone the library.
 
 ## Documentation
-You can find the tutorial and API documentation on the website: [DALIB API](https://dalib.readthedocs.io/en/latest/index.html)
+You can find the tutorial and API documentation on the website: [Documentation (please open in Firefox or Safari)](http://170.106.108.162/index.html). Note that this link is only for temporary use. You can also build the doc by yourself following the instructions in http://170.106.108.162/get_started/faq.html.
 
 Also, we have examples in the directory `examples`. A typical usage is 
 ```shell script
 # Train a DANN on Office-31 Amazon -> Webcam task using ResNet 50.
 # Assume you have put the datasets under the path `data/office-31`, 
 # or you are glad to download the datasets automatically from the Internet to this path
-python examples/dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20
+python dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20
 ```
 
 In the directory `examples`, you can find all the necessary running scripts to reproduce the benchmarks with specified hyper-parameters.
 
 ## Contributing
 We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us. 
-
-You can find the latest code on the [dev](https://github.com/thuml/Transfer-Learning-Library/tree/dev) branch.
 
 ## Disclaimer on Datasets
 

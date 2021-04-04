@@ -1,4 +1,6 @@
 from .grl import *
-from .classifier import *
+from .domain_discriminator import *
+from .kernels import *
+from .entropy import *
 
-__all__ = ['grl', 'classifier', 'kernels']
+__all__ = ['grl', 'kernels', 'domain_discriminator', 'entropy']

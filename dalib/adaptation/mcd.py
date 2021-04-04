@@ -1,10 +1,12 @@
-from typing import Optional, List, Dict
+from typing import Optional
 import torch.nn as nn
 import torch
 
 
 def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tensor) -> torch.Tensor:
-    r"""The `Classifier Discrepancy` in `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation <https://arxiv.org/abs/1712.02560>`_.
+    r"""The `Classifier Discrepancy` in
+    `Maximum Classiﬁer Discrepancy for Unsupervised Domain Adaptation (CVPR 2018) <https://arxiv.org/abs/1712.02560>`_.
+
     The classfier discrepancy between predictions :math:`p_1` and :math:`p_2` can be described as:
 
     .. math::
@@ -12,9 +14,9 @@ def classifier_discrepancy(predictions1: torch.Tensor, predictions2: torch.Tenso
 
     where K is number of classes.
 
-    Parameters:
-        - **predictions1** (tensor): Classifier predictions :math:`p_1`. Expected to contain raw, normalized scores for each class
-        - **predictions2** (tensor): Classifier predictions :math:`p_2`
+    Args:
+        predictions1 (torch.Tensor): Classifier predictions :math:`p_1`. Expected to contain raw, normalized scores for each class
+        predictions2 (torch.Tensor): Classifier predictions :math:`p_2`
     """
     return torch.mean(torch.abs(predictions1 - predictions2))
 
@@ -28,18 +30,22 @@ def entropy(predictions: torch.Tensor) -> torch.Tensor:
 
     where K is number of classes.
 
-    Parameters:
-        - **predictions** (tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
+    .. note::
+        This entropy function is specifically used in MCD and different from the usual :meth:`~dalib.modules.entropy.entropy` function.
+
+    Args:
+        predictions (torch.Tensor): Classifier predictions. Expected to contain raw, normalized scores for each class
     """
     return -torch.mean(torch.log(torch.mean(predictions, 0) + 1e-6))
 
 
 class ImageClassifierHead(nn.Module):
     r"""Classifier Head for MCD.
-    Parameters:
-        - **in_features** (int): Dimension of input features
-        - **num_classes** (int): Number of classes
-        - **bottleneck_dim** (int, optional): Feature dimension of the bottleneck layer. Default: 1024
+
+    Args:
+        in_features (int): Dimension of input features
+        num_classes (int): Number of classes
+        bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: 1024
 
     Shape:
         - Inputs: :math:`(minibatch, F)` where F = `in_features`.
@@ -48,7 +54,10 @@ class ImageClassifierHead(nn.Module):
 
     def __init__(self, in_features: int, num_classes: int, bottleneck_dim: Optional[int] = 1024):
         super(ImageClassifierHead, self).__init__()
+        self.num_classes = num_classes
         self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
             nn.Dropout(0.5),
             nn.Linear(in_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
@@ -62,13 +71,3 @@ class ImageClassifierHead(nn.Module):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         return self.head(inputs)
-
-    def get_parameters(self) -> List[Dict]:
-        """
-        :return: A parameter list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
-        """
-        params = [
-            {"params": self.head.parameters()},
-        ]
-        return params
