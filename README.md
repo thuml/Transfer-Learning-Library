@@ -42,7 +42,7 @@ We are planning to add
 - More DA methods for Segmentation
 - DA for Object Detection
 - Universal Domain Adaptation
-- 
+
 The performance of these algorithms were fairly evaluated in this [benchmark](http://170.106.108.162/index.html).
 
 ## Installation
