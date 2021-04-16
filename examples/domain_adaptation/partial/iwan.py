@@ -36,6 +36,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args: argparse.Namespace):
     logger = CompleteLogger(args.log, args.phase)
+    print(args)
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -374,5 +375,4 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
-    print(args)
     main(args)
