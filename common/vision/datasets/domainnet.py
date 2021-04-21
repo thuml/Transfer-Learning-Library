@@ -33,7 +33,7 @@ class DomainNet(ImageList):
                 ...
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/15c4d0f8e62e45d9a6b7/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/90ecb35bbd374e5e8c41/?dl=1"),
         ("clipart", "clipart.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/clipart.zip"),
         ("infograph", "infograph.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/infograph.zip"),
         ("painting", "painting.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/painting.zip"),
