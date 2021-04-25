@@ -12,10 +12,16 @@ class AdaptiveFeatureNorm(nn.Module):
 
     Instead of using restrictive scalar R to match the corresponding feature norm, Stepwise Adaptive Feature Norm
     is used in order to learn task-specific features with large norms in a progressive manner.
-    Given feature representations :math:`f` on source or target domain, the definition of Stepwise Adaptive Feature Norm loss is
+    We denote parameters of backbone :math:`G` as :math:`\theta_g`, parameters of bottleneck :math:`F_f` as :math:`\theta_f`
+    , parameters of classifier head :math:`F_y` as :math:`\theta_y`, and features extracted from sample :math:`x_i` as
+    :math:`h(x_i;\theta)`. Full loss is calculated as follows
 
     .. math::
-        norm\_loss = \mathbb{E}_{i}(\Vert f_i \Vert_2.detach() + delta - \Vert f_i \Vert_2)^2\\
+        L(\theta_g,\theta_f,\theta_y)=\frac{1}{n_s}\sum_{(x_i,y_i)\in D_s}L_y(x_i,y_i)+\frac{\lambda}{n_s+n_t}
+        \sum_{x_i\in D_s\cup D_t}L_d(h(x_i;\theta_0)+\Delta_r,h(x_i;\theta))\\
+
+    where :math:`L_y` denotes classification loss, :math:`L_d` denotes norm loss, :math:`\theta_0` and :math:`\theta`
+    represent the updated and updating model parameters in the last and current iterations respectively.
 
     Args:
         delta (float): positive residual scalar to control the feature norm enlargement.
