@@ -102,9 +102,10 @@ class ClassBalanceLoss(nn.Module):
 class EmaTeacher(object):
     r"""
     Exponential moving average model used in `Self-ensembling for Visual Domain Adaptation (ICLR 2018) <https://arxiv.org/abs/1706.05208>`_
-    
-    We define :math:`\theta_t'` at training step t as the EMA of successive :math:`\theta` weights, :math:`\alpha` as
-    decay rate. Then
+
+    We denote :math:`\theta_t'` as the parameters of teacher model at training step t, :math:`\theta_t` as the
+    parameters of student model at training step t, :math:`\alpha` as decay rate. Then we update teacher model in an
+    exponential moving average manner as follows
 
     .. math::
         \theta_t'=\alpha \theta_{t-1}' + (1-\alpha)\theta_t
