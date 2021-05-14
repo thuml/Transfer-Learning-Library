@@ -6,3 +6,4 @@ prettytable
 tqdm
 scikit-learn
 webcolors
+matplotlib
