@@ -31,6 +31,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
     logger = CompleteLogger(args.log, args.phase)
+    print(args)
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -381,5 +382,4 @@ if __name__ == '__main__':
     parser.add_argument('--test-input-size', nargs='+', type=int, default=(1024, 512),
                         help='the input image size during test')
     args = parser.parse_args()
-    print(args)
     main(args)

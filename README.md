@@ -33,7 +33,8 @@ Unsupervised Domain Adaptation (AFN, ICCV 2019)
 - Regressive Domain Adaptation for Unsupervised Keypoint Detection (RegDA, CVPR 2021)
 
 ##### Finetune for Classification
-- Explicit inductive bias for transfer learning with convolutional networks (DELTA, ICML 2018)
+- DEep Learning Transfer using Fea-
+ture Map with Attention for convolutional networks (DELTA, ICLR 2019)
 - Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)
 - Stochastic Normalization (StochNorm, NIPS 2020)
 - Co-Tuning for Transfer Learning (Co-Tuning, NIPS 2020).
