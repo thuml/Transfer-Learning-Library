@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Transfer Library Debugger",
+            "type": "python",
+            "request": "launch",
+            "cwd": "C:\\Users\\ajays\\MLResearch\\Transfer-Learning-Library",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "examples/domain_adaptation/classification/data/office-home",
+                "-d",
+                "OfficeHome",
+                "-s",
+                "Ar",
+                "-t",
+                "Cl",
+                "-a",
+                "resnet18",
+                "--seed",
+                "1",
+                "--log" ,
+                "examples/domain_adaptation/classification/logs/dann/OfficeHomeArCl",
+                "--epochs",
+                "20"
+            ],
+            "env": { "PYTHONPATH": "${workspaceRoot}"}
+        }
+    ]
+}

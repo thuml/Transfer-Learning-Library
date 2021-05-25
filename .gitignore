@@ -131,3 +131,10 @@ exp/*
 trash/*
 examples/domain_adaptation/digits/logs/*
 examples/domain_adaptation/digits/data/*
+
+# classification data
+examples/domain_adaptation/classification/data/*
+
+# vscode
+.vscode/
+

@@ -1,0 +1,35 @@
+Namespace(arch='resnet18', batch_size=32, bottleneck_dim=256, center_crop=False, data='OfficeHome', epochs=2, iters_per_epoch=1000, log='logs/dann/OfficeHome', lr=0.01, lr_decay=0.75, lr_gamma=0.001, momentum=0.9, per_class_eval=False, phase='train', print_freq=100, root='data/office-home', seed=1, source='Ar', target='Cl', trade_off=1.0, weight_decay=0.001, workers=2)
+c:\Users\ajays\MLResearch\Transfer-Learning-Library\examples\domain_adaptation\classification\dann.py:42: UserWarning: You have chosen to seed training. This will turn on the CUDNN deterministic setting, which can slow down your training considerably! You may see unexpected behavior when restarting from checkpoints.
+  warnings.warn('You have chosen to seed training. '
+=> using pre-trained model 'resnet18'
+Epoch: [0][   0/1000]	Time 879.64 (879.64)	Data 13.09 (13.09)	Loss   4.84 (  4.84)	Cls Acc 0.0 (0.0)	Domain Acc 46.9 (46.9)
+Epoch: [0][ 100/1000]	Time  0.13 ( 9.14)	Data  0.09 ( 0.51)	Loss   2.33 (  3.12)	Cls Acc 50.0 (36.5)	Domain Acc 85.9 (85.9)
+Epoch: [0][ 200/1000]	Time  0.38 ( 4.81)	Data  0.34 ( 0.45)	Loss   1.81 (  2.48)	Cls Acc 68.8 (49.5)	Domain Acc 89.1 (87.4)
+Epoch: [0][ 300/1000]	Time  9.72 ( 3.39)	Data  9.67 ( 0.46)	Loss   1.62 (  2.11)	Cls Acc 68.8 (57.0)	Domain Acc 95.3 (88.3)
+Epoch: [0][ 400/1000]	Time  0.15 ( 2.63)	Data  0.11 ( 0.42)	Loss   0.84 (  1.87)	Cls Acc 93.8 (62.4)	Domain Acc 90.6 (88.7)
+Epoch: [0][ 500/1000]	Time  0.29 ( 2.19)	Data  0.25 ( 0.41)	Loss   1.15 (  1.70)	Cls Acc 81.2 (66.4)	Domain Acc 82.8 (88.6)
+Epoch: [0][ 600/1000]	Time  9.59 ( 1.91)	Data  9.54 ( 0.42)	Loss   0.93 (  1.59)	Cls Acc 90.6 (69.4)	Domain Acc 76.6 (88.1)
+Epoch: [0][ 700/1000]	Time  0.14 ( 1.70)	Data  0.09 ( 0.42)	Loss   0.52 (  1.50)	Cls Acc 96.9 (71.8)	Domain Acc 89.1 (87.3)
+Epoch: [0][ 800/1000]	Time  0.33 ( 1.53)	Data  0.29 ( 0.40)	Loss   0.47 (  1.43)	Cls Acc 100.0 (73.9)	Domain Acc 89.1 (86.6)
+Epoch: [0][ 900/1000]	Time  9.87 ( 1.42)	Data  9.82 ( 0.41)	Loss   0.65 (  1.37)	Cls Acc 93.8 (75.5)	Domain Acc 81.2 (85.9)
+Test: [  0/137]	Time  8.771 ( 8.771)	Loss 3.9459e+00 (3.9459e+00)	Acc@1  12.50 ( 12.50)	Acc@5  56.25 ( 56.25)
+Test: [100/137]	Time  0.178 ( 0.191)	Loss 2.0921e+00 (2.7086e+00)	Acc@1  56.25 ( 36.66)	Acc@5  81.25 ( 64.79)
+ * Acc@1 38.076 Acc@5 65.246
+Epoch: [1][   0/1000]	Time  0.11 ( 0.11)	Data  0.03 ( 0.03)	Loss   1.08 (  1.08)	Cls Acc 81.2 (81.2)	Domain Acc 75.0 (75.0)
+Epoch: [1][ 100/1000]	Time  0.14 ( 0.41)	Data  0.09 ( 0.36)	Loss   0.83 (  0.95)	Cls Acc 96.9 (89.4)	Domain Acc 78.1 (75.7)
+Epoch: [1][ 200/1000]	Time  9.87 ( 0.42)	Data  9.81 ( 0.38)	Loss   0.98 (  0.96)	Cls Acc 90.6 (89.8)	Domain Acc 68.8 (74.9)
+Epoch: [1][ 300/1000]	Time  0.13 ( 0.43)	Data  0.08 ( 0.38)	Loss   1.11 (  0.96)	Cls Acc 87.5 (89.9)	Domain Acc 71.9 (74.5)
+Epoch: [1][ 400/1000]	Time  0.14 ( 0.43)	Data  0.09 ( 0.38)	Loss   0.93 (  0.96)	Cls Acc 93.8 (90.0)	Domain Acc 71.9 (74.1)
+Epoch: [1][ 500/1000]	Time  9.80 ( 0.45)	Data  9.74 ( 0.40)	Loss   0.87 (  0.96)	Cls Acc 96.9 (90.2)	Domain Acc 70.3 (73.6)
+Epoch: [1][ 600/1000]	Time  0.13 ( 0.43)	Data  0.09 ( 0.38)	Loss   0.93 (  0.96)	Cls Acc 93.8 (90.4)	Domain Acc 76.6 (73.3)
+Epoch: [1][ 700/1000]	Time  0.38 ( 0.43)	Data  0.33 ( 0.38)	Loss   0.72 (  0.96)	Cls Acc 96.9 (90.5)	Domain Acc 73.4 (72.8)
+Epoch: [1][ 800/1000]	Time  9.69 ( 0.44)	Data  9.63 ( 0.39)	Loss   0.82 (  0.96)	Cls Acc 93.8 (90.7)	Domain Acc 78.1 (72.6)
+Epoch: [1][ 900/1000]	Time  0.13 ( 0.43)	Data  0.08 ( 0.38)	Loss   1.03 (  0.96)	Cls Acc 96.9 (90.8)	Domain Acc 62.5 (72.4)
+Test: [  0/137]	Time  8.224 ( 8.224)	Loss 4.2874e+00 (4.2874e+00)	Acc@1  15.62 ( 15.62)	Acc@5  53.12 ( 53.12)
+Test: [100/137]	Time  0.185 ( 0.191)	Loss 2.1642e+00 (2.8597e+00)	Acc@1  53.12 ( 37.96)	Acc@5  75.00 ( 65.66)
+ * Acc@1 39.038 Acc@5 66.048
+best_acc1 = 39.0
+Test: [  0/137]	Time  8.310 ( 8.310)	Loss 4.2874e+00 (4.2874e+00)	Acc@1  15.62 ( 15.62)	Acc@5  53.12 ( 53.12)
+Test: [100/137]	Time  0.150 ( 0.188)	Loss 2.1642e+00 (2.8597e+00)	Acc@1  53.12 ( 37.96)	Acc@5  75.00 ( 65.66)
+ * Acc@1 39.038 Acc@5 66.048
+test_acc1 = 39.0
