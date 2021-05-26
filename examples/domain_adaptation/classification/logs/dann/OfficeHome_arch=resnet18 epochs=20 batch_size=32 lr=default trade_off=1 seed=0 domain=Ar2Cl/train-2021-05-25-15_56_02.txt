@@ -1,0 +1,17 @@
+Namespace(arch='resnet18', batch_size=32, bottleneck_dim=256, center_crop=False, data='OfficeHome', epochs=20, iters_per_epoch=1000, log='examples/domain_adaptation/classification/logs/dann/OfficeHome_arch=resnet18 epochs=20 batch_size=32 lr=default trade_off=1 seed=0 domain=Ar2Cl', lr=0.01, lr_decay=0.75, lr_gamma=0.001, momentum=0.9, per_class_eval=False, phase='train', print_freq=100, root='examples/domain_adaptation/classification/data/office-home', seed=0, source='Ar', target='Cl', trade_off=1.0, weight_decay=0.001, workers=2)
+C:\Users\ajays\MLResearch\Transfer-Learning-Library\examples\domain_adaptation\classification\dann.py:43: UserWarning: You have chosen to seed training. This will turn on the CUDNN deterministic setting, which can slow down your training considerably! You may see unexpected behavior when restarting from checkpoints.
+  warnings.warn('You have chosen to seed training. '
+=> using pre-trained model 'resnet18'
+Epoch: [0][   0/1000]	Time  1.84 ( 1.84)	Data  0.05 ( 0.05)	Loss   5.05 (  5.05)	Cls Acc 0.0 (0.0)	Domain Acc 50.0 (50.0)
+Epoch: [0][ 100/1000]	Time  0.13 ( 0.36)	Data  0.09 ( 0.29)	Loss   2.41 (  3.16)	Cls Acc 50.0 (35.6)	Domain Acc 79.7 (85.3)
+Epoch: [0][ 200/1000]	Time  0.27 ( 0.41)	Data  0.22 ( 0.35)	Loss   1.26 (  2.48)	Cls Acc 75.0 (49.2)	Domain Acc 92.2 (87.2)
+Epoch: [0][ 300/1000]	Time 12.39 ( 0.47)	Data 12.34 ( 0.41)	Loss   1.18 (  2.12)	Cls Acc 75.0 (56.5)	Domain Acc 81.2 (88.1)
+Epoch: [0][ 400/1000]	Time  0.20 ( 0.44)	Data  0.15 ( 0.38)	Loss   1.03 (  1.89)	Cls Acc 81.2 (61.8)	Domain Acc 90.6 (88.3)
+Epoch: [0][ 500/1000]	Time  0.34 ( 0.44)	Data  0.28 ( 0.39)	Loss   1.46 (  1.73)	Cls Acc 81.2 (65.5)	Domain Acc 82.8 (88.2)
+Epoch: [0][ 600/1000]	Time 11.99 ( 0.46)	Data 11.94 ( 0.41)	Loss   0.87 (  1.61)	Cls Acc 93.8 (68.8)	Domain Acc 76.6 (87.8)
+Epoch: [0][ 700/1000]	Time  0.14 ( 0.46)	Data  0.09 ( 0.41)	Loss   0.86 (  1.51)	Cls Acc 87.5 (71.3)	Domain Acc 87.5 (87.2)
+Epoch: [0][ 800/1000]	Time  0.40 ( 0.45)	Data  0.35 ( 0.40)	Loss   0.93 (  1.44)	Cls Acc 87.5 (73.3)	Domain Acc 79.7 (86.5)
+Epoch: [0][ 900/1000]	Time 12.54 ( 0.46)	Data 12.49 ( 0.41)	Loss   0.75 (  1.39)	Cls Acc 96.9 (74.9)	Domain Acc 76.6 (85.7)
+Test: [  0/137]	Time 11.189 (11.189)	Loss 3.7756e+00 (3.7756e+00)	Acc@1  15.62 ( 15.62)	Acc@5  62.50 ( 62.50)
+Test: [100/137]	Time  0.099 ( 0.203)	Loss 1.6677e+00 (2.7241e+00)	Acc@1  59.38 ( 36.01)	Acc@5  81.25 ( 64.60)
+ * Acc@1 37.617 Acc@5 65.109

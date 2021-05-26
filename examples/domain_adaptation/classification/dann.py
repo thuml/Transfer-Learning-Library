@@ -15,6 +15,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 sys.path.append('../../..')
 from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -125,19 +126,24 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = validate(test_loader, classifier, args, 0)
         print(acc1)
         return
+
+    # name of tensorboard
+    comment = f' arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.source}2{args.target}'
+    # Summary writer for tensorboard
+    tb = SummaryWriter(comment=comment)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
-              lr_scheduler, epoch, args)
+              lr_scheduler, epoch, args, tb)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = validate(val_loader, classifier, args, epoch, tb)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -149,18 +155,21 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
+    acc1 = validate(test_loader, classifier, args, epoch)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
+    tb.close()
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
           model: ImageClassifier, domain_adv: DomainAdversarialLoss, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace, tb: SummaryWriter):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
+    cls_losses = AverageMeter('Cls Loss',':6.2f')
+    transfer_losses = AverageMeter('Transfer Loss',':6.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
@@ -200,6 +209,9 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
         domain_accs.update(domain_acc.item(), x_s.size(0))
+        # seperated loss between two heads
+        cls_losses.update(cls_loss.item(), x_s.size(0))
+        transfer_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -213,9 +225,18 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         if i % args.print_freq == 0:
             progress.display(i)
+            
+    # tensorboard updates
+    tb.add_scalar('Classification Loss', cls_losses.sum, epoch)
+    tb.add_scalar('Domain Disriminator Loss', transfer_losses.sum, epoch)
+    tb.add_scalar('Total Loss', losses.sum, epoch)
+    tb.add_scalar('Classification Accuracy', cls_accs.avg, epoch)
+    tb.add_scalar('Domain Discrimination Accuracy', domain_accs.avg, epoch)
+    # tb.add_histogram('Classification Softmax', TODO, epoch)
 
 
-def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace) -> float:
+def validate(val_loader: DataLoader, model: ImageClassifier, 
+            args: argparse.Namespace, epoch: int, tb: SummaryWriter = None) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -262,6 +283,10 @@ def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Name
               .format(top1=top1, top5=top5))
         if confmat:
             print(confmat.format(classes))
+    # tensorboard update(s)
+    if tb:
+        tb.add_scalar('Validation Classification Loss', losses.sum, epoch)
+        tb.add_scalar('Validation Classification Accuracy', top1.avg, epoch)
 
     return top1.avg
 

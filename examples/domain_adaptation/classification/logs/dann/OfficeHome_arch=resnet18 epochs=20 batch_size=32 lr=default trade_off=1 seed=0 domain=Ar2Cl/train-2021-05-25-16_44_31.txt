@@ -1,0 +1,8 @@
+Namespace(arch='resnet18', batch_size=32, bottleneck_dim=256, center_crop=False, data='OfficeHome', epochs=1, iters_per_epoch=1, log='examples/domain_adaptation/classification/logs/dann/OfficeHome_arch=resnet18 epochs=20 batch_size=32 lr=default trade_off=1 seed=0 domain=Ar2Cl', lr=0.01, lr_decay=0.75, lr_gamma=0.001, momentum=0.9, per_class_eval=False, phase='train', print_freq=100, root='examples/domain_adaptation/classification/data/office-home', seed=0, source='Ar', target='Cl', trade_off=1.0, weight_decay=0.001, workers=2)
+C:\Users\ajays\MLResearch\Transfer-Learning-Library\examples\domain_adaptation\classification\dann.py:43: UserWarning: You have chosen to seed training. This will turn on the CUDNN deterministic setting, which can slow down your training considerably! You may see unexpected behavior when restarting from checkpoints.
+  warnings.warn('You have chosen to seed training. '
+=> using pre-trained model 'resnet18'
+Epoch: [0][0/1]	Time  1.93 ( 1.93)	Data  0.03 ( 0.03)	Loss   5.05 (  5.05)	Cls Acc 0.0 (0.0)	Domain Acc 50.0 (50.0)
+Test: [  0/137]	Time 11.349 (11.349)	Loss 4.2807e+00 (4.2807e+00)	Acc@1   0.00 (  0.00)	Acc@5   0.00 (  0.00)
+Test: [100/137]	Time  0.064 ( 0.203)	Loss 4.0973e+00 (4.1881e+00)	Acc@1   0.00 (  1.70)	Acc@5   6.25 (  8.97)
+ * Acc@1 1.512 Acc@5 8.110
