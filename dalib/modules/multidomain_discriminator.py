@@ -32,16 +32,16 @@ class MultidomainDiscriminator(nn.Sequential):
                                  nn.BatchNorm1d(hidden_size), nn.ReLU(),
                                  nn.Linear(hidden_size, hidden_size),
                                  nn.BatchNorm1d(hidden_size), nn.ReLU(),
-                                 nn.Linear(hidden_size, num_domains),
-                                 nn.Sigmoid())
+                                 nn.Linear(hidden_size, num_domains))
+                                #  ,nn.Sigmoid()) # removing sigmoid to allow for scaling
         else:
             super(MultidomainDiscriminator,
                   self).__init__(nn.Linear(in_feature, hidden_size),
                                  nn.ReLU(inplace=True), nn.Dropout(0.5),
                                  nn.Linear(hidden_size, hidden_size),
                                  nn.ReLU(inplace=True), nn.Dropout(0.5),
-                                 nn.Linear(hidden_size, num_domains),
-                                 nn.Sigmoid())
+                                 nn.Linear(hidden_size, num_domains))
+                                #  ,nn.Sigmoid())
 
     def get_parameters(self) -> List[Dict]:
         return [{"params": self.parameters(), "lr": 1.}]

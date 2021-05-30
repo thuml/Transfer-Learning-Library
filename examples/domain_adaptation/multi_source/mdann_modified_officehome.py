@@ -256,7 +256,6 @@ def train(train_source_iter: ForeverDataIterator,
         x_t, labels_t = next(train_target_iter)
 
         # retrieve the class and domain from the modified office_home dataset
-
         class_labels_s = ModifiedOfficeHome.get_category(
             labels_s, model.num_classes)
         domain_labels_s = ModifiedOfficeHome.get_style(
