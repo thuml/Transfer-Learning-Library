@@ -268,9 +268,9 @@ def train(train_source_iter: ForeverDataIterator,
         x_t = x_t.to(device)
         # labels_s = labels_s.to(device)
         # add new labels to device
-        class_labels_s.to(device)
-        domain_labels_s.to(device)
-        domain_labels_t.to(device)
+        class_labels_s = class_labels_s.to(device)
+        domain_labels_s = domain_labels_s.to(device)
+        domain_labels_t = domain_labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -289,7 +289,7 @@ def train(train_source_iter: ForeverDataIterator,
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
-        cls_acc = accuracy(y_s, labels_s)[0]
+        cls_acc = accuracy(y_s, class_labels_s)[0]
 
         losses.update(loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))

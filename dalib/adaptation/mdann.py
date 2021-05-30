@@ -82,9 +82,9 @@ class MultidomainAdversarialLoss(nn.Module):
             d, torch.cat((d_label_s, d_label_t), dim=0))[0]
         # TODO: Get num classes
         if w_s is None:
-            w_s = torch.ones((d.shape[-1], 1))
+            w_s = torch.ones((d.shape[-1], 1)).to(f_s.device)
         if w_t is None:
-            w_t = torch.ones((d.shape[-1], 1))
+            w_t = torch.ones((d.shape[-1], 1)).to(f_s.device)
         return 0.5 * (self.loss(d_s, d_label_s, w_s) + self.loss(d_t, d_label_t, w_t))
         # return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
 
