@@ -138,3 +138,12 @@ examples/domain_adaptation/classification/data/*
 # vscode
 .vscode/
 
+# logs and data
+examples/domain_adaptation/classification/logs/*
+examples/domain_adaptation/multi_source/logs/*
+examples/domain_adaptation/classification/data/*
+examples/domain_adaptation/multi_source/data/*
+runs/*
+
+
+

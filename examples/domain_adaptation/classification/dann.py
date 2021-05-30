@@ -106,6 +106,7 @@ def main(args: argparse.Namespace):
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # resume from the best checkpoint
+    # if args.phase != 'train':
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
@@ -131,7 +132,7 @@ def main(args: argparse.Namespace):
         return
 
     # name of tensorboard
-    comment = f' arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.source}2{args.target}'
+    comment = f' arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} iters-per-epoch={args.iters_per_epoch} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.source}2{args.target}'
     # Summary writer for tensorboard
     tb = SummaryWriter(comment=comment)
 
