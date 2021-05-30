@@ -145,5 +145,6 @@ examples/domain_adaptation/classification/data/*
 examples/domain_adaptation/multi_source/data/*
 runs/*
 
-
-
+# no datasets
+*.jpg
+*.tgz

@@ -106,7 +106,6 @@ def main(args: argparse.Namespace):
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     # resume from the best checkpoint
-    # if args.phase != 'train':
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
