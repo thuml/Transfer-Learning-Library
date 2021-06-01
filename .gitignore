@@ -144,7 +144,10 @@ examples/domain_adaptation/multi_source/logs/*
 examples/domain_adaptation/classification/data/*
 examples/domain_adaptation/multi_source/data/*
 runs/*
+bad_runs/*
 
 # no datasets
 *.jpg
 *.tgz
+
+

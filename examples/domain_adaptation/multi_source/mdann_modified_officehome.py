@@ -34,9 +34,10 @@ sys.path.append('../../..')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 def main(args: argparse.Namespace):
-    logger = CompleteLogger(args.log, args.phase)
+    comment = f'_arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.sources}2{args.targets}'
+    log = "examples/domain_adaptation/multi_source/logs/dann/ModfiedOfficeHome" + comment
+    logger = CompleteLogger(log, args.phase)
     print(args)
 
     if args.seed is not None:
@@ -75,7 +76,7 @@ def main(args: argparse.Namespace):
 
     # dataset = datasets.__dict__["ModifiedOfficeHome"]
 
-    print("Source: {} Target: {}".format(args.sources, args.targets))
+    print("Source(s): {} Target(s): {}".format(args.sources, args.targets))
     # assuming that args.sources and arg.targets are disjoint sets
     num_domains = len(args.sources) + len(args.targets)
     train_source_dataset = ModifiedOfficeHome(root=args.root,
@@ -475,11 +476,11 @@ if __name__ == '__main__':
         '--per-class-eval',
         action='store_true',
         help='whether output per-class accuracy during evaluation')
-    parser.add_argument(
-        "--log",
-        type=str,
-        default='dann',
-        help="Where to save logs, checkpoints and debugging images.")
+    # parser.add_argument(
+    #     "--log",
+    #     type=str,
+    #     default='dann',
+    #     help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase",
                         type=str,
                         default='train',
