@@ -1,4 +1,4 @@
-from common.utils.analysis import collect_feature, tsne, a_distance
+from common.utils.analysis import collect_feature_and_labels, tsne, a_distance
 from common.utils.logger import CompleteLogger
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.metric import accuracy, ConfusionMatrix
@@ -35,9 +35,7 @@ sys.path.append('../../..')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args: argparse.Namespace):
-    comment = f'_arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.sources}2{args.targets}'
-    log = "examples/domain_adaptation/multi_source/logs/dann/ModfiedOfficeHome" + comment
-    logger = CompleteLogger(log, args.phase)
+    logger = CompleteLogger(args.log, args.phase)
     print(args)
 
     if args.seed is not None:
@@ -175,18 +173,26 @@ def main(args: argparse.Namespace):
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone,
                                           classifier.bottleneck).to(device)
-        source_feature = collect_feature(train_source_loader,
+        source_feature, source_labels = collect_feature_and_labels(train_source_loader,
                                          feature_extractor, device)
-        target_feature = collect_feature(train_target_loader,
+        target_feature, target_labels = collect_feature_and_labels(train_target_loader,
                                          feature_extractor, device)
+        source_domain_labels = ModifiedOfficeHome.get_category(
+            source_labels, classifier.num_classes)
+        target_domain_labels = ModifiedOfficeHome.get_category(
+            target_labels, classifier.num_classes)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        tsne.visualize(source_feature, target_feature, 
+                        filename=tSNE_filename,
+                        source_domain_labels=source_domain_labels, 
+                        target_domain_labels=target_domain_labels,
+                        num_domains=num_domains)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
-        A_distance = a_distance.calculate(source_feature, target_feature,
-                                          device)
-        print("A-distance =", A_distance)
+        # A_distance = a_distance.calculate(source_feature, target_feature,
+        #                                   device)
+        # print("A-distance =", A_distance)
         return
 
     if args.phase == 'test':
@@ -476,11 +482,11 @@ if __name__ == '__main__':
         '--per-class-eval',
         action='store_true',
         help='whether output per-class accuracy during evaluation')
-    # parser.add_argument(
-    #     "--log",
-    #     type=str,
-    #     default='dann',
-    #     help="Where to save logs, checkpoints and debugging images.")
+    parser.add_argument(
+        "--log",
+        type=str,
+        default='dann',
+        help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase",
                         type=str,
                         default='train',

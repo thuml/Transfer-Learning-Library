@@ -1,0 +1,5 @@
+Namespace(arch='resnet18', batch_size=32, bottleneck_dim=256, center_crop=False, epochs=30, iters_per_epoch=1000, log='dann', lr=0.01, lr_decay=0.75, lr_gamma=0.001, momentum=0.9, per_class_eval=False, phase='analysis', print_freq=100, root='examples/domain_adaptation/multi_source/data/modified-office-home', seed=0, sources=['Ar'], targets=['Cl'], trade_off=1.0, weight_decay=0.001, workers=2)
+C:\Users\ajays\MLResearch\Transfer-Learning-Library\examples\domain_adaptation\multi_source\mdann_modified_officehome.py:45: UserWarning: You have chosen to seed training. This will turn on the CUDNN deterministic setting, which can slow down your training considerably! You may see unexpected behavior when restarting from checkpoints.
+  warnings.warn('You have chosen to seed training. '
+Source(s): ['Ar'] Target(s): ['Cl']
+=> using pre-trained model 'resnet18'

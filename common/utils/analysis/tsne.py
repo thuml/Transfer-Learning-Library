@@ -1,5 +1,6 @@
 import torch
 import matplotlib
+from typing import Optional
 
 matplotlib.use('Agg')
 from sklearn.manifold import TSNE
@@ -8,8 +9,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as col
 
 
-def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor,
-              filename: str, source_color='r', target_color='b'):
+def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor, 
+              filename: str, source_domain_labels: Optional[torch.Tensor] = None, 
+            target_domain_labels: Optional[torch.Tensor] = None, num_domains=2):
     """
     Visualize features from different domains using t-SNE.
 
@@ -21,6 +23,7 @@ def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor,
         target_color (str): the color of the target features. Default: 'b'
 
     """
+    assert num_domains <= 4 # quick fix
     source_feature = source_feature.numpy()
     target_feature = target_feature.numpy()
     features = np.concatenate([source_feature, target_feature], axis=0)
@@ -28,10 +31,21 @@ def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor,
     # map features to 2-d using TSNE
     X_tsne = TSNE(n_components=2, random_state=33).fit_transform(features)
 
-    # domain labels, 1 represents source while 0 represents target
-    domains = np.concatenate((np.ones(len(source_feature)), np.zeros(len(target_feature))))
+    
+    if source_domain_labels == None and target_domain_labels == None:
+        # domain labels, 1 represents source while 0 represents target
+        domains = np.concatenate((np.ones(len(source_feature)), np.zeros(len(target_feature))))
+    else:
+        # domain labels defined by the user since their could be more than 1
+        domains = np.concatenate((source_domain_labels, target_domain_labels))
+
+    colors = ['r', 'b', 'g', 'y']
+    domain_colors = []
+    for i in range(num_domains):
+        domain_colors.append(colors[i])
 
     # visualize using matplotlib
     plt.figure(figsize=(10, 10))
-    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap([source_color, target_color]), s=2)
+    # plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap([source_color, target_color]), s=2)
+    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap(domain_colors), s=2)
     plt.savefig(filename)
