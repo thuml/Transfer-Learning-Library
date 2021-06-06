@@ -26,7 +26,7 @@ class ImageList(datasets.VisionDataset):
         If your data_list_file has different formats, please over-ride :meth:`~ImageList.parse_data_file`.
     """
 
-    def__init__(self, root: str, classes: List[str], data_list_file: Optional[str] = None, data_list_files: Optional[List[str]] = None, transform: Optional[Callable] = None, target_transform: Optional[Callable] = None):
+    def __init__(self, root: str, classes: List[str], data_list_file: Optional[str] = None, data_list_files: Optional[List[str]] = None, transform: Optional[Callable] = None, target_transform: Optional[Callable] = None):
         super().__init__(root, transform=transform, target_transform=target_transform)
         assert data_list_file != None or data_list_files != None
         self.data_list_file = data_list_file
