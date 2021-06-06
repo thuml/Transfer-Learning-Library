@@ -1,7 +1,7 @@
 import os
 import torch
 import random
-from typing import Optional, List
+from typing import Optional, List, Tuple, Double
 from .imagelist import ImageList, num_classes
 from ._util import download as download_data, check_exits
 
@@ -31,7 +31,9 @@ class CheckerBoardOfficeHome(ImageList):
             Real_World/
             image_list/
                 train.txt
+                val.txt
                 test.txt
+                novel.txt
     """
     download_list = [
         # ("image_list", "image_list.zip",
@@ -63,9 +65,10 @@ class CheckerBoardOfficeHome(ImageList):
     #     "Rw": "image_list/Modified_Real_World.txt",
     # }
 
-    # generate the train and test data together since they are disjoint sets that make up the set of all images
     image_lists = {
         "train": "image_list/train.txt",
+        "val": "image_list/val.txt",
+        "test": "image_list/test.txt",
         "novel": "image_list/novel.txt"
     }
 
@@ -78,64 +81,89 @@ class CheckerBoardOfficeHome(ImageList):
                   'Curtains', 'Fork', 'Soda', 'Table', 'Knives', 'Oven', 'Refrigerator', 'Marker']
     category_index = 0
 
-    def __init__(self, root: str, tasks: List[str], download: Optional[bool] = False, style_is_domain: Optional[bool] = True, **kwargs):
-        mod_data_list_files = []
-        data_list_files = []
-        for task in tasks:
-            assert task in self.image_style_list
-            mod_data_list_files.append(
-                os.path.join(root, self.mod_image_style_list[task])
-            )
-            data_list_files.append(
-                os.path.join(root, self.image_style_list[task])
-            )
+    def __init__(self, root: str, tasks: List[str], download: Optional[bool] = False,
+                 style_is_domain: Optional[bool] = True, train_val_test_split: Optional[Tuple[Double]] = (0.5, 0.25, 0.25), ** kwargs):
+        assert len(train_val_test_split) == 3 and sum(
+            train_val_test_split) == 1
+        self.train_split, self.val_split, self.test_split = train_val_test_split
+        # mod_data_list_files = []
+        # data_list_files = []
+        # for task in tasks:
+        #     assert task in self.image_style_list
+        #     mod_data_list_files.append(
+        #         os.path.join(root, self.mod_image_style_list[task])
+        #     )
+        #     data_list_files.append(
+        #         os.path.join(root, self.image_style_list[task])
+        #     )
         self.num_categories = len(CheckerBoardOfficeHome.CATEGORIES)
         self.num_styles = len(CheckerBoardOfficeHome.image_style_list)
-        self.cat_style_matrix = torch.zeros((self.num_styles, self.num_categories))
+        
         if download:
             list(map(lambda args: download_data(root, *args), self.download_list))
         else:
             list(map(lambda file_name, _: check_exits(
                 root, file_name), self.download_list))
-
+        self.cat_style_matrix = torch.zeros(
+            (self.num_styles, self.num_categories)
+        )
+        self._generate_image_list()
         super(CheckerBoardOfficeHome, self).__init__(
             # TODO: Adapt the code for predicting style instead of category
             root, CheckerBoardOfficeHome.CATEGORIES, data_list_files=mod_data_list_files, **kwargs
         )
 
-    def generate_image_list(self, num_train_styles: int):
-        # TODO: Figure out 
+    def _generate_image_list(self, domains_per_cat: Optional[int] = 2):
         # TODO: Produce image list if style-predicting instead of category-predicting
-        train_list = []
+        train = []
         novel_list = ""
         styles = CheckerBoardOfficeHome.image_style_list.keys()
         style_indices = list(range(self.num_styles))
-        
 
         for cat_index in range(self.num_categories):
             random.shuffle(style_indices)
+            style_count = 0
             for style_index in style_indices:
-                style_count = 0
                 image_dir = os.path.join(self.root,
                                          CheckerBoardOfficeHome.image_dirs[styles[style_index]],
                                          CheckerBoardOfficeHome.CATEGORIES[cat_index])
                 for filename in os.listdir(image_dir):
                     if filename.endswith(".jpg"):
                         label = self._get_label(style_index, cat_index)
-                        line = filename + ' ' + label + '\n'
-                        if style_count < num_train_styles:
-                            train_list += line
+                        path_and_label = filename + ' ' + label + '\n'
+                        if style_count < domains_per_cat:
+                            train.append(path_and_label)
                             self.cat_style_matrix[style_index, cat_index] = 1
                         else:
-                            novel_list += line
+                            novel_list += path_and_label
                 style_count += 1
+        
+        # training, validation/calibration, testing split
+        random.shuffle(train)
+        num_train = int(len(train) * self.train_split)
+        num_val = int(len(train) * self.val_split)
+        train_list = "".join(train[:num_train])
+        val_list = "".join(train[num_train:(num_train + num_val)])
+        test_list = "".join(train[(num_train + num_val):])
 
         train_list_filename = os.path.join(
-            self.root, CheckerBoardOfficeHome.image_lists['train'])
+            self.root, CheckerBoardOfficeHome.image_lists['train']
+        )
+        val_list_filenaem = os.path.join(
+            self.root, CheckerBoardOfficeHome.images_dirs["val"]
+        )
+        test_list_filename = os.path.join(
+            self.root, CheckerBoardOfficeHome.images_dirs["dir"]
+        )
         novel_list_filename = os.path.join(
-            self.root, CheckerBoardOfficeHome.image_lists['novel'])
+            self.root, CheckerBoardOfficeHome.image_lists['novel']
+        )
         with open(train_list_filename, "w") as f:
             f.write(train_list)
+        with open(val_list_filenaem, "w") as f:
+            f.write(val_list)
+        with open(test_list_filename, "w") as f:
+            f.write(test_list)
         with open(novel_list_filename, "w") as f:
             f.write(novel_list)
 
@@ -151,12 +179,10 @@ class CheckerBoardOfficeHome(ImageList):
                 if val == 1:
                     str_matrix += "|X"
                 else:
-                    str_matrix += "| " 
+                    str_matrix += "| "
             str_matrix += "|\n"
             style_index += 1
         return str_matrix
-
-                
 
     def _get_label(self, style_index: int, category_index: int) -> int:
         return self.num_categories * style_index + category_index
@@ -174,5 +200,3 @@ class CheckerBoardOfficeHome(ImageList):
     @classmethod
     def get_style(cls, labels: torch.tensor, num_categories: int) -> torch.tensor:
         return labels // num_categories
-
-    
