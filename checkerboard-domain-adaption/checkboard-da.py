@@ -38,6 +38,7 @@ def main(args: argparse.Namespace):
     logger = CompleteLogger(args.log, args.phase)
     print(args)
 
+    
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
