@@ -72,11 +72,11 @@ def main(args: argparse.Namespace):
          T.CenterCrop(224),
          T.ToTensor(), normalize])
 
-    # dataset = datasets.__dict__["ModifiedOfficeHome"]
 
     print("Source(s): {} Target(s): {}".format(args.sources, args.targets))
     # assuming that args.sources and arg.targets are disjoint sets
     num_domains = len(args.sources) + len(args.targets)
+    
     train_source_dataset = ModifiedOfficeHome(root=args.root,
                                               tasks=args.sources,
                                               download=True,
@@ -158,7 +158,6 @@ def main(args: argparse.Namespace):
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
 
-    # TODO: Make a new version of the loss function to adapt to multidomain classification
     # define loss function
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri).to(device)
 

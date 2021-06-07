@@ -18,6 +18,7 @@ import argparse
 import shutil
 import os.path as osp
 import os
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -78,65 +79,70 @@ def main(args: argparse.Namespace):
     # num_domains = len(args.sources) + len(args.targets)
 
     # TODO: create the train, val, test, novel dataset
-    train_dataset = CheckerboardOfficeHome(root=args.root,
-                                           tasks=args.sources,
-                                           download=True,
-                                           dataset_type='train',
-                                           transform=train_transform)
-    train_loader = DataLoader(train_dataset,
+    transforms = [train_transform, val_transform, val_transform, val_transform]
+    
+    datasets = CheckerboardOfficeHome(root=args.root,
+                                      download=True,
+                                      transforms=transforms)
+    # display the category-style matrix
+    print(datasets)
+
+    # train_dataset = CheckerboardOfficeHome(root=args.root,
+    #                                        download=True,
+    #                                        dataset_type='train',
+    #                                        transform=train_transform)
+    train_loader = DataLoader(datasets.train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True,
                               num_workers=args.workers,
                               drop_last=True)
 
-    val_dataset = CheckerboardOfficeHome(root=args.root,
-                                     tasks=args.targets,
-                                     download=True,
-                                     dataset_type='val',
-                                     transform=val_transform)
-    val_loader = DataLoader(val_dataset,
+    # val_dataset = CheckerboardOfficeHome(root=args.root,
+    #                                  tasks=args.targets,
+    #                                  download=True,
+    #                                  dataset_type='val',
+    #                                  transform=val_transform)
+    val_loader = DataLoader(datasets.val_dataset,
                             batch_size=args.batch_size,
                             shuffle=False,
                             num_workers=args.workers)
 
-    test_dataset = CheckerboardOfficeHome(root=args.root,
-                                          tasks=args.targets,
-                                          download=True,
-                                          dataset_type='test',
-                                          transform=val_transform)
-    test_loader = DataLoader(test_dataset,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            num_workers=args.workers,
-                            drop_last=True)
-    novel_dataset = CheckerboardOfficeHome(root=args.root,
-                                          tasks=args.targets,
-                                          download=True,
-                                          dataset_type='novel',
-                                          transform=val_transform)
-    novel_loader = DataLoader(novel_dataset,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            num_workers=args.workers,
-                            drop_last=True)
-    
-    # display the category-style matrix
-    print(train_dataset)
+    # test_dataset = CheckerboardOfficeHome(root=args.root,
+    #                                       tasks=args.targets,
+    #                                       download=True,
+    #                                       dataset_type='test',
+    #                                       transform=val_transform)
+    test_loader = DataLoader(datasets.test_dataset,
+                             batch_size=args.batch_size,
+                             shuffle=True,
+                             num_workers=args.workers,
+                             drop_last=True)
+    # novel_dataset = CheckerboardOfficeHome(root=args.root,
+    #                                       tasks=args.targets,
+    #                                       download=True,
+    #                                       dataset_type='novel',
+    #                                       transform=val_transform)
+    novel_loader = DataLoader(datasets.novel_dataset,
+                              batch_size=args.batch_size,
+                              shuffle=True,
+                              num_workers=args.workers,
+                              drop_last=True)
+
 
     train_iter = ForeverDataIterator(train_loader)
-    val_iter = ForeverDataIterator(val_loader) # train_target_iter
+    val_iter = ForeverDataIterator(val_loader)  # train_target_iter
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     classifier = ImageClassifier(backbone,
-                                 train_dataset.num_classes,
+                                 len(datasets.classes()),
                                  bottleneck_dim=args.bottleneck_dim).to(device)
-                                 
+
     multidomain_discri = MultidomainDiscriminator(
         in_feature=classifier.features_dim,
         hidden_size=1024,
-        num_domains=len(CheckerboardOfficeHome.domains())).to(device)
+        num_domains=len(datasets.domains())).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() +
@@ -149,7 +155,6 @@ def main(args: argparse.Namespace):
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
 
-    # TODO: Make a new version of the loss function to adapt to multidomain classification
     # define loss function
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri).to(device)
 
@@ -164,22 +169,28 @@ def main(args: argparse.Namespace):
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone,
                                           classifier.bottleneck).to(device)
-        source_feature, source_labels = collect_feature_and_labels(
+        train_feature, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        target_feature, target_labels = collect_feature_and_labels(
-            train_target_loader, feature_extractor, device)
-        source_domain_labels = ModifiedOfficeHome.get_category(
-            source_labels, classifier.num_classes)
-        target_domain_labels = ModifiedOfficeHome.get_category(
-            target_labels, classifier.num_classes)
+        val_feature, val_labels = collect_feature_and_labels(
+            train_loader, feature_extractor, device)
+        test_feature, test_labels = collect_feature_and_labels(
+            train_loader, feature_extractor, device)
+        source_feature = torch.cat([train_feature, val_feature, test_feature], axis=0)
+        source_labels = torch.cat([train_labels, val_labels, test_labels], axis=0)
+        novel_feature, novel_labels = collect_feature_and_labels(
+            novel_loader, feature_extractor, device)
+        source_domain_labels = CheckerboardOfficeHome.get_category(
+            source_labels)
+        novel_domain_labels = CheckerboardOfficeHome.get_category(
+            novel_labels, classifier.num_classes)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
         tsne.visualize(source_feature,
-                       target_feature,
+                       novel_feature,
                        filename=tSNE_filename,
                        source_domain_labels=source_domain_labels,
-                       target_domain_labels=target_domain_labels,
-                       num_domains=num_domains)
+                       target_domain_labels=novel_domain_labels,
+                       num_domains=len(datasets.domains()))
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
         # A_distance = a_distance.calculate(source_feature, target_feature,
@@ -191,9 +202,14 @@ def main(args: argparse.Namespace):
         acc1 = validate(test_loader, classifier, args, 0)
         print(acc1)
         return
+    
+    if args.phase == 'novel':
+        acc1 = validate(novel_loader, classifier, args, 0)
+        print(acc1)
+        return
 
     # name of tensorboard
-    comment = f' arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.sources}2{args.targets}'
+    comment = f' Checkerboard OfficeHome arch={args.arch} seed={args.seed} epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off}'
     # Summary writer for tensorboard
     tb = SummaryWriter(comment=comment)
 
@@ -201,8 +217,8 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_iter, val_iter, classifier,
-              multidomain_adv, optimizer, lr_scheduler, epoch, args, tb)
+        train(train_iter, val_iter, classifier, multidomain_adv, optimizer,
+              lr_scheduler, epoch, args, tb)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args, epoch, tb)
@@ -219,15 +235,16 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args, epoch)
+    acc1 = validate(test_loader, classifier, args)
     print("test_acc1 = {:3.1f}".format(acc1))
+    acc1 = validate(novel_loader, classifier, args)
+    print("novel_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
     tb.close()
 
 
-def train(train_source_iter: ForeverDataIterator,
-          train_target_iter: ForeverDataIterator, model: ImageClassifier,
+def train(train_iter: ForeverDataIterator, model: ImageClassifier,
           multidomain_adv: MultidomainAdversarialLoss, optimizer: SGD,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace,
           tb: SummaryWriter):
@@ -251,51 +268,41 @@ def train(train_source_iter: ForeverDataIterator,
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, labels_t = next(train_target_iter)
+        x_tr, labels_tr = next(train_iter)
 
         # retrieve the class and domain from the modified office_home dataset
-        class_labels_s = ModifiedOfficeHome.get_category(
-            labels_s, model.num_classes)
-        domain_labels_s = ModifiedOfficeHome.get_style(labels_s,
-                                                       model.num_classes)
-        domain_labels_t = ModifiedOfficeHome.get_style(labels_t,
-                                                       model.num_classes)
+        class_labels_tr = CheckerboardOfficeHome.get_category(labels_tr)
+        domain_labels_tr = CheckerboardOfficeHome.get_style(labels_tr)
 
-        x_s = x_s.to(device)
-        x_t = x_t.to(device)
-        # labels_s = labels_s.to(device)
+        x_tr = x_tr.to(device)
+        
         # add new labels to device
-        class_labels_s = class_labels_s.to(device)
-        domain_labels_s = domain_labels_s.to(device)
-        domain_labels_t = domain_labels_t.to(device)
+        class_labels_tr = class_labels_tr.to(device)
+        domain_labels_tr = domain_labels_tr.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        y_tr, f_tr = model(x_tr)
 
         # Updating the loss functions with new labels
         # cls_loss = F.cross_entropy(y_s, labels_s)
-        cls_loss = F.cross_entropy(y_s, class_labels_s)
+        cls_loss = F.cross_entropy(y_tr, class_labels_tr)
         # TODO: Make a new domain discriminator for multiple class labels
-        transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s,
-                                        domain_labels_t)
+        transfer_loss = multidomain_adv(f_tr, f_val, domain_labels_tr,
+                                        domain_labels_val)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
-        cls_acc = accuracy(y_s, class_labels_s)[0]
+        cls_acc = accuracy(y_tr, class_labels_tr)[0]
 
-        losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_accs.update(domain_acc.item(), x_s.size(0))
+        losses.update(loss.item(), x_tr.size(0))
+        cls_accs.update(cls_acc.item(), x_tr.size(0))
+        domain_accs.update(domain_acc.item(), x_tr.size(0))
         # seperated loss between two heads
-        cls_losses.update(cls_loss.item(), x_s.size(0))
-        transfer_losses.update(transfer_loss.item(), x_s.size(0))
+        cls_losses.update(cls_loss.item(), x_tr.size(0))
+        transfer_losses.update(transfer_loss.item(), x_tr.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -311,18 +318,18 @@ def train(train_source_iter: ForeverDataIterator,
             progress.display(i)
 
     # tensorboard updates
-    tb.add_scalar('Classification Loss', cls_losses.sum, epoch)
-    tb.add_scalar('Domain Disriminator Loss', transfer_losses.sum, epoch)
-    tb.add_scalar('Total Loss', losses.sum, epoch)
-    tb.add_scalar('Classification Accuracy', cls_accs.avg, epoch)
-    tb.add_scalar('Domain Discrimination Accuracy', domain_accs.avg, epoch)
+    tb.add_scalar('Category Classification Loss (Training Set)', cls_losses.sum, epoch)
+    tb.add_scalar('Style Discrimination Loss (Training Set)', transfer_losses.sum, epoch)
+    tb.add_scalar('Total Loss (Training Set)', losses.sum, epoch)
+    tb.add_scalar('Category Classification Accuracy (Training Set)', cls_accs.avg, epoch)
+    tb.add_scalar('Style Discrimination Accuracy (Training Set', domain_accs.avg, epoch)
     # tb.add_histogram('Classification Softmax', TODO, epoch)
 
 
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
              args: argparse.Namespace,
-             epoch: int,
+             epoch: Optional[int] = 0,
              tb: SummaryWriter = None) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -343,7 +350,7 @@ def validate(val_loader: DataLoader,
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             images = images.to(device)
-            target = ModifiedOfficeHome.get_category(target, model.num_classes)
+            target = CheckerboardOfficeHome.get_category(target)
             target = target.to(device)
 
             # compute output
@@ -383,11 +390,10 @@ if __name__ == '__main__':
                                 and callable(models.__dict__[name]))
 
     parser = argparse.ArgumentParser(
-        description='MDANN for Mulisource and Multidomain Adpation')
+        description=
+        'DANN for Checkerboard Domain Adapation on the Office-Home Dataset')
     # dataset parameters
     parser.add_argument('root', metavar='DIR', help='root path of dataset')
-    parser.add_argument('-s', '--sources', nargs='+', help='source domain(s)')
-    parser.add_argument('-t', '--targets', nargs='+', help='target domain(s)')
     # parser.add_argument('-s', '--source', help='source domain(s)')
     # parser.add_argument('-t', '--target', help='target domain(s)')
     parser.add_argument('--center-crop',
