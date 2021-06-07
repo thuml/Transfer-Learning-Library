@@ -6,7 +6,7 @@ from .imagelist import ImageList, num_classes
 from ._util import download as download_data, check_exits
 
 
-class CheckerBoardOfficeHome(ImageList):
+class CheckerboardOfficeHome(ImageList):
     """`OfficeHome <http://hemanthdv.org/OfficeHome-Dataset/>`_ Dataset.
 
     Args:
@@ -36,9 +36,8 @@ class CheckerBoardOfficeHome(ImageList):
                 novel.txt
     """
     download_list = [
-        # ("image_list", "image_list.zip",
-        #  "https://cloud.tsinghua.edu.cn/f/ca3a3b6a8d554905b4cd/?dl=1"),
-        ("Art", "Art.tgz", "https://cloud.tsinghua.edu.cn/f/4691878067d04755beab/?dl=1"),
+        ("Art", "Art.tgz",
+         "https://cloud.tsinghua.edu.cn/f/4691878067d04755beab/?dl=1"),
         ("Clipart", "Clipart.tgz",
          "https://cloud.tsinghua.edu.cn/f/0d41e7da4558408ea5aa/?dl=1"),
         ("Product", "Product.tgz",
@@ -52,74 +51,85 @@ class CheckerBoardOfficeHome(ImageList):
         "Pr": "Product/",
         "Rw": "Real_World/",
     }
-    # image_style_list = {
-    #     "Ar": "image_list/Art.txt",
-    #     "Cl": "image_list/Clipart.txt",
-    #     "Pr": "image_list/Product.txt",
-    #     "Rw": "image_list/Real_World.txt",
-    # }
-    # mod_image_style_list = {
-    #     "Ar": "image_list/Modifed_Art.txt",
-    #     "Cl": "image_list/Modified_Clipart.txt",
-    #     "Pr": "image_list/Modified_Product.txt",
-    #     "Rw": "image_list/Modified_Real_World.txt",
-    # }
 
     image_lists = {
-        "train": "image_list/train.txt",
-        "val": "image_list/val.txt",
-        "test": "image_list/test.txt",
-        "novel": "image_list/novel.txt"
+        "train": "train.txt",
+        "val": "val.txt",
+        "test": "test.txt",
+        "novel": "novel.txt"
     }
 
-    CATEGORIES = ['Drill', 'Exit_Sign', 'Bottle', 'Glasses', 'Computer', 'File_Cabinet', 'Shelf', 'Toys', 'Sink',
-                  'Laptop', 'Kettle', 'Folder', 'Keyboard', 'Flipflops', 'Pencil', 'Bed', 'Hammer', 'ToothBrush', 'Couch',
-                  'Bike', 'Postit_Notes', 'Mug', 'Webcam', 'Desk_Lamp', 'Telephone', 'Helmet', 'Mouse', 'Pen', 'Monitor',
-                  'Mop', 'Sneakers', 'Notebook', 'Backpack', 'Alarm_Clock', 'Push_Pin', 'Paper_Clip', 'Batteries', 'Radio',
-                  'Fan', 'Ruler', 'Pan', 'Screwdriver', 'Trash_Can', 'Printer', 'Speaker', 'Eraser', 'Bucket', 'Chair',
-                  'Calendar', 'Calculator', 'Flowers', 'Lamp_Shade', 'Spoon', 'Candles', 'Clipboards', 'Scissors', 'TV',
-                  'Curtains', 'Fork', 'Soda', 'Table', 'Knives', 'Oven', 'Refrigerator', 'Marker']
+    CATEGORIES = [
+        'Drill', 'Exit_Sign', 'Bottle', 'Glasses', 'Computer', 'File_Cabinet',
+        'Shelf', 'Toys', 'Sink', 'Laptop', 'Kettle', 'Folder', 'Keyboard',
+        'Flipflops', 'Pencil', 'Bed', 'Hammer', 'ToothBrush', 'Couch', 'Bike',
+        'Postit_Notes', 'Mug', 'Webcam', 'Desk_Lamp', 'Telephone', 'Helmet',
+        'Mouse', 'Pen', 'Monitor', 'Mop', 'Sneakers', 'Notebook', 'Backpack',
+        'Alarm_Clock', 'Push_Pin', 'Paper_Clip', 'Batteries', 'Radio', 'Fan',
+        'Ruler', 'Pan', 'Screwdriver', 'Trash_Can', 'Printer', 'Speaker',
+        'Eraser', 'Bucket', 'Chair', 'Calendar', 'Calculator', 'Flowers',
+        'Lamp_Shade', 'Spoon', 'Candles', 'Clipboards', 'Scissors', 'TV',
+        'Curtains', 'Fork', 'Soda', 'Table', 'Knives', 'Oven', 'Refrigerator',
+        'Marker'
+    ]
 
     has_gen_file_list = False
+    num_categories = len(CATEGORIES)
+    num_styles = len(images_dirs.keys())
+    cat_style_matrix = torch.zeros(
+        (num_styles, num_categories)
+    )
 
-    def __init__(self, root: str, tasks: List[str], dataset_type: str, download: Optional[bool] = False, **kwargs):
-        assert dataset_type in CheckerBoardOfficeHome.image_lists.keys()
+    def __init__(self,
+                 root: str,
+                 tasks: List[str],
+                 dataset_type: str,
+                 download: Optional[bool] = False,
+                 **kwargs):
+        assert dataset_type in CheckerboardOfficeHome.image_lists.keys()
         if download:
-            list(map(lambda args: download_data(root, *args), self.download_list))
+            list(
+                map(lambda args: download_data(root, *args),
+                    self.download_list))
         else:
-            list(map(lambda file_name, _: check_exits(
-                root, file_name), self.download_list))
-        CheckerBoardOfficeHome.root = root
-        if not CheckerBoardOfficeHome.has_gen_file_list:
-            CheckerBoardOfficeHome.generate_image_list()
-        super(CheckerBoardOfficeHome, self).__init__(
+            list(
+                map(lambda file_name, _: check_exits(root, file_name),
+                    self.download_list))
+        if not CheckerboardOfficeHome.has_gen_file_list:
+            CheckerboardOfficeHome.generate_image_list(root=root)
+        super(CheckerboardOfficeHome, self).__init__(
             # TODO: Adapt the code for predicting style instead of category
-            root, CheckerBoardOfficeHome.CATEGORIES, data_list_files=CheckerBoardOfficeHome.image_lists[dataset_type], **kwargs
-        )
+            root=root,
+            classes=CheckerboardOfficeHome.CATEGORIES,
+            data_list_files=CheckerboardOfficeHome.image_lists[dataset_type],
+            **kwargs)
 
     @classmethod
-    def generate_image_list(cls, train_val_test_split: Optional[Tuple[Double]] = (0.5, 0.25, 0.25), domains_per_cat: Optional[int] = 2, style_is_domain: Optional[bool] = True):
+    def generate_image_list(
+            cls,
+            root: str,
+            train_val_test_split: Optional[Tuple[Double]] = (0.5, 0.25, 0.25),
+            domains_per_cat: Optional[int] = 2,
+            style_is_domain: Optional[bool] = True):
         # TODO: Produce image list if style-predicting instead of category-predicting
         assert len(train_val_test_split) == 3 and sum(
             train_val_test_split) == 1
         cls.train_split, cls.val_split, cls.test_split = train_val_test_split
         train = []
         novel_list = ""
-        cls.num_categories = len(CheckerBoardOfficeHome.CATEGORIES)
-        cls.num_styles = len(CheckerBoardOfficeHome.image_style_list)
-        styles = CheckerBoardOfficeHome.image_style_list.keys()
+        
+        styles = cls.image_dirs.keys()
         style_indices = list(range(cls.num_styles))
-        cls.cat_style_matrix = torch.zeros(
-            (cls.num_styles, cls.num_categories)
-        )
+        
 
         for cat_index in range(cls.num_categories):
             random.shuffle(style_indices)
             style_count = 0
             for style_index in style_indices:
-                image_dir = os.path.join(cls.root,
-                                         CheckerBoardOfficeHome.image_dirs[styles[style_index]],
-                                         CheckerBoardOfficeHome.CATEGORIES[cat_index])
+                image_dir = os.path.join(
+                    root,
+                    cls.image_dirs[styles[style_index]],
+                    cls.CATEGORIES[cat_index])
                 for filename in os.listdir(image_dir):
                     if filename.endswith(".jpg"):
                         label = cls._get_label(style_index, cat_index)
@@ -140,17 +150,13 @@ class CheckerBoardOfficeHome(ImageList):
         test_list = "".join(train[(num_train + num_val):])
 
         train_list_filename = os.path.join(
-            cls.root, CheckerBoardOfficeHome.image_lists['train']
-        )
+            root, cls.image_lists['train'])
         val_list_filename = os.path.join(
-            cls.root, CheckerBoardOfficeHome.images_dirs["val"]
-        )
+            root, cls.images_dirs["val"])
         test_list_filename = os.path.join(
-            cls.root, CheckerBoardOfficeHome.images_dirs["dir"]
-        )
+            root, cls.images_dirs["dir"])
         novel_list_filename = os.path.join(
-            cls.root, CheckerBoardOfficeHome.image_lists['novel']
-        )
+            root, cls.image_lists['novel'])
         with open(train_list_filename, "w") as f:
             f.write(train_list)
         with open(val_list_filename, "w") as f:
@@ -158,8 +164,8 @@ class CheckerBoardOfficeHome(ImageList):
         with open(test_list_filename, "w") as f:
             f.write(test_list)
         with open(novel_list_filename, "w") as f:
-            f.write(novel_list) 
-        CheckerBoardOfficeHome.has_gen_file_list = True
+            f.write(novel_list)
+        cls.has_gen_file_list = True
 
     def __str__(self):
         str_matrix = "Categories (Cols) AND Styles (Rows) Matrix\n "
@@ -167,7 +173,7 @@ class CheckerBoardOfficeHome(ImageList):
         for cat_index in range(self.num_categories):
             str_matrix += "|" + cat_index
         str_matrix += "|\n"
-        for row in CheckerBoardOfficeHome.cat_style_matrix:
+        for row in CheckerboardOfficeHome.cat_style_matrix:
             str_matrix += "|" + style_index
             for val in row:
                 if val == 1:
@@ -178,19 +184,21 @@ class CheckerBoardOfficeHome(ImageList):
             style_index += 1
         return str_matrix
 
-    def _get_label(self, style_index: int, category_index: int) -> int:
-        return self.num_categories * style_index + category_index
-
-    def domains(self):
-        if self.style_is_domain:
-            return list(self.images_dirs.keys())
+    @classmethod
+    def domains(cls):
+        if cls.style_is_domain:
+            return list(cls.images_dirs.keys())
         else:
-            return CheckerBoardOfficeHome.CATEGORIES
+            return CheckerboardOfficeHome.CATEGORIES
 
     @classmethod
-    def get_category(cls, labels: torch.tensor, num_categories: int) -> torch.tensor:
-        return labels % num_categories
+    def _get_label(cls, style_index: int, category_index: int) -> int:
+        return cls.num_categories * style_index + category_index
 
     @classmethod
-    def get_style(cls, labels: torch.tensor, num_categories: int) -> torch.tensor:
-        return labels // num_categories
+    def get_category(cls, labels: torch.tensor) -> torch.tensor:
+        return labels % cls.num_categories
+
+    @classmethod
+    def get_style(cls, labels: torch.tensor) -> torch.tensor:
+        return labels // cls.num_categories

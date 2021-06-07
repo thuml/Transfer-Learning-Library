@@ -5,7 +5,7 @@ from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.data import ForeverDataIterator
 from common.vision.transforms import ResizeImage
 import common.vision.models as models
-from common.vision.datasets.modified_officehome import ModifiedOfficeHome
+from common.vision.datasets.modified_officehome import CheckerboardOfficeHome
 # from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
 # from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -34,11 +34,11 @@ sys.path.append('../../..')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def main(args: argparse.Namespace):
     logger = CompleteLogger(args.log, args.phase)
     print(args)
 
-    
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -73,80 +73,70 @@ def main(args: argparse.Namespace):
          T.CenterCrop(224),
          T.ToTensor(), normalize])
 
-    # dataset = datasets.__dict__["ModifiedOfficeHome"]
-
-    print("Source(s): {} Target(s): {}".format(args.sources, args.targets))
+    CheckerboardOfficeHome.generate_image_list()
     # assuming that args.sources and arg.targets are disjoint sets
-    num_domains = len(args.sources) + len(args.targets)
-    train_source_dataset = ModifiedOfficeHome(root=args.root,
-                                              tasks=args.sources,
-                                              download=True,
-                                              transform=train_transform)
-    # train_source_dataset = ConcatDataset([
-    #     dataset(root=args.root,
-    #             task=source,
-    #             download=True,
-    #             transform=train_transform) for source in args.sources
-    # ])
-    train_source_loader = DataLoader(train_source_dataset,
-                                     batch_size=args.batch_size,
-                                     shuffle=True,
-                                     num_workers=args.workers,
-                                     drop_last=True)
-    train_target_dataset = ModifiedOfficeHome(root=args.root,
-                                              tasks=args.targets,
-                                              download=True,
-                                              transform=train_transform)
-    # train_target_dataset = ConcatDataset([
-    #     dataset(root=args.root,
-    #             task=target,
-    #             download=True,
-    #             transform=train_transform) for target in args.targets
-    # ])
-    train_target_loader = DataLoader(train_target_dataset,
-                                     batch_size=args.batch_size,
-                                     shuffle=True,
-                                     num_workers=args.workers,
-                                     drop_last=True)
-    val_dataset = ModifiedOfficeHome(root=args.root,
+    # num_domains = len(args.sources) + len(args.targets)
+
+    # TODO: create the train, val, test, novel dataset
+    train_dataset = CheckerboardOfficeHome(root=args.root,
+                                           tasks=args.sources,
+                                           download=True,
+                                           dataset_type='train',
+                                           transform=train_transform)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=args.batch_size,
+                              shuffle=True,
+                              num_workers=args.workers,
+                              drop_last=True)
+
+    val_dataset = CheckerboardOfficeHome(root=args.root,
                                      tasks=args.targets,
                                      download=True,
+                                     dataset_type='val',
                                      transform=val_transform)
-    # val_dataset = ConcatDataset([
-    #     dataset(root=args.root,
-    #             task=target,
-    #             download=True,
-    #             transform=val_transform) for target in args.targets
-    # ])
     val_loader = DataLoader(val_dataset,
                             batch_size=args.batch_size,
                             shuffle=False,
                             num_workers=args.workers)
-    # if args.data == 'DomainNet':
-    #     test_dataset = ModifiedOfficeHome(root=args.root,
-    #                                       task=args.targets,
-    #                                       split='test',
-    #                                       download=True,
-    #                                       transform=val_transform)
-    #     test_loader = DataLoader(test_dataset,
-    #                              batch_size=args.batch_size,
-    #                              shuffle=False,
-    #                              num_workers=args.workers)
-    # else:
-    test_loader = val_loader
 
-    train_source_iter = ForeverDataIterator(train_source_loader)
-    train_target_iter = ForeverDataIterator(train_target_loader)
+    test_dataset = CheckerboardOfficeHome(root=args.root,
+                                          tasks=args.targets,
+                                          download=True,
+                                          dataset_type='test',
+                                          transform=val_transform)
+    test_loader = DataLoader(test_dataset,
+                            batch_size=args.batch_size,
+                            shuffle=True,
+                            num_workers=args.workers,
+                            drop_last=True)
+    novel_dataset = CheckerboardOfficeHome(root=args.root,
+                                          tasks=args.targets,
+                                          download=True,
+                                          dataset_type='novel',
+                                          transform=val_transform)
+    novel_loader = DataLoader(novel_dataset,
+                            batch_size=args.batch_size,
+                            shuffle=True,
+                            num_workers=args.workers,
+                            drop_last=True)
+    
+    # display the category-style matrix
+    print(train_dataset)
+
+    train_iter = ForeverDataIterator(train_loader)
+    val_iter = ForeverDataIterator(val_loader) # train_target_iter
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     classifier = ImageClassifier(backbone,
-                                 train_source_dataset.num_classes,
+                                 train_dataset.num_classes,
                                  bottleneck_dim=args.bottleneck_dim).to(device)
-    # TODO: Make the domain discriminator work on multiple domains
-    multidomain_discri = MultidomainDiscriminator(in_feature=classifier.features_dim,
-                                                  hidden_size=1024, num_domains=num_domains).to(device)
+                                 
+    multidomain_discri = MultidomainDiscriminator(
+        in_feature=classifier.features_dim,
+        hidden_size=1024,
+        num_domains=len(CheckerboardOfficeHome.domains())).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() +
@@ -174,21 +164,22 @@ def main(args: argparse.Namespace):
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone,
                                           classifier.bottleneck).to(device)
-        source_feature, source_labels = collect_feature_and_labels(train_source_loader,
-                                         feature_extractor, device)
-        target_feature, target_labels = collect_feature_and_labels(train_target_loader,
-                                         feature_extractor, device)
+        source_feature, source_labels = collect_feature_and_labels(
+            train_loader, feature_extractor, device)
+        target_feature, target_labels = collect_feature_and_labels(
+            train_target_loader, feature_extractor, device)
         source_domain_labels = ModifiedOfficeHome.get_category(
             source_labels, classifier.num_classes)
         target_domain_labels = ModifiedOfficeHome.get_category(
             target_labels, classifier.num_classes)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature, 
-                        filename=tSNE_filename,
-                        source_domain_labels=source_domain_labels, 
-                        target_domain_labels=target_domain_labels,
-                        num_domains=num_domains)
+        tsne.visualize(source_feature,
+                       target_feature,
+                       filename=tSNE_filename,
+                       source_domain_labels=source_domain_labels,
+                       target_domain_labels=target_domain_labels,
+                       num_domains=num_domains)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
         # A_distance = a_distance.calculate(source_feature, target_feature,
@@ -210,8 +201,8 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, multidomain_adv,
-              optimizer, lr_scheduler, epoch, args, tb)
+        train(train_iter, val_iter, classifier,
+              multidomain_adv, optimizer, lr_scheduler, epoch, args, tb)
 
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args, epoch, tb)
@@ -266,10 +257,10 @@ def train(train_source_iter: ForeverDataIterator,
         # retrieve the class and domain from the modified office_home dataset
         class_labels_s = ModifiedOfficeHome.get_category(
             labels_s, model.num_classes)
-        domain_labels_s = ModifiedOfficeHome.get_style(
-            labels_s, model.num_classes)
-        domain_labels_t = ModifiedOfficeHome.get_style(
-            labels_t, model.num_classes)
+        domain_labels_s = ModifiedOfficeHome.get_style(labels_s,
+                                                       model.num_classes)
+        domain_labels_t = ModifiedOfficeHome.get_style(labels_t,
+                                                       model.num_classes)
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
@@ -292,7 +283,8 @@ def train(train_source_iter: ForeverDataIterator,
         # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_s, class_labels_s)
         # TODO: Make a new domain discriminator for multiple class labels
-        transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
+        transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s,
+                                        domain_labels_t)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
