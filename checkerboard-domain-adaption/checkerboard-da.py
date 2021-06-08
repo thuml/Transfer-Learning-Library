@@ -199,12 +199,12 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args, 0)
+        acc1 = validate(test_loader, classifier, 'Test', args, 0)
         print(acc1)
         return
     
     if args.phase == 'novel':
-        acc1 = validate(novel_loader, classifier, args, 0)
+        acc1 = validate(novel_loader, classifier, 'Novel', args, 0)
         print(acc1)
         return
 
@@ -221,7 +221,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args, tb)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args, epoch, tb)
+        acc1 = validate(val_loader, classifier, 'Validation', args, epoch, tb)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(),
@@ -235,9 +235,9 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
+    acc1 = validate(test_loader, classifier, 'Test', args)
     print("test_acc1 = {:3.1f}".format(acc1))
-    acc1 = validate(novel_loader, classifier, args)
+    acc1 = validate(novel_loader, 'Novel', classifier, args)
     print("novel_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
@@ -289,9 +289,8 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         # Updating the loss functions with new labels
         # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_tr, class_labels_tr)
-        # TODO: Make a new domain discriminator for multiple class labels
-        transfer_loss = multidomain_adv(f_tr, f_val, domain_labels_tr,
-                                        domain_labels_val)
+
+        transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
@@ -323,12 +322,13 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
     tb.add_scalar('Total Loss (Training Set)', losses.sum, epoch)
     tb.add_scalar('Category Classification Accuracy (Training Set)', cls_accs.avg, epoch)
     tb.add_scalar('Style Discrimination Accuracy (Training Set', domain_accs.avg, epoch)
-    # tb.add_histogram('Classification Softmax', TODO, epoch)
+    tb.add_histogram('Classification Softmax', y_tr, epoch)
 
 
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
              args: argparse.Namespace,
+             dataset_type: str,
              epoch: Optional[int] = 0,
              tb: SummaryWriter = None) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
@@ -378,8 +378,8 @@ def validate(val_loader: DataLoader,
             print(confmat.format(classes))
     # tensorboard update(s)
     if tb:
-        tb.add_scalar('Validation Classification Loss', losses.sum, epoch)
-        tb.add_scalar('Validation Classification Accuracy', top1.avg, epoch)
+        tb.add_scalar(f'Classification Loss ({dataset_type} Set)', losses.sum, epoch)
+        tb.add_scalar(f'Classification Accuracy ({dataset_type} Set)', top1.avg, epoch)
 
     return top1.avg
 

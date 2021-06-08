@@ -276,6 +276,7 @@ def train(train_source_iter: ForeverDataIterator,
         class_labels_s = class_labels_s.to(device)
         domain_labels_s = domain_labels_s.to(device)
         domain_labels_t = domain_labels_t.to(device)
+        d_labels = torch.cat((domain_labels_s, domain_labels_t), dim=0)
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -284,13 +285,15 @@ def train(train_source_iter: ForeverDataIterator,
         x = torch.cat((x_s, x_t), dim=0)
         y, f = model(x)
         y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        # f_s, f_t = f.chunk(2, dim=0)
 
         # Updating the loss functions with new labels
         # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_s, class_labels_s)
         # TODO: Make a new domain discriminator for multiple class labels
-        transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
+
+        transfer_loss = multidomain_adv(f, d_labels)
+        # transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 

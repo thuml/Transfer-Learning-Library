@@ -69,21 +69,30 @@ class MultidomainAdversarialLoss(nn.Module):
         #         input, target, weight=weight, reduction=reduction)
         self.domain_discriminator_accuracy = None
 
-    def forward(self, f_s: torch.Tensor, d_label_s: torch.Tensor, 
-                f_t: Optional[torch.Tensor] = None, d_label_t: Optional[torch.Tensor] = None,
-                w_s: Optional[torch.Tensor] = None, w_t: Optional[torch.Tensor] = None) -> torch.Tensor:
-        f = self.grl(torch.cat((f_s, f_t), dim=0))
+    def forward(self, f: torch.Tensor, d_labels: torch.Tensor, 
+                w: Optional[torch.Tensor] = None) -> torch.Tensor:
         d = self.multidomain_discriminator(f)
-        d_s, d_t = d.chunk(2, dim=0)
-        self.domain_discriminator_accuracy = accuracy(
-            d, torch.cat((d_label_s, d_label_t), dim=0))[0]
-        # TODO: Get num classes
-        if w_s is None:
-            w_s = torch.ones((d.shape[-1], 1)).to(f_s.device)
-        if w_t is None:
-            w_t = torch.ones((d.shape[-1], 1)).to(f_s.device)
-        return 0.5 * (self.loss(d_s, d_label_s, w_s) + self.loss(d_t, d_label_t, w_t))
-        # return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
+        self.domain_discriminator_accuracy = accuracy(d, d_labels)[0]
+        if w is None:
+            w = torch.ones((d.shape[-1], 1)).to(f.device)
+        return self.loss(d, d_labels, w)
+    
+    # def forward(self, f_s: torch.Tensor, d_label_s: torch.Tensor, 
+    #             f_t: Optional[torch.Tensor] = None, d_label_t: Optional[torch.Tensor] = None,
+    #             w_s: Optional[torch.Tensor] = None, w_t: Optional[torch.Tensor] = None) -> torch.Tensor:
+    #     f = self.grl(torch.cat((f_s, f_t), dim=0))
+    #     d = self.multidomain_discriminator(f)
+    #     d_s, d_t = d.chunk(2, dim=0)
+    #     self.domain_discriminator_accuracy = accuracy(
+    #         d, torch.cat((d_label_s, d_label_t), dim=0))[0]
+    #     # TODO: Get num classes
+    #     if w_s is None:
+    #         w_s = torch.ones((d.shape[-1], 1)).to(f_s.device)
+    #     if w_t is None:
+    #         w_t = torch.ones((d.shape[-1], 1)).to(f_s.device)
+    #     return 0.5 * (self.loss(d_s, d_label_s, w_s) + self.loss(d_t, d_label_t, w_t))
+    #     # return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
+
 
 
 class ImageClassifier(ClassifierBase):
