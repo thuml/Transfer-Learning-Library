@@ -29,7 +29,7 @@ from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def main(args: argparse.Namespace):
@@ -92,18 +92,32 @@ def main(args: argparse.Namespace):
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
+    use_parallel = torch.cuda.device_count() > 1 and args.dataparallel
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
-    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
+    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim) #.to(device)
+    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024) #.to(device)
+    if use_parallel:
+        classifier = nn.DataParallel(classifier)
+        domain_discri = nn.DataParallel(domain_discri)
+    classifier = classifier.to(device)
+    domain_discri = domain_discri.to(device)
+
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
+    if use_parallel:
+        optimizer = SGD(classifier.module.get_parameters() + domain_discri.module.get_parameters(),
+                    args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    else: 
+        optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
                     args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
+    # if use_parallel:
+    #     domain_adv = nn.DataParallel(domain_adv)
+    # domain_adv = domain_adv.to(device)
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -132,6 +146,8 @@ def main(args: argparse.Namespace):
 
     # name of tensorboard
     comment = f' arch=resnet18 epochs={args.epochs} batch_size={args.batch_size} iters-per-epoch={args.iters_per_epoch} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off} seed={args.seed} domain={args.source}2{args.target}'
+    if use_parallel:
+        comment += f' dataparallel=True'
     # Summary writer for tensorboard
     tb = SummaryWriter(comment=comment)
 
@@ -337,7 +353,7 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
@@ -353,6 +369,9 @@ if __name__ == '__main__':
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
+    parser.add_argument("--dataparallel", type=bool, default=False,
+                        help="""If True, you can run model on multiple gpus. 
+                        If False, you only run model on 0 to 1 gpus.""")
     args = parser.parse_args()
     main(args)
 

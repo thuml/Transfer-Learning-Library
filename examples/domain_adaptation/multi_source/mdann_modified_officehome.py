@@ -290,9 +290,9 @@ def train(train_source_iter: ForeverDataIterator,
         # Updating the loss functions with new labels
         # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_s, class_labels_s)
-        # TODO: Make a new domain discriminator for multiple class labels
         transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
+        # this loss functions works because of the gradient reversal layer
         loss = cls_loss + transfer_loss * args.trade_off
 
         cls_acc = accuracy(y_s, class_labels_s)[0]
@@ -326,6 +326,8 @@ def train(train_source_iter: ForeverDataIterator,
     # tb.add_histogram('Classification Softmax', TODO, epoch)
 
 
+
+
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
              args: argparse.Namespace,
@@ -356,6 +358,7 @@ def validate(val_loader: DataLoader,
             # compute output
             output, _ = model(images)
             loss = F.cross_entropy(output, target)
+
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
