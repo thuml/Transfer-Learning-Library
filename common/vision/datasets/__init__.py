@@ -13,5 +13,5 @@ from .stanford_dogs import StanfordDogs
 from .coco70 import COCO70
 from .oxfordpet import OxfordIIITPet
 
-__all__ = ['ImageList', 'Office31', 'OfficeHome', 'ModifiedOfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", 'CheckerboardOfficeHome'
-           "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPet"]
+__all__ = ['ImageList', 'Office31', 'OfficeHome', 'ModifiedOfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet",
+           'CheckerboardOfficeHome', "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPet"]

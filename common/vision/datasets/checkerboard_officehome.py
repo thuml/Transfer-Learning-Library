@@ -1,12 +1,13 @@
 import os
 import torch
+import torchvision.transforms as T
 import random
-from typing import Optional, List, Tuple, Double
-from .imagelist import ImageList, num_classes
+from typing import Optional, List, Tuple
+from .imagelist import ImageList
 from ._util import download as download_data, check_exits
 
 
-class CheckerboardOfficeHome(ImageList):
+class CheckerboardOfficeHome():
     """`OfficeHome <http://hemanthdv.org/OfficeHome-Dataset/>`_ Dataset.
 
     Args:
@@ -52,12 +53,7 @@ class CheckerboardOfficeHome(ImageList):
         "Rw": "Real_World/",
     }
 
-    image_lists = {
-        "train": "train.txt",
-        "val": "val.txt",
-        "test": "test.txt",
-        "novel": "novel.txt"
-    }
+    images_lists = ("train.txt", "val.txt", "test.txt", "novel.txt")
 
     CATEGORIES = [
         'Drill', 'Exit_Sign', 'Bottle', 'Glasses', 'Computer', 'File_Cabinet',
@@ -73,90 +69,95 @@ class CheckerboardOfficeHome(ImageList):
         'Marker'
     ]
 
-    has_gen_file_list = False
+    # has_gen_file_list = False
     num_categories = len(CATEGORIES)
     num_styles = len(images_dirs.keys())
-    cat_style_matrix = torch.zeros(
-        (num_styles, num_categories)
-    )
 
     def __init__(self,
                  root: str,
-                 tasks: List[str],
-                 dataset_type: str,
                  download: Optional[bool] = False,
+                 transforms = [None, None, None, None],
+                 style_is_domain: Optional[bool] = True,
                  **kwargs):
-        assert dataset_type in CheckerboardOfficeHome.image_lists.keys()
-        if download:
-            list(
-                map(lambda args: download_data(root, *args),
-                    self.download_list))
-        else:
-            list(
-                map(lambda file_name, _: check_exits(root, file_name),
-                    self.download_list))
-        if not CheckerboardOfficeHome.has_gen_file_list:
-            CheckerboardOfficeHome.generate_image_list(root=root)
-        super(CheckerboardOfficeHome, self).__init__(
-            # TODO: Adapt the code for predicting style instead of category
-            root=root,
-            classes=CheckerboardOfficeHome.CATEGORIES,
-            data_list_files=CheckerboardOfficeHome.image_lists[dataset_type],
-            **kwargs)
+        assert len(transforms) == len(CheckerboardOfficeHome.images_lists)
+        # if download:
+        #     list(
+        #         map(lambda args: download_data(root, *args),
+        #             self.download_list))
+        # else:
+        #     list(
+        #         map(lambda name, file_name, _: check_exits(root, file_name),
+        #             self.download_list))
 
-    @classmethod
+        # TODO: implelment this:
+        self.style_is_domain = style_is_domain
+
+        self.generate_image_list(root)
+        datasets = []
+        for i in range(len(CheckerboardOfficeHome.images_lists)):
+            data_list_file = os.path.join(root, CheckerboardOfficeHome.images_lists[i])
+            datasets.append(
+                ImageList(
+                    # TODO: Adapt the code for predicting style instead of category
+                    root=root,
+                    classes=self.classes(),
+                    data_list_file=data_list_file,
+                    transform=transforms[i],
+                    **kwargs))
+        self.train_dataset, self.val_dataset, self.test_dataset, self.novel_dataset = datasets
+        
+
+
     def generate_image_list(
-            cls,
+            self,
             root: str,
-            train_val_test_split: Optional[Tuple[Double]] = (0.5, 0.25, 0.25),
-            domains_per_cat: Optional[int] = 2,
-            style_is_domain: Optional[bool] = True):
+            train_val_test_split: Optional[Tuple[float]] = (0.5, 0.25, 0.25),
+            domains_per_cat: Optional[int] = 2):
         # TODO: Produce image list if style-predicting instead of category-predicting
         assert len(train_val_test_split) == 3 and sum(
             train_val_test_split) == 1
-        cls.train_split, cls.val_split, cls.test_split = train_val_test_split
+        self.train_split, self.val_split, self.test_split = train_val_test_split
         train = []
         novel_list = ""
-        
-        styles = cls.image_dirs.keys()
-        style_indices = list(range(cls.num_styles))
-        
+        self.cat_style_matrix = torch.zeros(
+            (CheckerboardOfficeHome.num_styles,
+             CheckerboardOfficeHome.num_categories))
+        styles = list(self.images_dirs.keys())
+        style_indices = list(range(self.num_styles))
 
-        for cat_index in range(cls.num_categories):
+        for cat_index in range(self.num_categories):
             random.shuffle(style_indices)
             style_count = 0
             for style_index in style_indices:
-                image_dir = os.path.join(
-                    root,
-                    cls.image_dirs[styles[style_index]],
-                    cls.CATEGORIES[cat_index])
+                style = self.images_dirs[styles[style_index]]
+                cat = self.CATEGORIES[cat_index]
+                image_dir = os.path.join(root,
+                                         style,
+                                         cat)
                 for filename in os.listdir(image_dir):
                     if filename.endswith(".jpg"):
-                        label = cls._get_label(style_index, cat_index)
-                        path_and_label = filename + ' ' + label + '\n'
+                        path = os.path.join(style, cat, filename)
+                        label = self._get_label(style_index, cat_index)
+                        path_and_label = path + ' ' + str(label) + '\n'
                         if style_count < domains_per_cat:
                             train.append(path_and_label)
-                            cls.cat_style_matrix[style_index, cat_index] = 1
+                            self.cat_style_matrix[style_index, cat_index] = 1
                         else:
                             novel_list += path_and_label
                 style_count += 1
 
         # training, validation/calibration, testing split
         random.shuffle(train)
-        num_train = int(len(train) * cls.train_split)
-        num_val = int(len(train) * cls.val_split)
+        num_train = int(len(train) * self.train_split)
+        num_val = int(len(train) * self.val_split)
         train_list = "".join(train[:num_train])
         val_list = "".join(train[num_train:(num_train + num_val)])
         test_list = "".join(train[(num_train + num_val):])
 
-        train_list_filename = os.path.join(
-            root, cls.image_lists['train'])
-        val_list_filename = os.path.join(
-            root, cls.images_dirs["val"])
-        test_list_filename = os.path.join(
-            root, cls.images_dirs["dir"])
-        novel_list_filename = os.path.join(
-            root, cls.image_lists['novel'])
+        train_list_filename = os.path.join(root, self.images_lists[0])
+        val_list_filename = os.path.join(root, self.images_lists[1])
+        test_list_filename = os.path.join(root, self.images_lists[2])
+        novel_list_filename = os.path.join(root, self.images_lists[3])
         with open(train_list_filename, "w") as f:
             f.write(train_list)
         with open(val_list_filename, "w") as f:
@@ -165,29 +166,35 @@ class CheckerboardOfficeHome(ImageList):
             f.write(test_list)
         with open(novel_list_filename, "w") as f:
             f.write(novel_list)
-        cls.has_gen_file_list = True
+        self.has_gen_file_list = True
 
     def __str__(self):
-        str_matrix = "Categories (Cols) AND Styles (Rows) Matrix\n "
+        str_matrix = "Categories (Cols) AND Styles (Rows) Matrix\n"
         style_index = 0
-        for cat_index in range(self.num_categories):
-            str_matrix += "|" + cat_index
-        str_matrix += "|\n"
-        for row in CheckerboardOfficeHome.cat_style_matrix:
-            str_matrix += "|" + style_index
+        styles = list(CheckerboardOfficeHome.images_dirs.keys())
+        # for cat_index in range(self.num_categories):
+        #     str_matrix += "|" + str(cat_index)
+        # str_matrix += "|\n"
+        for row in self.cat_style_matrix:
+            str_matrix += "|" + str(styles[style_index])
             for val in row:
                 if val == 1:
                     str_matrix += "|X"
                 else:
                     str_matrix += "| "
-            str_matrix += "|\n"
+            str_matrix += f"| Total={int(torch.sum(row))}\n"
             style_index += 1
         return str_matrix
 
-    @classmethod
-    def domains(cls):
-        if cls.style_is_domain:
-            return list(cls.images_dirs.keys())
+    def domains(self):
+        if self.style_is_domain:
+            return list(CheckerboardOfficeHome.images_dirs.keys())
+        else:
+            return CheckerboardOfficeHome.CATEGORIES
+
+    def classes(self):
+        if not self.style_is_domain:
+            return list(CheckerboardOfficeHome.images_dirs.keys())
         else:
             return CheckerboardOfficeHome.CATEGORIES
 

@@ -11,7 +11,7 @@ import matplotlib.colors as col
 
 def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor, 
               filename: str, source_domain_labels: Optional[torch.Tensor] = None, 
-            target_domain_labels: Optional[torch.Tensor] = None, num_domains=2):
+            target_domain_labels: Optional[torch.Tensor] = None, num_domains: Optional[int]=2):
     """
     Visualize features from different domains using t-SNE.
 
@@ -23,7 +23,7 @@ def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor,
         target_color (str): the color of the target features. Default: 'b'
 
     """
-    assert num_domains <= 4 # quick fix
+    assert num_domains <= 4 # quick fix that will change when color prediciting
     source_feature = source_feature.numpy()
     target_feature = target_feature.numpy()
     features = np.concatenate([source_feature, target_feature], axis=0)

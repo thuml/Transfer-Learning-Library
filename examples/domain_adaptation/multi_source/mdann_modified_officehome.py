@@ -34,6 +34,7 @@ sys.path.append('../../..')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def main(args: argparse.Namespace):
     logger = CompleteLogger(args.log, args.phase)
     print(args)
@@ -72,11 +73,10 @@ def main(args: argparse.Namespace):
          T.CenterCrop(224),
          T.ToTensor(), normalize])
 
-    # dataset = datasets.__dict__["ModifiedOfficeHome"]
-
     print("Source(s): {} Target(s): {}".format(args.sources, args.targets))
     # assuming that args.sources and arg.targets are disjoint sets
     num_domains = len(args.sources) + len(args.targets)
+
     train_source_dataset = ModifiedOfficeHome(root=args.root,
                                               tasks=args.sources,
                                               download=True,
@@ -158,7 +158,6 @@ def main(args: argparse.Namespace):
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
 
-    # TODO: Make a new version of the loss function to adapt to multidomain classification
     # define loss function
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri).to(device)
 
@@ -174,20 +173,20 @@ def main(args: argparse.Namespace):
         feature_extractor = nn.Sequential(classifier.backbone,
                                           classifier.bottleneck).to(device)
         source_feature, source_labels = collect_feature_and_labels(train_source_loader,
-                                         feature_extractor, device)
+                                                                   feature_extractor, device)
         target_feature, target_labels = collect_feature_and_labels(train_target_loader,
-                                         feature_extractor, device)
+                                                                   feature_extractor, device)
         source_domain_labels = ModifiedOfficeHome.get_category(
             source_labels, classifier.num_classes)
         target_domain_labels = ModifiedOfficeHome.get_category(
             target_labels, classifier.num_classes)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature, 
-                        filename=tSNE_filename,
-                        source_domain_labels=source_domain_labels, 
-                        target_domain_labels=target_domain_labels,
-                        num_domains=num_domains)
+        tsne.visualize(source_feature, target_feature,
+                       filename=tSNE_filename,
+                       source_domain_labels=source_domain_labels,
+                       target_domain_labels=target_domain_labels,
+                       num_domains=num_domains)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
         # A_distance = a_distance.calculate(source_feature, target_feature,
@@ -277,6 +276,7 @@ def train(train_source_iter: ForeverDataIterator,
         class_labels_s = class_labels_s.to(device)
         domain_labels_s = domain_labels_s.to(device)
         domain_labels_t = domain_labels_t.to(device)
+        d_labels = torch.cat((domain_labels_s, domain_labels_t), dim=0)
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -285,12 +285,14 @@ def train(train_source_iter: ForeverDataIterator,
         x = torch.cat((x_s, x_t), dim=0)
         y, f = model(x)
         y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        # f_s, f_t = f.chunk(2, dim=0)
 
         # Updating the loss functions with new labels
         # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_s, class_labels_s)
-        transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
+
+        transfer_loss = multidomain_adv(f, d_labels)
+        # transfer_loss = multidomain_adv(f_s, f_t, domain_labels_s, domain_labels_t)
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         # this loss functions works because of the gradient reversal layer
         loss = cls_loss + transfer_loss * args.trade_off
