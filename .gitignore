@@ -145,6 +145,8 @@ examples/domain_adaptation/classification/data/*
 examples/domain_adaptation/multi_source/data/*
 runs/*
 bad_runs/*
+checkerboard-domain-adaptation/data/*
+checkerboard-domain-adaptation/logs/*
 
 # no datasets
 *.jpg
