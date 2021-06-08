@@ -74,12 +74,15 @@ class CheckerboardOfficeHome():
     num_styles = len(images_dirs.keys())
 
     def __init__(self,
-                 root: str,
-                 download: Optional[bool] = False,
-                 transforms = [None, None, None, None],
-                 style_is_domain: Optional[bool] = True,
+                root: str,
+                download: Optional[bool] = False,
+                train_val_test_split: Optional[Tuple[float]] = (0.5, 0.25, 0.25),
+                transforms = [None, None, None, None],
+                style_is_domain: Optional[bool] = True,
                  **kwargs):
+        assert len(train_val_test_split) == 3 and sum(train_val_test_split) == 1
         assert len(transforms) == len(CheckerboardOfficeHome.images_lists)
+        self.train_split, self.val_split, self.test_split = train_val_test_split
         # if download:
         #     list(
         #         map(lambda args: download_data(root, *args),
@@ -111,12 +114,10 @@ class CheckerboardOfficeHome():
     def generate_image_list(
             self,
             root: str,
-            train_val_test_split: Optional[Tuple[float]] = (0.5, 0.25, 0.25),
             domains_per_cat: Optional[int] = 2):
         # TODO: Produce image list if style-predicting instead of category-predicting
-        assert len(train_val_test_split) == 3 and sum(
-            train_val_test_split) == 1
-        self.train_split, self.val_split, self.test_split = train_val_test_split
+        
+        
         train = []
         novel_list = ""
         self.cat_style_matrix = torch.zeros(

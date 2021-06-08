@@ -147,6 +147,7 @@ runs/*
 bad_runs/*
 checkerboard-domain-adaptation/data/*
 checkerboard-domain-adaptation/logs/*
+wandb/*
 
 # no datasets
 *.jpg
