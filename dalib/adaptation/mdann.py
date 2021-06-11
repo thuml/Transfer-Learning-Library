@@ -92,7 +92,7 @@ class MultidomainAdversarialLoss(nn.Module):
     #     if w_t is None:
     #         w_t = torch.ones((d.shape[-1], 1)).to(f_s.device)
     #     return 0.5 * (self.loss(d_s, d_label_s, w_s) + self.loss(d_t, d_label_t, w_t))
-    #     # return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
+    #     #return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
 
 
 

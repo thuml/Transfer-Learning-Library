@@ -40,9 +40,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args: argparse.Namespace):
     # wandb login and intialize
-    wandb.login()
-    wandb.init(project="checkerboard-test", config=args)
-
+    
     logger = CompleteLogger(args.log, args.phase)
     print(args)
 
@@ -104,7 +102,8 @@ def main(args: argparse.Namespace):
     val_loader = DataLoader(datasets.val_dataset,
                             batch_size=args.batch_size,
                             shuffle=False,
-                            num_workers=args.workers)
+                            num_workers=args.workers,
+                            drop_last=True)
 
     test_loader = DataLoader(datasets.test_dataset,
                             batch_size=args.batch_size,
@@ -117,6 +116,12 @@ def main(args: argparse.Namespace):
                             shuffle=True,
                             num_workers=args.workers,
                             drop_last=True)
+
+    if not args.use_forever_iter:
+        args.iters_per_epoch = len(train_loader)
+    wandb.login()
+    wandb.init(project="checkerboard-new-val-mixed", config=args)
+
 
     train_iter = ForeverDataIterator(train_loader)
     # val_iter = ForeverDataIterator(val_loader)  
@@ -191,16 +196,21 @@ def main(args: argparse.Namespace):
         # A_distance = a_distance.calculate(source_feature, target_feature,
         #                                   device)
         # print("A-distance =", A_distance)
+        wandb.finish()
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args, 'Test', 0)
+        acc1, test_log = validate(test_loader, classifier, args, 'Test', 0)
         print(acc1)
+        wandb.log(test_log)
+        wandb.finish()
         return
 
     if args.phase == 'novel':
-        acc1 = validate(novel_loader, classifier, args, 'Novel', 0)
+        acc1, novel_log = validate(novel_loader, classifier, args, 'Novel', 0)
         print(acc1)
+        wandb.log(novel_log)
+        wandb.finish()
         return
 
     
@@ -217,11 +227,17 @@ def main(args: argparse.Namespace):
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        train(train_iter, classifier, multidomain_adv, optimizer,
+        # train_dict = train(train_iter, val_iter, classifier, multidomain_adv, optimizer,
+        #       lr_scheduler, epoch, args, tb)
+        train_log = train(train_iter, classifier, multidomain_adv, optimizer,
               lr_scheduler, epoch, args, tb)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args, 'Validation', epoch, tb)
+        acc1, val_log = validate(val_loader, classifier, args, 'Validation', epoch, tb)
+
+        total_log = train_log.copy()
+        total_log.update(val_log.copy())
+        wandb.log(total_log)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(),
@@ -235,21 +251,26 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args, 'Test')
+    acc1, test_log = validate(test_loader, classifier, args, 'Test')
     print("test_acc1 = {:3.1f}".format(acc1))
+    
     # evaluate on novel set
-    acc1 = validate(novel_loader, classifier, args, 'Novel')
+    acc1, novel_log = validate(novel_loader, classifier, args, 'Novel')
     print("novel_acc1 = {:3.1f}".format(acc1))
+
+    eval_log = test_log.copy()
+    eval_log.update(novel_log.copy())
+    wandb.log(eval_log)
 
     logger.close()
     tb.close()
     wandb.finish()
 
 
-def train(train_iter: ForeverDataIterator, model: ImageClassifier,
-          multidomain_adv: MultidomainAdversarialLoss, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace,
-          tb: SummaryWriter):
+def train(train_iter: ForeverDataIterator, 
+        model: ImageClassifier, multidomain_adv: MultidomainAdversarialLoss, 
+        optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, 
+        args: argparse.Namespace, tb: SummaryWriter):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -271,28 +292,40 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
     end = time.time()
     for i in range(args.iters_per_epoch):
         x_tr, labels_tr = next(train_iter)
+        #x_val, labels_val = next(val_iter)
 
-        # retrieve the class and domain from the modified office_home dataset
+        # retrieve the class and domain from the checkerboard office_home dataset
         class_labels_tr = CheckerboardOfficeHome.get_category(labels_tr)
         domain_labels_tr = CheckerboardOfficeHome.get_style(labels_tr)
+        #domain_labels_val = CheckerboardOfficeHome.get_style(labels_val)
 
+        # add training data to device
         x_tr = x_tr.to(device)
+        #x_val = x_val.to(device)
 
         # add new labels to device
         class_labels_tr = class_labels_tr.to(device)
         domain_labels_tr = domain_labels_tr.to(device)
+        #domain_labels_val = domain_labels_val.to(device)
+        #domain_labels = torch.cat((domain_labels_tr, domain_labels_val), dim=0)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
+        #x = torch.cat((x_tr, x_val), dim=0)
+        #y, f = model(x)
+        #y_tr, y_val = y.chunk(2, dim=0)
+        #f_tr, f_val = f.chunk(2, dim=0)
         y_tr, f_tr = model(x_tr)
 
+
         # Updating the loss functions with new labels
-        # cls_loss = F.cross_entropy(y_s, labels_s)
         cls_loss = F.cross_entropy(y_tr, class_labels_tr)
 
+        #transfer_loss = multidomain_adv(f_tr, domain_labels_tr, f_val, domain_labels_val)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
+        
         domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
@@ -331,13 +364,12 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
     tb.add_histogram('Classification Softmax', y_tr, epoch)
 
     # wandb
-    wandb.log({"Category Classification Loss (Training Set)": cls_losses.sum,
+    return {"Category Classification Loss (Training Set)": cls_losses.sum,
                 'Style Discrimination Loss (Training Set)': transfer_losses.sum,
                 'Total Loss (Training Set)': losses.sum,
                 'Category Classification Accuracy (Training Set)': cls_accs.avg,
                 'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
-                'Classification Softmax':  y_tr,
-                'epoch': epoch})
+                'Classification Softmax':  y_tr}
 
 
 def validate(val_loader: DataLoader,
@@ -397,12 +429,10 @@ def validate(val_loader: DataLoader,
             f'Classification Loss ({dataset_type} Set)', losses.sum, epoch)
         tb.add_scalar(
             f'Classification Accuracy ({dataset_type} Set)', top1.avg, epoch)
-    # wandb
-    wandb.log({f"Classification Loss ({dataset_type} Set)": losses.sum,
-                f'Classification Accuracy ({dataset_type} Set)': top1.avg,
-                'epoch': epoch})
 
-    return top1.avg
+    return top1.avg, {f"Classification Loss ({dataset_type} Set)": losses.sum,
+                f'Classification Accuracy ({dataset_type} Set)': top1.avg,
+                'epoch': epoch}
 
 
 if __name__ == '__main__':
@@ -473,7 +503,7 @@ if __name__ == '__main__':
                         dest='weight_decay')
     parser.add_argument('-j',
                         '--workers',
-                        default=2,
+                        default=4,
                         type=int,
                         metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -513,6 +543,20 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model."
                         "When phase is 'analysis', only analysis the model.")
     parser.add_argument(
+        '--mixed-split',
+        dest="used_mixed_split",
+        action='store_true',
+        help='''Randomly split the non-novel dataset into three partitions 
+                (training, validation, and testing set). All three datasets 
+                will share category-style combinations.''')
+    parser.add_argument(
+        '--no-mixed-split',
+        dest="used_mixed_split",
+        action='store_false',
+        help='''Split the dataset into three partitions such that the validation 
+                dataset and the training dataset do not share category-combinations with 
+                the training dataset. ''')
+    parser.add_argument(
         '--train-split',
         default=0.5,
         type=float,
@@ -527,6 +571,21 @@ if __name__ == '__main__':
         type=float,
         default=0.25,
         help='How to split the non-novel data into testing data.')
+    parser.add_argument('--styles-per-cat',
+                        default=2,
+                        type=int,
+                        help='number of styles per category in the non-novel dataset')
+    
+    parser.add_argument(
+        '--forever-iter',
+        dest="use_forever_iter",
+        action='store_true',
+        help='Use the forever data iterator while training.')
+    parser.add_argument(
+        '--no-forever-iter',
+        dest="use_forever_iter",
+        action='store_false',
+        help="Don't use the forever data iterator while training.")
     parser.add_argument(
         '--use-best-model',
         dest="use_best_model",
@@ -539,5 +598,6 @@ if __name__ == '__main__':
         action='store_false',
         help='''If true, load the best model when testing and analyzing. 
         If false, load the latest model when testing and analyzing.''')
+
     args = parser.parse_args()
     main(args)

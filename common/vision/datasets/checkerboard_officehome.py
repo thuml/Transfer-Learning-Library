@@ -95,7 +95,8 @@ class CheckerboardOfficeHome():
         # TODO: implelment this:
         self.style_is_domain = style_is_domain
 
-        self.generate_image_list(root)
+        # self.generate_image_list(root)
+        self.generate_image_list(root, 3)
         datasets = []
         for i in range(len(CheckerboardOfficeHome.images_lists)):
             data_list_file = os.path.join(root, CheckerboardOfficeHome.images_lists[i])
@@ -109,8 +110,6 @@ class CheckerboardOfficeHome():
                     **kwargs))
         self.train_dataset, self.val_dataset, self.test_dataset, self.novel_dataset = datasets
         
-
-
     def generate_image_list(
             self,
             root: str,
@@ -168,6 +167,72 @@ class CheckerboardOfficeHome():
         with open(novel_list_filename, "w") as f:
             f.write(novel_list)
         self.has_gen_file_list = True
+
+    # def generate_image_list(
+    #         self,
+    #         root: str,
+    #         domains_per_cat: Optional[int] = 2):
+    #     # TODO: Produce image list if style-predicting instead of category-predicting
+        
+        
+    #     train_list = ""
+    #     val_and_test = []
+    #     novel_list = ""
+    #     self.cat_style_matrix = torch.zeros(
+    #         (CheckerboardOfficeHome.num_styles,
+    #          CheckerboardOfficeHome.num_categories))
+    #     styles = list(self.images_dirs.keys())
+    #     style_indices = list(range(self.num_styles))
+
+    #     for cat_index in range(self.num_categories):
+    #         random.shuffle(style_indices)
+    #         style_count = 0
+    #         for style_index in style_indices:
+    #             style = self.images_dirs[styles[style_index]]
+    #             cat = self.CATEGORIES[cat_index]
+    #             image_dir = os.path.join(root,
+    #                                      style,
+    #                                      cat)
+    #             for filename in os.listdir(image_dir):
+    #                 if filename.endswith(".jpg"):
+    #                     path = os.path.join(style, cat, filename)
+    #                     label = self._get_label(style_index, cat_index)
+    #                     path_and_label = path + ' ' + str(label) + '\n'
+    #                     if style_count < domains_per_cat:
+    #                         if style_count < 1:
+    #                             val_and_test.append(path_and_label)
+    #                         else:
+    #                             train_list += path_and_label  
+    #                         self.cat_style_matrix[style_index, cat_index] = 1
+    #                     else:
+    #                         novel_list += path_and_label
+    #             style_count += 1
+
+    #     # training, validation/calibration, testing split
+    #     # random.shuffle(path_and_label)
+    #     # num_train = int(len(train) * self.train_split)
+    #     # num_val = int(len(train) * self.val_split)
+    #     # train_list = "".join(train[:num_train])
+    #     # val_list = "".join(train[num_train:(num_train + num_val)])
+    #     # test_list = "".join(train[(num_train + num_val):])
+    #     random.shuffle(val_and_test)
+    #     num_val = len(val_and_test) // 2
+    #     val_list = "".join(val_and_test[:num_val])
+    #     test_list = "".join(val_and_test[num_val:])
+
+    #     train_list_filename = os.path.join(root, self.images_lists[0])
+    #     val_list_filename = os.path.join(root, self.images_lists[1])
+    #     test_list_filename = os.path.join(root, self.images_lists[2])
+    #     novel_list_filename = os.path.join(root, self.images_lists[3])
+    #     with open(train_list_filename, "w") as f:
+    #         f.write(train_list)
+    #     with open(val_list_filename, "w") as f:
+    #         f.write(val_list)
+    #     with open(test_list_filename, "w") as f:
+    #         f.write(test_list)
+    #     with open(novel_list_filename, "w") as f:
+    #         f.write(novel_list)
+    #     self.has_gen_file_list = True
 
     def __str__(self):
         str_matrix = "Categories (Cols) AND Styles (Rows) Matrix\n"
