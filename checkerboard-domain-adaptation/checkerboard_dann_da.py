@@ -86,8 +86,11 @@ def main(args: argparse.Namespace):
                        val_transform, val_transform, val_transform]
     train_val_test_split = (args.train_split, args.val_split, args.test_split)
     datasets = CheckerboardOfficeHome(root=args.root,
-                                    train_val_test_split=train_val_test_split,  
-                                    download=False,
+                                    download=False, 
+                                    use_mixed_split=args.use_mixed_split,
+                                    train_val_test_split=train_val_test_split,
+                                    styles_per_cat=args.styles_per_cat,
+                                    balance_domains=args.balance_domains, 
                                     transforms=transforms_list)
 
     # display the category-style matrix
@@ -120,7 +123,7 @@ def main(args: argparse.Namespace):
     if not args.use_forever_iter:
         args.iters_per_epoch = len(train_loader)
     wandb.login()
-    wandb.init(project="checkerboard-new-val-mixed", config=args)
+    wandb.init(project="checkerboard-setup-dann", config=args)
 
 
     train_iter = ForeverDataIterator(train_loader)
@@ -179,10 +182,8 @@ def main(args: argparse.Namespace):
             [train_labels, val_labels, test_labels], axis=0)
         novel_feature, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        source_domain_labels = CheckerboardOfficeHome.get_category(
-            source_labels)
-        novel_domain_labels = CheckerboardOfficeHome.get_category(
-            novel_labels, classifier.num_classes)
+        source_domain_labels = CheckerboardOfficeHome.get_style(source_labels)
+        novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
         tsne.visualize(source_feature,
@@ -250,7 +251,11 @@ def main(args: argparse.Namespace):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
     # evaluate on test set
-    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    if args.use_best_model:
+        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    else:
+        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('latest')))
+
     acc1, test_log = validate(test_loader, classifier, args, 'Test')
     print("test_acc1 = {:3.1f}".format(acc1))
     
@@ -431,8 +436,7 @@ def validate(val_loader: DataLoader,
             f'Classification Accuracy ({dataset_type} Set)', top1.avg, epoch)
 
     return top1.avg, {f"Classification Loss ({dataset_type} Set)": losses.sum,
-                f'Classification Accuracy ({dataset_type} Set)': top1.avg,
-                'epoch': epoch}
+                f'Classification Accuracy ({dataset_type} Set)': top1.avg}
 
 
 if __name__ == '__main__':
@@ -540,18 +544,19 @@ if __name__ == '__main__':
                         type=str,
                         default='train',
                         choices=['train', 'test', 'analysis', 'novel'],
-                        help="When phase is 'test', only test the model."
+                        help="When phase is 'test', only test the model on test set."
+                        "When phase is 'novel', only test the model on the novel set."
                         "When phase is 'analysis', only analysis the model.")
     parser.add_argument(
         '--mixed-split',
-        dest="used_mixed_split",
+        dest="use_mixed_split",
         action='store_true',
         help='''Randomly split the non-novel dataset into three partitions 
                 (training, validation, and testing set). All three datasets 
                 will share category-style combinations.''')
     parser.add_argument(
         '--no-mixed-split',
-        dest="used_mixed_split",
+        dest="use_mixed_split",
         action='store_false',
         help='''Split the dataset into three partitions such that the validation 
                 dataset and the training dataset do not share category-combinations with 
@@ -575,7 +580,17 @@ if __name__ == '__main__':
                         default=2,
                         type=int,
                         help='number of styles per category in the non-novel dataset')
-    
+    parser.add_argument(
+        '--balanced-domains',
+        dest="balance_domains",
+        action='store_true',
+        help='''Balance the domains when creating category-style matrix.''')
+    parser.add_argument(
+        '--imbalanced-domains',
+        dest="balance_domains",
+        action='store_false',
+        help='''Don't try to balance the domains when creating the 
+                category-style matrix.''')
     parser.add_argument(
         '--forever-iter',
         dest="use_forever_iter",
