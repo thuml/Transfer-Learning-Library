@@ -72,11 +72,11 @@ class MultidomainAdversarialLoss(nn.Module):
     def forward(self, f: torch.Tensor, d_labels: torch.Tensor, 
                 w: Optional[torch.Tensor] = None) -> torch.Tensor:
         f = self.grl(f)
-        d = self.multidomain_discriminator(f)
-        self.domain_discriminator_accuracy = accuracy(d, d_labels)[0]
+        self.domain_pred = self.multidomain_discriminator(f)
+        self.domain_discriminator_accuracy = accuracy(self.domain_pred, d_labels)[0]
         if w is None:
-            w = torch.ones((d.shape[-1], 1)).to(f.device)
-        return self.loss(d, d_labels, w)
+            w = torch.ones((self.domain_pred.shape[-1], 1)).to(f.device)
+        return self.loss(self.domain_pred, d_labels, w)
     
     # def forward(self, f_s: torch.Tensor, d_label_s: torch.Tensor, 
     #             f_t: Optional[torch.Tensor] = None, d_label_t: Optional[torch.Tensor] = None,

@@ -231,10 +231,10 @@ def main(args: argparse.Namespace):
         # train_dict = train(train_iter, val_iter, classifier, multidomain_adv, optimizer,
         #       lr_scheduler, epoch, args, tb)
         train_log = train(train_iter, classifier, multidomain_adv, optimizer,
-              lr_scheduler, epoch, args, tb)
+              lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1, val_log = validate(val_loader, classifier, args, 'Validation', epoch, tb)
+        acc1, val_log = validate(val_loader, classifier, args, 'Validation')
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -275,7 +275,7 @@ def main(args: argparse.Namespace):
 def train(train_iter: ForeverDataIterator, 
         model: ImageClassifier, multidomain_adv: MultidomainAdversarialLoss, 
         optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, 
-        args: argparse.Namespace, tb: SummaryWriter):
+        args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -295,50 +295,57 @@ def train(train_iter: ForeverDataIterator,
     multidomain_adv.train()
 
     end = time.time()
+
+    class_y_true = []
+    class_predicitons = []
+    domain_y_true = []
+    domain_predictions = []
+
     for i in range(args.iters_per_epoch):
         x_tr, labels_tr = next(train_iter)
-        #x_val, labels_val = next(val_iter)
 
         # retrieve the class and domain from the checkerboard office_home dataset
         class_labels_tr = CheckerboardOfficeHome.get_category(labels_tr)
         domain_labels_tr = CheckerboardOfficeHome.get_style(labels_tr)
-        #domain_labels_val = CheckerboardOfficeHome.get_style(labels_val)
 
         # add training data to device
         x_tr = x_tr.to(device)
-        #x_val = x_val.to(device)
 
         # add new labels to device
         class_labels_tr = class_labels_tr.to(device)
         domain_labels_tr = domain_labels_tr.to(device)
-        #domain_labels_val = domain_labels_val.to(device)
-        #domain_labels = torch.cat((domain_labels_tr, domain_labels_val), dim=0)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        #x = torch.cat((x_tr, x_val), dim=0)
-        #y, f = model(x)
-        #y_tr, y_val = y.chunk(2, dim=0)
-        #f_tr, f_val = f.chunk(2, dim=0)
         y_tr, f_tr = model(x_tr)
-
 
         # Updating the loss functions with new labels
         cls_loss = F.cross_entropy(y_tr, class_labels_tr)
-
-        #transfer_loss = multidomain_adv(f_tr, domain_labels_tr, f_val, domain_labels_val)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
-        
-        domain_acc = multidomain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
 
+        # calculate accuracy
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
+        domain_acc = multidomain_adv.domain_discriminator_accuracy
 
+        # gather data for the category confusion matrix
+        _, y_tr_pred_class = y_tr.topk(1)
+        class_y_true.append(class_labels_tr)
+        class_predicitons.append(y_tr_pred_class)
+
+        # gather data for the category confusion matrix
+        _, y_tr_pred_domain =  multidomain_adv.domain_pred.topk(1)
+        domain_y_true.append(domain_labels_tr)
+        domain_predictions.append(y_tr_pred_domain)
+
+
+        # update loss meter
         losses.update(loss.item(), x_tr.size(0))
         cls_accs.update(cls_acc.item(), x_tr.size(0))
         domain_accs.update(domain_acc.item(), x_tr.size(0))
+
         # seperated loss between two heads
         cls_losses.update(cls_loss.item(), x_tr.size(0))
         transfer_losses.update(transfer_loss.item(), x_tr.size(0))
@@ -355,18 +362,24 @@ def train(train_iter: ForeverDataIterator,
 
         if i % args.print_freq == 0:
             progress.display(i)
+    
+    class_y_true = torch.cat(class_y_true, dim=0)
+    class_predicitons = torch.cat(class_predicitons, dim=0)
+    domain_y_true = torch.cat(domain_y_true, dim=0)
+    domain_predictions = torch.cat(domain_predictions, dim=0)
+    
 
-    # tensorboard updates
-    tb.add_scalar('Category Classification Loss (Training Set)',
-                  cls_losses.sum, epoch)
-    tb.add_scalar('Style Discrimination Loss (Training Set)',
-                  transfer_losses.sum, epoch)
-    tb.add_scalar('Total Loss (Training Set)', losses.sum, epoch)
-    tb.add_scalar(
-        'Category Classification Accuracy (Training Set)', cls_accs.avg, epoch)
-    tb.add_scalar(
-        'Style Discrimination Accuracy (Training Set', domain_accs.avg, epoch)
-    tb.add_histogram('Classification Softmax', y_tr, epoch)
+    # # tensorboard updates
+    # tb.add_scalar('Category Classification Loss (Training Set)',
+    #               cls_losses.sum, epoch)
+    # tb.add_scalar('Style Discrimination Loss (Training Set)',
+    #               transfer_losses.sum, epoch)
+    # tb.add_scalar('Total Loss (Training Set)', losses.sum, epoch)
+    # tb.add_scalar(
+    #     'Category Classification Accuracy (Training Set)', cls_accs.avg, epoch)
+    # tb.add_scalar(
+    #     'Style Discrimination Accuracy (Training Set', domain_accs.avg, epoch)
+    # tb.add_histogram('Classification Softmax', y_tr, epoch)
 
     # wandb
     return {"Category Classification Loss (Training Set)": cls_losses.sum,
@@ -374,21 +387,28 @@ def train(train_iter: ForeverDataIterator,
                 'Total Loss (Training Set)': losses.sum,
                 'Category Classification Accuracy (Training Set)': cls_accs.avg,
                 'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
-                'Classification Softmax':  y_tr}
+                'Classification Logits':  y_tr,
+                'Category Classification Confusion Matrix (Training Set)': 
+                wandb.plot.confusion_matrix(probs=None, y_true=class_y_true, preds=class_predicitons),
+                'Domain Discrimination Confusion Matrix (Training Set)': 
+                wandb.plot.confusion_matrix(probs=None, y_true=domain_y_true, preds=domain_predictions)}
 
 
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
+             multidomain_adv: MultidomainAdversarialLoss, 
              args: argparse.Namespace,
-             dataset_type: str,
-             epoch: Optional[int] = 0,
-             tb: SummaryWriter = None) -> float:
+             dataset_type: str) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
+    cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(val_loader), [batch_time, losses, top1, top5],
-                             prefix='Test: ')
+    transfer_losses = AverageMeter('Transfer Loss', ':6.2f')
+    domain_accs = AverageMeter('Domain Acc', ':6.2f')
+    losses = AverageMeter('Total Loss', ':6.2f')
+
+    progress = ProgressMeter(len(val_loader), [batch_time, cls_losses, top1, top5, transfer_losses, domain_accs],
+                             prefix=f'{dataset_type} Set: ')
 
     # switch to evaluate mode
     model.eval()
@@ -398,24 +418,53 @@ def validate(val_loader: DataLoader,
     else:
         confmat = None
 
+    class_y_true = []
+    class_predicitons = []
+    domain_y_true = []
+    domain_predictions = []
+
     with torch.no_grad():
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             images = images.to(device)
-            target = CheckerboardOfficeHome.get_category(target)
-            target = target.to(device)
+            class_labels = CheckerboardOfficeHome.get_category(target)
+            class_labels = class_labels.to(device)
+            domain_labels = CheckerboardOfficeHome.get_style(target)
+            domain_labels = domain_labels.to(device)
 
             # compute output
-            output, _ = model(images)
-            loss = F.cross_entropy(output, target)
+            class_pred, features = model(images)
 
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            # compute loss
+            cls_loss = F.cross_entropy(class_pred, class_labels)
+            transfer_loss = multidomain_adv(features, domain_labels)
+            loss = cls_loss + transfer_loss * args.trade_off
+
+            # measure accuracy and record class loss
+            acc1, acc5 = accuracy(class_pred, class_labels, topk=(1, 5))
             if confmat:
-                confmat.update(target, output.argmax(1))
-            losses.update(loss.item(), images.size(0))
+                confmat.update(class_labels, class_pred.argmax(1))
+            cls_losses.update(cls_loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
             top5.update(acc5.item(), images.size(0))
+
+            # domain discrimination accuracy
+            domain_acc = multidomain_adv.domain_discriminator_accuracy
+            transfer_losses.update(transfer_loss.item(), images.size(0))
+            domain_accs.update(domain_acc.item(), images.size(0))
+
+            # gather data for the category confusion matrix
+            _, y_tr_pred_class = class_pred.topk(1)
+            class_y_true.append(class_labels)
+            class_predicitons.append(y_tr_pred_class)
+
+            # gather data for the category confusion matrix
+            _, y_tr_pred_domain =  multidomain_adv.domain_pred.topk(1)
+            domain_y_true.append(domain_labels)
+            domain_predictions.append(y_tr_pred_domain)
+
+            # record total loss on meter
+            losses.update(loss.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -428,15 +477,22 @@ def validate(val_loader: DataLoader,
                                                                     top5=top5))
         if confmat:
             print(confmat.format(classes))
-    # tensorboard update(s)
-    if tb:
-        tb.add_scalar(
-            f'Classification Loss ({dataset_type} Set)', losses.sum, epoch)
-        tb.add_scalar(
-            f'Classification Accuracy ({dataset_type} Set)', top1.avg, epoch)
+    
+    class_y_true = torch.cat(class_y_true, dim=0)
+    class_predicitons = torch.cat(class_predicitons, dim=0)
+    domain_y_true = torch.cat(domain_y_true, dim=0)
+    domain_predictions = torch.cat(domain_predictions, dim=0)
 
-    return top1.avg, {f"Classification Loss ({dataset_type} Set)": losses.sum,
-                f'Classification Accuracy ({dataset_type} Set)': top1.avg}
+    return top1.avg, {f"Classification Loss ({dataset_type} Set)": cls_losses.sum,
+                f'Classification Accuracy ({dataset_type} Set)': top1.avg,
+                f"Domain Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
+                f'Domain Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
+                f"Total Loss ({dataset_type} Set)": losses.avg,
+                f'Category Classification Confusion Matrix ({dataset_type} Set)': 
+                wandb.plot.confusion_matrix(probs=None, y_true=class_y_true, preds=class_predicitons),
+                f'Domain Discrimination Confusion Matrix ({dataset_type} Set)': 
+                wandb.plot.confusion_matrix(probs=None, y_true=domain_y_true, preds=domain_predictions)
+                }
 
 
 if __name__ == '__main__':
@@ -448,8 +504,6 @@ if __name__ == '__main__':
         description='DANN for Checkerboard Domain Adapation on the Office-Home Dataset')
     # dataset parameters
     parser.add_argument('root', metavar='DIR', help='root path of dataset')
-    # parser.add_argument('-s', '--source', help='source domain(s)')
-    # parser.add_argument('-t', '--target', help='target domain(s)')
     parser.add_argument('--center-crop',
                         default=False,
                         action='store_true',
