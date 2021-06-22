@@ -7,7 +7,8 @@ Fine Tune Library
     :caption: Benchmarks
     :titlesonly:
 
-    benchmarks/fine_grained_classification
+    benchmarks/image_classification
+    benchmarks/image_classification_unsupervised
 
 
 .. toctree::
@@ -19,5 +20,6 @@ Fine Tune Library
     finetune/delta
     finetune/stoch_norm
     finetune/co_tuning
+    finetune/bi_tuning
 
 

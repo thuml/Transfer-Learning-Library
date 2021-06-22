@@ -5,8 +5,8 @@ import sys
 import argparse
 import shutil
 import os
+
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
@@ -75,6 +75,10 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=> loading pre-trained model from '{}'".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
     num_classes = train_dataset.num_classes
     classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(device)
 
@@ -215,7 +219,6 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-
     parser = argparse.ArgumentParser(description='Co-Tuning for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
@@ -235,6 +238,9 @@ if __name__ == '__main__':
                         metavar='P', help='weight of pretrained loss')
     parser.add_argument("--relationship", type=str, default='relationship.npy',
                         help="Where to save relationship file.")
+    parser.add_argument('--pretrained', default=None,
+                        help="pretrained checkpoint of the backbone. "
+                             "(default: None, use the ImageNet supervised pretrained backbone)")
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',

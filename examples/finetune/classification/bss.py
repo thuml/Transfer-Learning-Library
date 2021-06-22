@@ -70,6 +70,10 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=> loading pre-trained model from '{}'".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
     num_classes = train_dataset.num_classes
     classifier = Classifier(backbone, num_classes).to(device)
     bss_module = BatchSpectralShrinkage(k=args.k)
@@ -132,7 +136,6 @@ def train(train_iter: ForeverDataIterator, model: Classifier, bss_module, optimi
 
         # compute output
         y, f = model(x)
-
         cls_loss = F.cross_entropy(y, label)
         bss_loss = bss_module(f)
         loss = cls_loss + args.trade_off * bss_loss
@@ -223,6 +226,9 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
+    parser.add_argument('--pretrained', default=None,
+                        help="pretrained checkpoint of the backbone. "
+                             "(default: None, use the ImageNet supervised pretrained backbone)")
     parser.add_argument('-k', '--k', default=1, type=int,
                         metavar='N',
                         help='hyper-parameter for BSS loss')

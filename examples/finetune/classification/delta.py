@@ -7,8 +7,6 @@ import sys
 import argparse
 import shutil
 
-import torch
-import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 import torch.backends.cudnn as cudnn
@@ -75,6 +73,11 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     backbone_source = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=> loading pre-trained model from '{}'".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
+        backbone_source.load_state_dict(pretrained_dict, strict=False)
     num_classes = train_dataset.num_classes
     classifier = Classifier(backbone, num_classes).to(device)
     source_classifier = Classifier(backbone_source, head=backbone_source.copy_head(), num_classes=backbone_source.fc.out_features).to(device)
@@ -374,7 +377,9 @@ if __name__ == '__main__':
                          help='trade-off for backbone regularization')
     parser.add_argument('--trade-off-head', default=0.01, type=float,
                         help='trade-off for head regularization')
-
+    parser.add_argument('--pretrained', default=None,
+                        help="pretrained checkpoint of the backbone. "
+                             "(default: None, use the ImageNet supervised pretrained backbone)")
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
