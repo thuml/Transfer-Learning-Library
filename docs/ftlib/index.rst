@@ -16,6 +16,7 @@ Fine Tune Library
     :caption: Algorithms
     :titlesonly:
 
+    finetune/lwf
     finetune/bss
     finetune/delta
     finetune/stoch_norm

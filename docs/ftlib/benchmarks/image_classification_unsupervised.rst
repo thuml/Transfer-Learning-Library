@@ -6,6 +6,7 @@ We provide benchmarks of different finetune algorithms on `CUB-200-2011`_, `Stan
 
 Those domain adaptation algorithms includes:
 
+-  :ref:`LWF`
 -  :ref:`BSS`
 -  :ref:`DELTA`
 -  :ref:`CoTuning`
