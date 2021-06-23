@@ -175,34 +175,49 @@ def main(args: argparse.Namespace):
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone,
                                           classifier.bottleneck).to(device)
-        train_feature, train_labels = collect_feature_and_labels(
+        train_features, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        val_feature, val_labels = collect_feature_and_labels(
+        val_features, val_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        test_feature, test_labels = collect_feature_and_labels(
+        test_features, test_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        source_feature = torch.cat(
-            [train_feature, val_feature, test_feature], axis=0)
-        source_labels = torch.cat(
+        non_novel_features = torch.cat(
+            [train_features, val_features, test_features], axis=0)
+        non_novel_labels = torch.cat(
             [train_labels, val_labels, test_labels], axis=0)
-        novel_feature, novel_labels = collect_feature_and_labels(
+        novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        source_domain_labels = CheckerboardOfficeHome.get_style(source_labels)
+        non_novel_domain_labels = CheckerboardOfficeHome.get_style(non_novel_labels)
         novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature,
-                       novel_feature,
-                       filename=tSNE_filename,
-                       source_domain_labels=source_domain_labels,
-                       target_domain_labels=novel_domain_labels,
-                       num_domains=len(datasets.domains()))
+        total_title = 'Total Dataset TSNE'
+        novel_title = 'Novel Dataset TSNE'
+        non_novel_title = 'Non-novel Dataset TSNE'
+        tSNE_filename = osp.join(logger.visualize_directory, f'{total_title}.png')
+        non_novel_tSNE_filename = osp.join(logger.visualize_directory, f'{non_novel_title}.png')
+        novel_tSNE_filename = osp.join(logger.visualize_directory, f'{novel_title}.png')
+        all_features = torch.cat((non_novel_features, novel_features), dim=0)
+        all_domain_labels = torch.cat((non_novel_domain_labels, novel_domain_labels), dim=0)
+        tsne.visualize(features=all_features,
+                        domain_labels=all_domain_labels,
+                        filename=tSNE_filename,
+                        num_domains=len(datasets.domains()),
+                        fig_title=total_title)
+        tsne.visualize(features=non_novel_features,
+                        domain_labels=non_novel_domain_labels,
+                        filename=non_novel_tSNE_filename,
+                        num_domains=len(datasets.domains()),
+                        fig_title=non_novel_title)
+        tsne.visualize(features=novel_features,
+                        domain_labels=novel_domain_labels,
+                        filename=novel_tSNE_filename,
+                        num_domains=len(datasets.domains()),
+                        fig_title=novel_title)
+                    
         print("Saving t-SNE to", tSNE_filename)
         # TODO: produce error calculation
-        # calculate A-distance, which is a measure for distribution discrepancy
-        # A_distance = a_distance.calculate(source_feature, target_feature,
-        #                                   device)
-        # print("A-distance =", A_distance)
+        error = a_distance.calculate_multidomain_error(all_features, all_domain_labels, device)
+        print("Error =", error)
         wandb.finish()
         return
 
@@ -463,6 +478,7 @@ def validate(val_loader: DataLoader,
         plt.figure(figsize=(25, 22))
         ax = plt.axes()
         plt.title(class_title)
+        # TODO: Fix x and y label for confusion matrix png
         plt.xlabel('Predicted')
         plt.ylabel('True')
         sn.heatmap(df_class_cm, annot=True)
