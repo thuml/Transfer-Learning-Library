@@ -29,7 +29,12 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
 from torch.utils.data.dataset import ConcatDataset
-from torch.utils.tensorboard import SummaryWriter
+from sklearn.metrics import confusion_matrix
+import seaborn as sn
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
 
 import wandb
 
@@ -123,7 +128,7 @@ def main(args: argparse.Namespace):
     if not args.use_forever_iter:
         args.iters_per_epoch = len(train_loader)
     wandb.login()
-    wandb.init(project="checkerboard-setup-dann", config=args)
+    wandb.init(project=args.wandb_name, config=args)
 
 
     train_iter = ForeverDataIterator(train_loader)
@@ -193,6 +198,7 @@ def main(args: argparse.Namespace):
                        target_domain_labels=novel_domain_labels,
                        num_domains=len(datasets.domains()))
         print("Saving t-SNE to", tSNE_filename)
+        # TODO: produce error calculation
         # calculate A-distance, which is a measure for distribution discrepancy
         # A_distance = a_distance.calculate(source_feature, target_feature,
         #                                   device)
@@ -201,40 +207,30 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1, test_log = validate(test_loader, classifier, args, 'Test', 0)
+        acc1, test_log = validate(test_loader, classifier, multidomain_adv, args, 'Test', True)
         print(acc1)
         wandb.log(test_log)
         wandb.finish()
         return
 
     if args.phase == 'novel':
-        acc1, novel_log = validate(novel_loader, classifier, args, 'Novel', 0)
+        acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args, 'Novel', True)
         print(acc1)
         wandb.log(novel_log)
         wandb.finish()
         return
 
-    
 
-    # name of tensorboard
-    comment = f''' Checkerboard OfficeHome arch={args.arch} seed={args.seed} epochs={args.epochs} 
-                    batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} 
-                    lr_decay={args.lr_decay} trade_off={args.trade_off}'''
-    comment = f' Checkerboard OfficeHome arch={args.arch} seed={args.seed} epochs={args.epochs} batch_size={args.batch_size} lr={args.lr} lr_gamma={args.lr_gamma} lr_decay={args.lr_decay} trade_off={args.trade_off}'
-    # Summary writer for tensorboard
-    tb = SummaryWriter(comment=comment)
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        # train_dict = train(train_iter, val_iter, classifier, multidomain_adv, optimizer,
-        #       lr_scheduler, epoch, args, tb)
         train_log = train(train_iter, classifier, multidomain_adv, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1, val_log = validate(val_loader, classifier, args, 'Validation')
+        acc1, val_log = validate(val_loader, classifier, multidomain_adv, args, 'Validation', epoch == args.epochs - 1)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -256,11 +252,11 @@ def main(args: argparse.Namespace):
     else:
         classifier.load_state_dict(torch.load(logger.get_checkpoint_path('latest')))
 
-    acc1, test_log = validate(test_loader, classifier, args, 'Test')
+    acc1, test_log = validate(test_loader, classifier, multidomain_adv, args, 'Test', True)
     print("test_acc1 = {:3.1f}".format(acc1))
     
     # evaluate on novel set
-    acc1, novel_log = validate(novel_loader, classifier, args, 'Novel')
+    acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args, 'Novel', True)
     print("novel_acc1 = {:3.1f}".format(acc1))
 
     eval_log = test_log.copy()
@@ -268,8 +264,10 @@ def main(args: argparse.Namespace):
     wandb.log(eval_log)
 
     logger.close()
-    tb.close()
-    wandb.finish()
+    try:
+        wandb.finish()
+    except:
+        return
 
 
 def train(train_iter: ForeverDataIterator, 
@@ -295,11 +293,6 @@ def train(train_iter: ForeverDataIterator,
     multidomain_adv.train()
 
     end = time.time()
-
-    class_y_true = []
-    class_predicitons = []
-    domain_y_true = []
-    domain_predictions = []
 
     for i in range(args.iters_per_epoch):
         x_tr, labels_tr = next(train_iter)
@@ -330,16 +323,6 @@ def train(train_iter: ForeverDataIterator,
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
         domain_acc = multidomain_adv.domain_discriminator_accuracy
 
-        # gather data for the category confusion matrix
-        _, y_tr_pred_class = y_tr.topk(1)
-        class_y_true.append(class_labels_tr)
-        class_predicitons.append(y_tr_pred_class)
-
-        # gather data for the category confusion matrix
-        _, y_tr_pred_domain =  multidomain_adv.domain_pred.topk(1)
-        domain_y_true.append(domain_labels_tr)
-        domain_predictions.append(y_tr_pred_domain)
-
 
         # update loss meter
         losses.update(loss.item(), x_tr.size(0))
@@ -362,24 +345,6 @@ def train(train_iter: ForeverDataIterator,
 
         if i % args.print_freq == 0:
             progress.display(i)
-    
-    class_y_true = torch.cat(class_y_true, dim=0)
-    class_predicitons = torch.cat(class_predicitons, dim=0)
-    domain_y_true = torch.cat(domain_y_true, dim=0)
-    domain_predictions = torch.cat(domain_predictions, dim=0)
-    
-
-    # # tensorboard updates
-    # tb.add_scalar('Category Classification Loss (Training Set)',
-    #               cls_losses.sum, epoch)
-    # tb.add_scalar('Style Discrimination Loss (Training Set)',
-    #               transfer_losses.sum, epoch)
-    # tb.add_scalar('Total Loss (Training Set)', losses.sum, epoch)
-    # tb.add_scalar(
-    #     'Category Classification Accuracy (Training Set)', cls_accs.avg, epoch)
-    # tb.add_scalar(
-    #     'Style Discrimination Accuracy (Training Set', domain_accs.avg, epoch)
-    # tb.add_histogram('Classification Softmax', y_tr, epoch)
 
     # wandb
     return {"Category Classification Loss (Training Set)": cls_losses.sum,
@@ -387,18 +352,14 @@ def train(train_iter: ForeverDataIterator,
                 'Total Loss (Training Set)': losses.sum,
                 'Category Classification Accuracy (Training Set)': cls_accs.avg,
                 'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
-                'Classification Logits':  y_tr,
-                'Category Classification Confusion Matrix (Training Set)': 
-                wandb.plot.confusion_matrix(probs=None, y_true=class_y_true, preds=class_predicitons),
-                'Domain Discrimination Confusion Matrix (Training Set)': 
-                wandb.plot.confusion_matrix(probs=None, y_true=domain_y_true, preds=domain_predictions)}
-
+                'Classification Logits':  y_tr,}
 
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
              multidomain_adv: MultidomainAdversarialLoss, 
              args: argparse.Namespace,
-             dataset_type: str) -> float:
+             dataset_type: str,
+             gen_conf_mat: Optional[bool] = False) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -407,7 +368,7 @@ def validate(val_loader: DataLoader,
     domain_accs = AverageMeter('Domain Acc', ':6.2f')
     losses = AverageMeter('Total Loss', ':6.2f')
 
-    progress = ProgressMeter(len(val_loader), [batch_time, cls_losses, top1, top5, transfer_losses, domain_accs],
+    progress = ProgressMeter(len(val_loader), [batch_time, cls_losses, top1, top5, domain_accs],
                              prefix=f'{dataset_type} Set: ')
 
     # switch to evaluate mode
@@ -478,22 +439,49 @@ def validate(val_loader: DataLoader,
         if confmat:
             print(confmat.format(classes))
     
-    class_y_true = torch.cat(class_y_true, dim=0)
-    class_predicitons = torch.cat(class_predicitons, dim=0)
-    domain_y_true = torch.cat(domain_y_true, dim=0)
-    domain_predictions = torch.cat(domain_predictions, dim=0)
+    class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
+    class_predicitons = torch.squeeze(torch.cat(class_predicitons, dim=0)).tolist()
+    domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
+    domain_predictions = torch.squeeze(torch.cat(domain_predictions, dim=0)).tolist()
 
-    return top1.avg, {f"Classification Loss ({dataset_type} Set)": cls_losses.sum,
-                f'Classification Accuracy ({dataset_type} Set)': top1.avg,
-                f"Domain Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
-                f'Domain Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
-                f"Total Loss ({dataset_type} Set)": losses.avg,
-                f'Category Classification Confusion Matrix ({dataset_type} Set)': 
-                wandb.plot.confusion_matrix(probs=None, y_true=class_y_true, preds=class_predicitons),
-                f'Domain Discrimination Confusion Matrix ({dataset_type} Set)': 
-                wandb.plot.confusion_matrix(probs=None, y_true=domain_y_true, preds=domain_predictions)
-                }
+    if gen_conf_mat:
+        styles = ['Art', 'Clipart', 'Product', 'Real World']
+        class_conf_mat = confusion_matrix(class_y_true, class_predicitons)
+        domain_conf_mat = confusion_matrix(domain_y_true, domain_predictions)
+        class_title = f'Category Classification Confusion Matrix ({dataset_type} Set)'
+        domain_title = f'Style Discrimination Confusion Matrix ({dataset_type} Set)'
 
+        # save the csv of the confusion matrix
+        df_class_cm = pd.DataFrame(class_conf_mat, index=val_loader.dataset.classes, columns=val_loader.dataset.classes)
+        if not os.path.exists(f'{args.log}/conf_mat/'):
+            os.makedirs(f'{args.log}/conf_mat/')
+        df_class_cm.to_csv(f'{args.log}/conf_mat/{class_title}.csv')
+        df_domain_cm = pd.DataFrame(domain_conf_mat, index=styles, columns=styles)
+        df_domain_cm.to_csv(f'{args.log}/conf_mat/{domain_title}.csv')
+
+        # save the pngs of the category classification confusion matrix
+        plt.figure(figsize=(25, 22))
+        ax = plt.axes()
+        plt.title(class_title)
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        sn.heatmap(df_class_cm, annot=True)
+        plt.savefig(f"{args.log}/conf_mat/{class_title}.png")
+
+        # save the pngs of the style discrimination classification confusion matrix
+        plt.figure(figsize=(15, 12))
+        plt.title(domain_title)
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        sn.heatmap(df_domain_cm, annot=True)
+        plt.savefig(f'{args.log}/conf_mat/{domain_title}.png')
+
+
+    return top1.avg, {f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
+                f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
+                f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
+                f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
+                f"Total Loss ({dataset_type} Set)": losses.sum}
 
 if __name__ == '__main__':
     architecture_names = sorted(name for name in models.__dict__
@@ -594,6 +582,11 @@ if __name__ == '__main__':
         type=str,
         default='dann',
         help="Where to save logs, checkpoints and debugging images.")
+    parser.add_argument(
+        "--wandb-name",
+        type=str,
+        default='checkerboard-task',
+        help="Name that will appear in the wandb dashboard.")
     parser.add_argument("--phase",
                         type=str,
                         default='train',
