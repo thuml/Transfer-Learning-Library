@@ -33,9 +33,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
-
-
-
+from utils_ajay import temp_scaling, kernel_ece
 import wandb
 
 sys.path.append('../../..')
@@ -45,7 +43,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args: argparse.Namespace):
     # wandb login and intialize
-    
+
     logger = CompleteLogger(args.log, args.phase)
     print(args)
 
@@ -87,25 +85,27 @@ def main(args: argparse.Namespace):
     # num_domains = len(args.sources) + len(args.targets)
 
     # TODO: create the train, val, test, novel dataset
-    transforms_list = [train_transform,
-                       val_transform, val_transform, val_transform]
+    transforms_list = [
+        train_transform, val_transform, val_transform, val_transform
+    ]
     train_val_test_split = (args.train_split, args.val_split, args.test_split)
-    datasets = CheckerboardOfficeHome(root=args.root,
-                                    download=False, 
-                                    use_mixed_split=args.use_mixed_split,
-                                    train_val_test_split=train_val_test_split,
-                                    styles_per_cat=args.styles_per_cat,
-                                    balance_domains=args.balance_domains, 
-                                    transforms=transforms_list)
+    datasets = CheckerboardOfficeHome(
+        root=args.root,
+        download=False,
+        use_mixed_split=args.use_mixed_split,
+        train_val_test_split=train_val_test_split,
+        styles_per_cat=args.styles_per_cat,
+        balance_domains=args.balance_domains,
+        transforms=transforms_list)
 
     # display the category-style matrix
     print(datasets)
 
     train_loader = DataLoader(datasets.train_dataset,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            num_workers=args.workers,
-                            drop_last=True)
+                              batch_size=args.batch_size,
+                              shuffle=True,
+                              num_workers=args.workers,
+                              drop_last=True)
 
     val_loader = DataLoader(datasets.val_dataset,
                             batch_size=args.batch_size,
@@ -114,25 +114,24 @@ def main(args: argparse.Namespace):
                             drop_last=True)
 
     test_loader = DataLoader(datasets.test_dataset,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            num_workers=args.workers,
-                            drop_last=True)
+                             batch_size=args.batch_size,
+                             shuffle=True,
+                             num_workers=args.workers,
+                             drop_last=True)
 
     novel_loader = DataLoader(datasets.novel_dataset,
-                            batch_size=args.batch_size,
-                            shuffle=True,
-                            num_workers=args.workers,
-                            drop_last=True)
+                              batch_size=args.batch_size,
+                              shuffle=True,
+                              num_workers=args.workers,
+                              drop_last=True)
 
     if not args.use_forever_iter:
         args.iters_per_epoch = len(train_loader)
     wandb.login()
     wandb.init(project=args.wandb_name, config=args)
 
-
     train_iter = ForeverDataIterator(train_loader)
-    # val_iter = ForeverDataIterator(val_loader)  
+    # val_iter = ForeverDataIterator(val_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
@@ -164,10 +163,10 @@ def main(args: argparse.Namespace):
     if args.phase != 'train':
         if args.use_best_model:
             checkpoint = torch.load(logger.get_checkpoint_path('best'),
-                                map_location='cpu')
+                                    map_location='cpu')
         else:
             checkpoint = torch.load(logger.get_checkpoint_path('latest'),
-                                map_location='cpu')
+                                    map_location='cpu')
         classifier.load_state_dict(checkpoint)
 
     # analysis the model
@@ -183,69 +182,77 @@ def main(args: argparse.Namespace):
             train_loader, feature_extractor, device)
         non_novel_features = torch.cat(
             [train_features, val_features, test_features], axis=0)
-        non_novel_labels = torch.cat(
-            [train_labels, val_labels, test_labels], axis=0)
+        non_novel_labels = torch.cat([train_labels, val_labels, test_labels],
+                                     axis=0)
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        non_novel_domain_labels = CheckerboardOfficeHome.get_style(non_novel_labels)
+        non_novel_domain_labels = CheckerboardOfficeHome.get_style(
+            non_novel_labels)
         novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
         # plot t-SNE
         total_title = 'Total Dataset TSNE'
         novel_title = 'Novel Dataset TSNE'
         non_novel_title = 'Non-novel Dataset TSNE'
-        tSNE_filename = osp.join(logger.visualize_directory, f'{total_title}.png')
-        non_novel_tSNE_filename = osp.join(logger.visualize_directory, f'{non_novel_title}.png')
-        novel_tSNE_filename = osp.join(logger.visualize_directory, f'{novel_title}.png')
+        tSNE_filename = osp.join(logger.visualize_directory,
+                                 f'{total_title}.png')
+        non_novel_tSNE_filename = osp.join(logger.visualize_directory,
+                                           f'{non_novel_title}.png')
+        novel_tSNE_filename = osp.join(logger.visualize_directory,
+                                       f'{novel_title}.png')
         all_features = torch.cat((non_novel_features, novel_features), dim=0)
-        all_domain_labels = torch.cat((non_novel_domain_labels, novel_domain_labels), dim=0)
+        all_domain_labels = torch.cat(
+            (non_novel_domain_labels, novel_domain_labels), dim=0)
         tsne.visualize(features=all_features,
-                        domain_labels=all_domain_labels,
-                        filename=tSNE_filename,
-                        num_domains=len(datasets.domains()),
-                        fig_title=total_title)
+                       domain_labels=all_domain_labels,
+                       filename=tSNE_filename,
+                       num_domains=len(datasets.domains()),
+                       fig_title=total_title)
         tsne.visualize(features=non_novel_features,
-                        domain_labels=non_novel_domain_labels,
-                        filename=non_novel_tSNE_filename,
-                        num_domains=len(datasets.domains()),
-                        fig_title=non_novel_title)
+                       domain_labels=non_novel_domain_labels,
+                       filename=non_novel_tSNE_filename,
+                       num_domains=len(datasets.domains()),
+                       fig_title=non_novel_title)
         tsne.visualize(features=novel_features,
-                        domain_labels=novel_domain_labels,
-                        filename=novel_tSNE_filename,
-                        num_domains=len(datasets.domains()),
-                        fig_title=novel_title)
-                    
+                       domain_labels=novel_domain_labels,
+                       filename=novel_tSNE_filename,
+                       num_domains=len(datasets.domains()),
+                       fig_title=novel_title)
+
         print("Saving t-SNE to", tSNE_filename)
         # TODO: produce error calculation
-        error = a_distance.calculate_multidomain_error(all_features, all_domain_labels, device)
+        error = a_distance.calculate_multidomain_error(all_features,
+                                                       all_domain_labels,
+                                                       device)
         print("Error =", error)
         wandb.finish()
         return
 
     if args.phase == 'test':
-        acc1, test_log = validate(test_loader, classifier, multidomain_adv, args, 'Test', True)
+        acc1, test_log = validate(test_loader, classifier, multidomain_adv,
+                                  args, 'Test', True)
         print(acc1)
         wandb.log(test_log)
         wandb.finish()
         return
 
     if args.phase == 'novel':
-        acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args, 'Novel', True)
+        acc1, novel_log = validate(novel_loader, classifier, multidomain_adv,
+                                   args, 'Novel', True)
         print(acc1)
         wandb.log(novel_log)
         wandb.finish()
         return
-
-
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
         # train for one epoch
         train_log = train(train_iter, classifier, multidomain_adv, optimizer,
-              lr_scheduler, epoch, args)
+                          lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1, val_log = validate(val_loader, classifier, multidomain_adv, args, 'Validation', epoch == args.epochs - 1)
+        acc1, val_log = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Validation', epoch == args.epochs - 1)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -263,15 +270,19 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     if args.use_best_model:
-        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+        classifier.load_state_dict(
+            torch.load(logger.get_checkpoint_path('best')))
     else:
-        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('latest')))
+        classifier.load_state_dict(
+            torch.load(logger.get_checkpoint_path('latest')))
 
-    acc1, test_log = validate(test_loader, classifier, multidomain_adv, args, 'Test', True)
+    acc1, test_log = validate(test_loader, classifier, multidomain_adv, args,
+                              'Test', True)
     print("test_acc1 = {:3.1f}".format(acc1))
-    
+
     # evaluate on novel set
-    acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args, 'Novel', True)
+    acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args,
+                               'Novel', True)
     print("novel_acc1 = {:3.1f}".format(acc1))
 
     eval_log = test_log.copy()
@@ -285,10 +296,9 @@ def main(args: argparse.Namespace):
         return
 
 
-def train(train_iter: ForeverDataIterator, 
-        model: ImageClassifier, multidomain_adv: MultidomainAdversarialLoss, 
-        optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, 
-        args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, model: ImageClassifier,
+          multidomain_adv: MultidomainAdversarialLoss, optimizer: SGD,
+          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
@@ -338,7 +348,6 @@ def train(train_iter: ForeverDataIterator,
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
         domain_acc = multidomain_adv.domain_discriminator_accuracy
 
-
         # update loss meter
         losses.update(loss.item(), x_tr.size(0))
         cls_accs.update(cls_acc.item(), x_tr.size(0))
@@ -362,16 +371,19 @@ def train(train_iter: ForeverDataIterator,
             progress.display(i)
 
     # wandb
-    return {"Category Classification Loss (Training Set)": cls_losses.sum,
-                'Style Discrimination Loss (Training Set)': transfer_losses.sum,
-                'Total Loss (Training Set)': losses.sum,
-                'Category Classification Accuracy (Training Set)': cls_accs.avg,
-                'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
-                'Classification Logits':  y_tr,}
+    return {
+        "Category Classification Loss (Training Set)": cls_losses.sum,
+        'Style Discrimination Loss (Training Set)': transfer_losses.sum,
+        'Total Loss (Training Set)': losses.sum,
+        'Category Classification Accuracy (Training Set)': cls_accs.avg,
+        'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
+        'Classification Logits': y_tr,
+    }
+
 
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
-             multidomain_adv: MultidomainAdversarialLoss, 
+             multidomain_adv: MultidomainAdversarialLoss,
              args: argparse.Namespace,
              dataset_type: str,
              gen_conf_mat: Optional[bool] = False) -> float:
@@ -383,7 +395,8 @@ def validate(val_loader: DataLoader,
     domain_accs = AverageMeter('Domain Acc', ':6.2f')
     losses = AverageMeter('Total Loss', ':6.2f')
 
-    progress = ProgressMeter(len(val_loader), [batch_time, cls_losses, top1, top5, domain_accs],
+    progress = ProgressMeter(len(val_loader),
+                             [batch_time, cls_losses, top1, top5, domain_accs],
                              prefix=f'{dataset_type} Set: ')
 
     # switch to evaluate mode
@@ -398,6 +411,8 @@ def validate(val_loader: DataLoader,
     class_predicitons = []
     domain_y_true = []
     domain_predictions = []
+    all_class_logits = []
+    all_class_labels = []
 
     with torch.no_grad():
         end = time.time()
@@ -429,13 +444,17 @@ def validate(val_loader: DataLoader,
             transfer_losses.update(transfer_loss.item(), images.size(0))
             domain_accs.update(domain_acc.item(), images.size(0))
 
+            # gather data for calibration evaluation
+            all_class_logits.append(class_pred)
+            all_class_labels.append(class_labels)
+
             # gather data for the category confusion matrix
             _, y_tr_pred_class = class_pred.topk(1)
             class_y_true.append(class_labels)
             class_predicitons.append(y_tr_pred_class)
 
             # gather data for the category confusion matrix
-            _, y_tr_pred_domain =  multidomain_adv.domain_pred.topk(1)
+            _, y_tr_pred_domain = multidomain_adv.domain_pred.topk(1)
             domain_y_true.append(domain_labels)
             domain_predictions.append(y_tr_pred_domain)
 
@@ -453,13 +472,23 @@ def validate(val_loader: DataLoader,
                                                                     top5=top5))
         if confmat:
             print(confmat.format(classes))
-    
-    class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
-    class_predicitons = torch.squeeze(torch.cat(class_predicitons, dim=0)).tolist()
-    domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
-    domain_predictions = torch.squeeze(torch.cat(domain_predictions, dim=0)).tolist()
+
+    # calculate expected calibration error
+    all_class_logits = torch.cat(all_class_logits, dim=0)
+    all_class_probs = F.softmax(all_class_logits, dim=0).tolist()
+    all_class_labels = torch.squeeze(
+        torch.cat(all_class_labels, dim=0)).tolist()
+    classes = list(range(len(CheckerboardOfficeHome.CATEGORIES)))
+    ece = kernel_ece(all_class_probs, all_class_labels, classes)
+    print(f"Expected Calibration Error: {ece}")
 
     if gen_conf_mat:
+        class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
+        class_predicitons = torch.squeeze(torch.cat(class_predicitons,
+                                                    dim=0)).tolist()
+        domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
+        domain_predictions = torch.squeeze(torch.cat(domain_predictions,
+                                                     dim=0)).tolist()
         styles = ['Art', 'Clipart', 'Product', 'Real World']
         class_conf_mat = confusion_matrix(class_y_true, class_predicitons)
         domain_conf_mat = confusion_matrix(domain_y_true, domain_predictions)
@@ -467,11 +496,15 @@ def validate(val_loader: DataLoader,
         domain_title = f'Style Discrimination Confusion Matrix ({dataset_type} Set)'
 
         # save the csv of the confusion matrix
-        df_class_cm = pd.DataFrame(class_conf_mat, index=val_loader.dataset.classes, columns=val_loader.dataset.classes)
+        df_class_cm = pd.DataFrame(class_conf_mat,
+                                   index=val_loader.dataset.classes,
+                                   columns=val_loader.dataset.classes)
         if not os.path.exists(f'{args.log}/conf_mat/'):
             os.makedirs(f'{args.log}/conf_mat/')
         df_class_cm.to_csv(f'{args.log}/conf_mat/{class_title}.csv')
-        df_domain_cm = pd.DataFrame(domain_conf_mat, index=styles, columns=styles)
+        df_domain_cm = pd.DataFrame(domain_conf_mat,
+                                    index=styles,
+                                    columns=styles)
         df_domain_cm.to_csv(f'{args.log}/conf_mat/{domain_title}.csv')
 
         # save the pngs of the category classification confusion matrix
@@ -492,12 +525,15 @@ def validate(val_loader: DataLoader,
         sn.heatmap(df_domain_cm, annot=True)
         plt.savefig(f'{args.log}/conf_mat/{domain_title}.png')
 
+    return top1.avg, {
+        f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
+        f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
+        f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
+        f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
+        f"Total Loss ({dataset_type} Set)": losses.sum,
+        f"Expected Calibration Error ({dataset_type} Set)": ece,
+    }
 
-    return top1.avg, {f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
-                f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
-                f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
-                f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
-                f"Total Loss ({dataset_type} Set)": losses.sum}
 
 if __name__ == '__main__':
     architecture_names = sorted(name for name in models.__dict__
@@ -598,18 +634,18 @@ if __name__ == '__main__':
         type=str,
         default='dann',
         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument(
-        "--wandb-name",
-        type=str,
-        default='checkerboard-task',
-        help="Name that will appear in the wandb dashboard.")
-    parser.add_argument("--phase",
+    parser.add_argument("--wandb-name",
                         type=str,
-                        default='train',
-                        choices=['train', 'test', 'analysis', 'novel'],
-                        help="When phase is 'test', only test the model on test set."
-                        "When phase is 'novel', only test the model on the novel set."
-                        "When phase is 'analysis', only analysis the model.")
+                        default='checkerboard-task',
+                        help="Name that will appear in the wandb dashboard.")
+    parser.add_argument(
+        "--phase",
+        type=str,
+        default='train',
+        choices=['train', 'test', 'analysis', 'novel'],
+        help="When phase is 'test', only test the model on test set."
+        "When phase is 'novel', only test the model on the novel set."
+        "When phase is 'analysis', only analysis the model.")
     parser.add_argument(
         '--mixed-split',
         dest="use_mixed_split",
@@ -639,10 +675,11 @@ if __name__ == '__main__':
         type=float,
         default=0.25,
         help='How to split the non-novel data into testing data.')
-    parser.add_argument('--styles-per-cat',
-                        default=2,
-                        type=int,
-                        help='number of styles per category in the non-novel dataset')
+    parser.add_argument(
+        '--styles-per-cat',
+        default=2,
+        type=int,
+        help='number of styles per category in the non-novel dataset')
     parser.add_argument(
         '--balanced-domains',
         dest="balance_domains",
@@ -654,11 +691,10 @@ if __name__ == '__main__':
         action='store_false',
         help='''Don't try to balance the domains when creating the 
                 category-style matrix.''')
-    parser.add_argument(
-        '--forever-iter',
-        dest="use_forever_iter",
-        action='store_true',
-        help='Use the forever data iterator while training.')
+    parser.add_argument('--forever-iter',
+                        dest="use_forever_iter",
+                        action='store_true',
+                        help='Use the forever data iterator while training.')
     parser.add_argument(
         '--no-forever-iter',
         dest="use_forever_iter",
