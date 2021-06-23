@@ -40,7 +40,8 @@ ture Map with Attention for convolutional networks (DELTA, ICLR 2019)
 - Co-Tuning for Transfer Learning (Co-Tuning, NIPS 2020).
 
 We are planning to add
-- More DA methods for Segmentation
+- Domain Generalization
+- Multi-task Learning
 - DA for Object Detection
 - Universal Domain Adaptation
 
