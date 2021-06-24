@@ -156,16 +156,16 @@ def main(args: argparse.Namespace):
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
 
-    # define loss function
+    # define loss function for domain discrimination
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri).to(device)
 
-    # resume from the best checkpoint
+    # resume from the best or latest checkpoint
     if args.phase != 'train':
-        if args.use_best_model:
-            checkpoint = torch.load(logger.get_checkpoint_path('best'),
+        if args.use_latest_model:
+            checkpoint = torch.load(logger.get_checkpoint_path('latest'),
                                     map_location='cpu')
         else:
-            checkpoint = torch.load(logger.get_checkpoint_path('latest'),
+            checkpoint = torch.load(logger.get_checkpoint_path('best'),
                                     map_location='cpu')
         classifier.load_state_dict(checkpoint)
 
@@ -475,7 +475,7 @@ def validate(val_loader: DataLoader,
 
     # calculate expected calibration error
     all_class_logits = torch.cat(all_class_logits, dim=0)
-    all_class_probs = F.softmax(all_class_logits, dim=0).tolist()
+    all_class_probs = F.softmax(all_class_logits, dim=1).tolist()
     all_class_labels = torch.squeeze(
         torch.cat(all_class_labels, dim=0)).tolist()
     classes = list(range(len(CheckerboardOfficeHome.CATEGORIES)))
@@ -509,7 +509,6 @@ def validate(val_loader: DataLoader,
 
         # save the pngs of the category classification confusion matrix
         plt.figure(figsize=(25, 22))
-        ax = plt.axes()
         plt.title(class_title)
         # TODO: Fix x and y label for confusion matrix png
         plt.xlabel('Predicted')
@@ -646,20 +645,26 @@ if __name__ == '__main__':
         help="When phase is 'test', only test the model on test set."
         "When phase is 'novel', only test the model on the novel set."
         "When phase is 'analysis', only analysis the model.")
-    parser.add_argument(
-        '--mixed-split',
-        dest="use_mixed_split",
-        action='store_true',
-        help='''Randomly split the non-novel dataset into three partitions 
-                (training, validation, and testing set). All three datasets 
-                will share category-style combinations.''')
-    parser.add_argument(
-        '--no-mixed-split',
-        dest="use_mixed_split",
-        action='store_false',
-        help='''Split the dataset into three partitions such that the validation 
-                dataset and the training dataset do not share category-combinations with 
-                the training dataset. ''')
+    parser.add_argument('--use-mixed-split',
+                        default=False,
+                        action='store_true',
+                        help=''''Randomly split the non-novel dataset into three partitions 
+                            (training, validation, and testing set). All three datasets 
+                            will share category-style combinations.''')
+    # parser.add_argument(
+    #     '--mixed-split',
+    #     dest="use_mixed_split",
+    #     action='store_true',
+    #     help='''Randomly split the non-novel dataset into three partitions
+    #             (training, validation, and testing set). All three datasets
+    #             will share category-style combinations.''')
+    # parser.add_argument(
+    #     '--no-mixed-split',
+    #     dest="use_mixed_split",
+    #     action='store_false',
+    #     help='''Split the dataset into three partitions such that the validation
+    #             dataset and the training dataset do not share category-combinations with
+    #             the training dataset. ''')
     parser.add_argument(
         '--train-split',
         default=0.5,
@@ -680,38 +685,51 @@ if __name__ == '__main__':
         default=2,
         type=int,
         help='number of styles per category in the non-novel dataset')
-    parser.add_argument(
-        '--balanced-domains',
-        dest="balance_domains",
-        action='store_true',
-        help='''Balance the domains when creating category-style matrix.''')
-    parser.add_argument(
-        '--imbalanced-domains',
-        dest="balance_domains",
-        action='store_false',
-        help='''Don't try to balance the domains when creating the 
-                category-style matrix.''')
-    parser.add_argument('--forever-iter',
-                        dest="use_forever_iter",
+    parser.add_argument('--balance-domains',
+                        default=False,
+                        action='store_true',
+                        help='Balance the domains when creating category-style matrix.')
+    # parser.add_argument(
+    #     '--balanced-domains',
+    #     dest="balance_domains",
+    #     action='store_true',
+    #     help='''Balance the domains when creating category-style matrix.''')
+    # parser.add_argument(
+    #     '--imbalanced-domains',
+    #     dest="balance_domains",
+    #     action='store_false',
+    #     help='''Don't try to balance the domains when creating the
+    #             category-style matrix.''')
+    parser.add_argument('--use-forever-iter',
+                        default=False,
                         action='store_true',
                         help='Use the forever data iterator while training.')
-    parser.add_argument(
-        '--no-forever-iter',
-        dest="use_forever_iter",
-        action='store_false',
-        help="Don't use the forever data iterator while training.")
-    parser.add_argument(
-        '--use-best-model',
-        dest="use_best_model",
-        action='store_true',
-        help='''If true, load the best model when testing and analyzing. 
-        If false, load the latest model when testing and analyzing.''')
-    parser.add_argument(
-        '--use-latest-model',
-        dest="use_best_model",
-        action='store_false',
-        help='''If true, load the best model when testing and analyzing. 
-        If false, load the latest model when testing and analyzing.''')
+    # parser.add_argument('--forever-iter',
+    #                     dest="use_forever_iter",
+    #                     action='store_true',
+    #                     help='Use the forever data iterator while training.')
+    # parser.add_argument(
+    #     '--no-forever-iter',
+    #     dest="use_forever_iter",
+    #     action='store_false',
+    #     help="Don't use the forever data iterator while training.")
+    parser.add_argument('--use-latest-model',
+                        default=False,
+                        action='store_true',
+                        help='''If true, load the best model when testing and analyzing. 
+                                If false, load the latest model when testing and analyzing.''')
+    # parser.add_argument(
+    #     '--use-best-model',
+    #     dest="use_best_model",
+    #     action='store_true',
+    #     help='''If true, load the best model when testing and analyzing.
+    #     If false, load the latest model when testing and analyzing.''')
+    # parser.add_argument(
+    #     '--use-latest-model',
+    #     dest="use_best_model",
+    #     action='store_false',
+    #     help='''If true, load the best model when testing and analyzing.
+    #     If false, load the latest model when testing and analyzing.''')
 
     args = parser.parse_args()
     main(args)

@@ -51,6 +51,19 @@ def temp_scaling(probs, labels, n_classes, probs_test=[]):
 
     return t
 
+# Mirror data about a domain boundary
+def mirror_1d(d, xmin=None, xmax=None):
+    """If necessary apply reflecting boundary conditions."""
+    if xmin is not None and xmax is not None:
+        xmed = (xmin+xmax)/2
+        return np.concatenate(((2*xmin-d[d < xmed]).reshape(-1,1), d, (2*xmax-d[d >= xmed]).reshape(-1,1)))
+    elif xmin is not None:
+        return np.concatenate((2*xmin-d, d))
+    elif xmax is not None:
+        return np.concatenate((d, 2*xmax-d))
+    else:
+        return d
+
 
 # Compute the kernel ECE as described by Zhang et al. (2020)
 # https://github.com/zhang64-llnl/Mix-n-Match-Calibration
