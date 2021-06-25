@@ -81,56 +81,56 @@ def calculate(source_feature: torch.Tensor, target_feature: torch.Tensor,
             print("epoch {} accuracy: {} A-dist: {}".format(epoch, meter.avg, a_distance))
     return a_distance
 
-def calculate_multidomain_acc(feature: torch.Tensor, label: torch.Tensor,
-              device, progress=True, training_epochs=10):
-    """
-    Calculate the :math:`\mathcal{A}`-distance, which is a measure for distribution discrepancy.
+# def calculate_multidomain_acc(feature: torch.Tensor, label: torch.Tensor,
+#               device, progress=True, training_epochs=10):
+#     """
+#     Calculate the :math:`\mathcal{A}`-distance, which is a measure for distribution discrepancy.
 
-    The definition is :math:`dist_\mathcal{A} = 2 (1-2\epsilon)`, where :math:`\epsilon` is the
-    test error of a classifier trained to discriminate the source from the target.
+#     The definition is :math:`dist_\mathcal{A} = 2 (1-2\epsilon)`, where :math:`\epsilon` is the
+#     test error of a classifier trained to discriminate the source from the target.
 
-    Args:
-        source_feature (tensor): features from source domain in shape :math:`(minibatch, F)`
-        target_feature (tensor): features from target domain in shape :math:`(minibatch, F)`
-        device (torch.device)
-        progress (bool): if True, displays a the progress of training A-Net
-        training_epochs (int): the number of epochs when training the classifier
+#     Args:
+#         source_feature (tensor): features from source domain in shape :math:`(minibatch, F)`
+#         target_feature (tensor): features from target domain in shape :math:`(minibatch, F)`
+#         device (torch.device)
+#         progress (bool): if True, displays a the progress of training A-Net
+#         training_epochs (int): the number of epochs when training the classifier
 
-    Returns:
-        :math:`\mathcal{A}`-distance
-    """
-    dataset = TensorDataset(feature, label)
-    length = len(dataset)
-    train_size = int(0.8 * length)
-    val_size = length - train_size
-    train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_size])
-    train_loader = DataLoader(train_set, batch_size=2, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=8, shuffle=False)
+#     Returns:
+#         :math:`\mathcal{A}`-distance
+#     """
+#     dataset = TensorDataset(feature, label)
+#     length = len(dataset)
+#     train_size = int(0.8 * length)
+#     val_size = length - train_size
+#     train_set, val_set = torch.utils.data.random_split(dataset, [train_size, val_size])
+#     train_loader = DataLoader(train_set, batch_size=2, shuffle=True)
+#     val_loader = DataLoader(val_set, batch_size=8, shuffle=False)
 
-    anet = ANet(feature.shape[1]).to(device)
-    optimizer = SGD(anet.parameters(), lr=0.01)
-    for epoch in range(training_epochs):
-        anet.train()
-        for (x, label) in train_loader:
-            x = x.to(device)
-            label = label.to(device)
-            anet.zero_grad()
-            y = anet(x)
-            loss = F.binary_cross_entropy(y, label)
-            loss.backward()
-            optimizer.step()
+#     anet = ANet(feature.shape[1]).to(device)
+#     optimizer = SGD(anet.parameters(), lr=0.01)
+#     for epoch in range(training_epochs):
+#         anet.train()
+#         for (x, label) in train_loader:
+#             x = x.to(device)
+#             label = label.to(device)
+#             anet.zero_grad()
+#             y = anet(x)
+#             loss = F.binary_cross_entropy(y, label)
+#             loss.backward()
+#             optimizer.step()
 
-        anet.eval()
-        acc_meter = AverageMeter("accuracy", ":4.2f")
-        with torch.no_grad():
-            for (x, label) in val_loader:
-                x = x.to(device)
-                label = label.to(device)
-                y = anet(x)
-                acc = binary_accuracy(y, label)
-                acc_meter.update(acc, x.shape[0])
-        #error = 1 - meter.avg / 100
-        if progress:
-            print("epoch {} accuracy: {} Error: {}".format(epoch, acc_meter.avg)) #, error))
-    return acc_meter.avg
+#         anet.eval()
+#         acc_meter = AverageMeter("accuracy", ":4.2f")
+#         with torch.no_grad():
+#             for (x, label) in val_loader:
+#                 x = x.to(device)
+#                 label = label.to(device)
+#                 y = anet(x)
+#                 acc = binary_accuracy(y, label)
+#                 acc_meter.update(acc, x.shape[0])
+#         #error = 1 - meter.avg / 100
+#         if progress:
+#             print("epoch {} accuracy: {} Error: {}".format(epoch, acc_meter.avg)) #, error))
+#     return acc_meter.avg
 

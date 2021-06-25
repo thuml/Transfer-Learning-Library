@@ -1,4 +1,4 @@
-from common.utils.analysis import collect_feature_and_labels, tsne, a_distance
+from common.utils.analysis import collect_feature_and_labels, tsne, post_hoc_accuracy
 from common.utils.logger import CompleteLogger
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.metric import accuracy, ConfusionMatrix
@@ -180,7 +180,14 @@ def main(args: argparse.Namespace):
             fig_title=title
         )
         print("Saving t-SNE to", tSNE_filename)
-        post_hoc_domain_acc = a_distance.calculate_multidomain_acc(
+        model = MultidomainDiscriminator(
+            in_feature=classifier.features_dim,
+            hidden_size=1024,
+            num_domains=len(datasets.domains())).to(device
+        )
+        # calculate the accuracy of a model trained to discriminate the domains using the feature representation
+        post_hoc_domain_acc = post_hoc_accuracy.calculate_multidomain_acc(
+                                                    model,
                                                     features,
                                                     domain_labels,
                                                     device
@@ -209,14 +216,17 @@ def main(args: argparse.Namespace):
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
         novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
+        all_features = torch.cat([non_novel_features, novel_features], axis=0)
+        all_domain_labels = torch.cat([non_novel_domain_labels, novel_domain_labels], axis=0)
         
         log = {}
         # plot t-SNE and calculate post-hoc domain discriminator accuracy
         log.update(domain_analyze(train_features, train_domain_labels, 'Train'))
         log.update(domain_analyze(val_features, val_domain_labels, 'Validation'))
-        log.update(domain_analyze(test_loader, test_domain_labels, 'Test'))
+        log.update(domain_analyze(test_features, test_domain_labels, 'Test'))
         log.update(domain_analyze(non_novel_features, non_novel_domain_labels, 'Non-novel'))
         log.update(domain_analyze(novel_features, novel_domain_labels, 'Novel'))
+        log.update(domain_analyze(all_features, all_domain_labels, 'Total'))
         return log
 
     def partial_analysis(data_loader: DataLoader, dataset_type: str):
@@ -268,10 +278,12 @@ def main(args: argparse.Namespace):
         wandb.log(total_log)
 
         # remember best acc@1 and save checkpoint
+        # torch.save(classifier.state_dict(),
+        #            logger.get_checkpoint_path('latest'))
         torch.save(classifier.state_dict(),
-                   logger.get_checkpoint_path('latest'))
+                   logger.get_checkpoint_path(f'epoch {epoch}'))
         if acc1 > best_acc1:
-            shutil.copy(logger.get_checkpoint_path('latest'),
+            shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
                         logger.get_checkpoint_path('best'))
         
         
@@ -285,6 +297,7 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('best')))
     else:
+        # TODO: Fix to go after the latest model
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 

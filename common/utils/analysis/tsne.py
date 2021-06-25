@@ -37,7 +37,7 @@ def multidomain_visualize(features: torch.Tensor, domain_labels: torch.Tensor,
     # visualize using matplotlib
     plt.figure(figsize=(10, 10))
     if fig_title:
-        plt.set_title(fig_title)
+        plt.title(fig_title)
     plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domain_labels, cmap=col.ListedColormap(domain_colors), s=2)
     plt.savefig(filename)
 
