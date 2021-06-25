@@ -125,7 +125,7 @@ def main(args: argparse.Namespace):
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        tsne.multidomain_visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
         A_distance = a_distance.calculate(source_feature, target_feature, device)

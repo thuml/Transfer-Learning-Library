@@ -182,7 +182,7 @@ def main(args: argparse.Namespace):
             target_labels, classifier.num_classes)
         # plot t-SNE
         tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature,
+        tsne.multidomain_visualize(source_feature, target_feature,
                        filename=tSNE_filename,
                        source_domain_labels=source_domain_labels,
                        target_domain_labels=target_domain_labels,

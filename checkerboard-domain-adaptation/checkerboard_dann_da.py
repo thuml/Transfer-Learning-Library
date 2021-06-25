@@ -169,68 +169,75 @@ def main(args: argparse.Namespace):
                                     map_location='cpu')
         classifier.load_state_dict(checkpoint)
 
-    # analysis the model
-    if args.phase == 'analysis':
-        # extract features from both domains
-        feature_extractor = nn.Sequential(classifier.backbone,
-                                          classifier.bottleneck).to(device)
+    def domain_analyze(features: torch.Tensor, domain_labels: torch.Tensor, dataset_type: str):
+        title = f'{dataset_type} Dataset TSNE'
+        tSNE_filename = osp.join(logger.visualize_directory, f'{title}.png')
+        tsne.multidomain_visualize(
+            features=features,
+            domain_labels=domain_labels,
+            filename=tSNE_filename,
+            num_domains=len(datasets.domains()),
+            fig_title=title
+        )
+        print("Saving t-SNE to", tSNE_filename)
+        post_hoc_domain_acc = a_distance.calculate_multidomain_acc(
+                                                    features,
+                                                    domain_labels,
+                                                    device
+                                                )
+        print(f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set) = {post_hoc_domain_acc}')
+        return {f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set)': post_hoc_domain_acc}
+
+
+    def full_analysis(model: ImageClassifier):
+        # extract features from train, validation, test, and novel dataset
+        feature_extractor = nn.Sequential(model.backbone,
+                                          model.bottleneck).to(device)
         train_features, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
+        train_domain_labels = CheckerboardOfficeHome.get_style(train_labels)
         val_features, val_labels = collect_feature_and_labels(
-            train_loader, feature_extractor, device)
+            val_loader, feature_extractor, device)
+        val_domain_labels = CheckerboardOfficeHome.get_style(val_labels)
         test_features, test_labels = collect_feature_and_labels(
-            train_loader, feature_extractor, device)
+            test_loader, feature_extractor, device)
+        test_domain_labels = CheckerboardOfficeHome.get_style(test_labels)
         non_novel_features = torch.cat(
             [train_features, val_features, test_features], axis=0)
-        non_novel_labels = torch.cat([train_labels, val_labels, test_labels],
-                                     axis=0)
+        non_novel_domain_labels = torch.cat(
+            [train_domain_labels, val_domain_labels, test_domain_labels ], axis=0)
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        non_novel_domain_labels = CheckerboardOfficeHome.get_style(
-            non_novel_labels)
         novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
-        # plot t-SNE
-        total_title = 'Total Dataset TSNE'
-        novel_title = 'Novel Dataset TSNE'
-        non_novel_title = 'Non-novel Dataset TSNE'
-        tSNE_filename = osp.join(logger.visualize_directory,
-                                 f'{total_title}.png')
-        non_novel_tSNE_filename = osp.join(logger.visualize_directory,
-                                           f'{non_novel_title}.png')
-        novel_tSNE_filename = osp.join(logger.visualize_directory,
-                                       f'{novel_title}.png')
-        all_features = torch.cat((non_novel_features, novel_features), dim=0)
-        all_domain_labels = torch.cat(
-            (non_novel_domain_labels, novel_domain_labels), dim=0)
-        tsne.visualize(features=all_features,
-                       domain_labels=all_domain_labels,
-                       filename=tSNE_filename,
-                       num_domains=len(datasets.domains()),
-                       fig_title=total_title)
-        tsne.visualize(features=non_novel_features,
-                       domain_labels=non_novel_domain_labels,
-                       filename=non_novel_tSNE_filename,
-                       num_domains=len(datasets.domains()),
-                       fig_title=non_novel_title)
-        tsne.visualize(features=novel_features,
-                       domain_labels=novel_domain_labels,
-                       filename=novel_tSNE_filename,
-                       num_domains=len(datasets.domains()),
-                       fig_title=novel_title)
+        
+        log = {}
+        # plot t-SNE and calculate post-hoc domain discriminator accuracy
+        log.update(domain_analyze(train_features, train_domain_labels, 'Train'))
+        log.update(domain_analyze(val_features, val_domain_labels, 'Validation'))
+        log.update(domain_analyze(test_loader, test_domain_labels, 'Test'))
+        log.update(domain_analyze(non_novel_features, non_novel_domain_labels, 'Non-novel'))
+        log.update(domain_analyze(novel_features, novel_domain_labels, 'Novel'))
+        return log
 
-        print("Saving t-SNE to", tSNE_filename)
-        # TODO: produce error calculation
-        error = a_distance.calculate_multidomain_error(all_features,
-                                                       all_domain_labels,
-                                                       device)
-        print("Error =", error)
+    def partial_analysis(data_loader: DataLoader, dataset_type: str):
+        feature_extractor = nn.Sequential(classifier.backbone,
+                                        classifier.bottleneck).to(device)
+        features, labels = collect_feature_and_labels(data_loader, 
+                                        feature_extractor, device)
+        domain_labels = CheckerboardOfficeHome.get_style(labels)
+        return domain_analyze(features, domain_labels, dataset_type)  
+
+    # analysis the model
+    if args.phase == 'analysis':
+        wandb.log(full_analysis(classifier))
         wandb.finish()
         return
 
     if args.phase == 'test':
         acc1, test_log = validate(test_loader, classifier, multidomain_adv,
                                   args, 'Test', True)
-        print(acc1)
+        print(f'test_acc1 = {acc1}')
+        test_log.update(partial_analysis(test_loader, 'Test'))
         wandb.log(test_log)
         wandb.finish()
         return
@@ -238,13 +245,15 @@ def main(args: argparse.Namespace):
     if args.phase == 'novel':
         acc1, novel_log = validate(novel_loader, classifier, multidomain_adv,
                                    args, 'Novel', True)
-        print(acc1)
+        print(f'novel_acc1 = {acc1}')
+        novel_log.update(partial_analysis(novel_log, 'Novel'))
         wandb.log(novel_log)
         wandb.finish()
         return
 
     # start training
     best_acc1 = 0.
+    early_stop_count = 0
     for epoch in range(args.epochs):
         # train for one epoch
         train_log = train(train_iter, classifier, multidomain_adv, optimizer,
@@ -264,7 +273,10 @@ def main(args: argparse.Namespace):
         if acc1 > best_acc1:
             shutil.copy(logger.get_checkpoint_path('latest'),
                         logger.get_checkpoint_path('best'))
+        
+        
         best_acc1 = max(acc1, best_acc1)
+        
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
@@ -287,13 +299,12 @@ def main(args: argparse.Namespace):
 
     eval_log = test_log.copy()
     eval_log.update(novel_log.copy())
+    eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
 
+    wandb.finish()
     logger.close()
-    try:
-        wandb.finish()
-    except:
-        return
+
 
 
 def train(train_iter: ForeverDataIterator, model: ImageClassifier,
@@ -654,6 +665,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mixed-split',
         dest="use_mixed_split",
+        default=True,
         action='store_true',
         help='''Randomly split the non-novel dataset into three partitions
                 (training, validation, and testing set). All three datasets
@@ -661,6 +673,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--no-mixed-split',
         dest="use_mixed_split",
+        default=True,
         action='store_false',
         help='''Split the dataset into three partitions such that the validation
                 dataset and the training dataset do not share category-combinations with
@@ -692,11 +705,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--balanced-domains',
         dest="balance_domains",
+        default=True,
         action='store_true',
         help='''Balance the domains when creating category-style matrix.''')
     parser.add_argument(
         '--imbalanced-domains',
         dest="balance_domains",
+        default=True,
         action='store_false',
         help='''Don't try to balance the domains when creating the
                 category-style matrix.''')
@@ -706,30 +721,38 @@ if __name__ == '__main__':
     #                     help='Use the forever data iterator while training.')
     parser.add_argument('--forever-iter',
                         dest="use_forever_iter",
+                        default=False,
                         action='store_true',
                         help='Use the forever data iterator while training.')
     parser.add_argument(
         '--no-forever-iter',
         dest="use_forever_iter",
+        default=False,
         action='store_false',
         help="Don't use the forever data iterator while training.")
-    parser.add_argument('--use-latest-model',
-                        default=False,
-                        action='store_true',
-                        help='''If true, load the best model when testing and analyzing. 
-                                If false, load the latest model when testing and analyzing.''')
     parser.add_argument(
         '--use-best-model',
         dest="use_best_model",
+        default=True,
         action='store_true',
         help='''If true, load the best model when testing and analyzing.
         If false, load the latest model when testing and analyzing.''')
     parser.add_argument(
         '--use-latest-model',
         dest="use_best_model",
+        default=True,
         action='store_false',
         help='''If true, load the best model when testing and analyzing.
         If false, load the latest model when testing and analyzing.''')
+    parser.add_argument('--early-stopping',
+                        default=False,
+                        action='store_true',
+                        help='use early stopping on validation set when training.')
+    parser.add_argument('--patience',
+                        default=10,
+                        type=int,
+                        help='number of epochs to wait before employing earlystopping')
+    
 
     args = parser.parse_args()
     main(args)

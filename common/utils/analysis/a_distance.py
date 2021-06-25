@@ -81,7 +81,7 @@ def calculate(source_feature: torch.Tensor, target_feature: torch.Tensor,
             print("epoch {} accuracy: {} A-dist: {}".format(epoch, meter.avg, a_distance))
     return a_distance
 
-def calculate_multidomain_error(feature: torch.Tensor, label: torch.Tensor,
+def calculate_multidomain_acc(feature: torch.Tensor, label: torch.Tensor,
               device, progress=True, training_epochs=10):
     """
     Calculate the :math:`\mathcal{A}`-distance, which is a measure for distribution discrepancy.
@@ -121,16 +121,16 @@ def calculate_multidomain_error(feature: torch.Tensor, label: torch.Tensor,
             optimizer.step()
 
         anet.eval()
-        meter = AverageMeter("accuracy", ":4.2f")
+        acc_meter = AverageMeter("accuracy", ":4.2f")
         with torch.no_grad():
             for (x, label) in val_loader:
                 x = x.to(device)
                 label = label.to(device)
                 y = anet(x)
                 acc = binary_accuracy(y, label)
-                meter.update(acc, x.shape[0])
-        error = 1 - meter.avg / 100
+                acc_meter.update(acc, x.shape[0])
+        #error = 1 - meter.avg / 100
         if progress:
-            print("epoch {} accuracy: {} Error: {}".format(epoch, meter.avg, error))
-    return error
+            print("epoch {} accuracy: {} Error: {}".format(epoch, acc_meter.avg)) #, error))
+    return acc_meter.avg
 
