@@ -109,7 +109,7 @@ def main(args: argparse.Namespace):
 
     val_loader = DataLoader(datasets.val_dataset,
                             batch_size=args.batch_size,
-                            shuffle=False,
+                            shuffle=True,
                             num_workers=args.workers,
                             drop_last=True)
 
@@ -180,7 +180,8 @@ def main(args: argparse.Namespace):
             fig_title=title
         )
         print("Saving t-SNE to", tSNE_filename)
-        model = MultidomainDiscriminator(
+        model =                                               
+        (
             in_feature=classifier.features_dim,
             hidden_size=1024,
             num_domains=len(datasets.domains())).to(device
@@ -364,9 +365,14 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         y_tr, f_tr = model(x_tr)
 
         # Updating the loss functions with new labels
-        cls_loss = F.cross_entropy(y_tr, class_labels_tr)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
-        loss = cls_loss + transfer_loss * args.trade_off
+
+        if args.d_steps_per_g == 0 or i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
+            # this loss functions works because of the gradient reversal layer
+            cls_loss = F.cross_entropy(y_tr, class_labels_tr)
+            loss = cls_loss + transfer_loss * args.trade_off
+        else:
+            loss = transfer_loss
 
         # calculate accuracy
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
@@ -765,7 +771,10 @@ if __name__ == '__main__':
                         default=10,
                         type=int,
                         help='number of epochs to wait before employing earlystopping')
-    
+    parser.add_argument('--d-steps-per-g',
+                        default=0,
+                        type=int,
+                        help='Number times the domain discriminator learns before the classifier starts learning.')
 
     args = parser.parse_args()
     main(args)
