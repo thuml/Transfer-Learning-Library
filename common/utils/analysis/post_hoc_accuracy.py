@@ -24,6 +24,7 @@ def calculate_multidomain_acc(model: nn.Sequential, feature: torch.Tensor, label
     val_loader = DataLoader(val_set, batch_size=16, shuffle=False, drop_last=True)
 
     optimizer = SGD(model.parameters(), lr=0.01)
+    best_acc = 0.
     for epoch in range(training_epochs):
         model.train()
         for (x, label) in train_loader:
@@ -35,17 +36,24 @@ def calculate_multidomain_acc(model: nn.Sequential, feature: torch.Tensor, label
             loss.backward()
             optimizer.step()
 
+        y_true = []
+        y_preds = []
         model.eval()
         acc_meter = AverageMeter("accuracy", ":4.2f")
         with torch.no_grad():
             for (x, label) in val_loader:
                 x = x.to(device)
                 label = label.to(device)
+                y_true += label.tolist()
                 y = model(x)
+                _, y_pred = y.topk(1)
+                y_preds.append(y_pred)
                 acc = accuracy(y, label)[0]
+                acc = max(best_acc, acc)
                 acc_meter.update(acc, x.shape[0])
         #error = 1 - meter.avg / 100
         if progress:
             print("epoch {} accuracy: {}".format(epoch, acc_meter.avg)) #, error))
-    return acc_meter.avg
+    y_preds = torch.squeeze(torch.cat(y_preds, dim=0)).tolist()
+    return acc_meter.avg, y_true, y_preds
 

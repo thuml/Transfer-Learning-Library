@@ -90,12 +90,10 @@ class CheckerboardOfficeHome211():
         #     list(
         #         map(lambda name, file_name, _: check_exits(root, file_name),
         #             self.download_list))
+        # TODO: Implement this
+        self.style_is_domain = True
+        self.generate_image_list(root, balance_domains)
 
-        # TODO: implelment this:
-
-        # self.generate_image_list(root)
-        if not self.has_gen_file_list:
-            self.generate_image_list(root, balance_domains)
         datasets = []
         for i in range(len(CheckerboardOfficeHome211.images_lists)):
             data_list_file = os.path.join(root, CheckerboardOfficeHome211.images_lists[i])
@@ -131,41 +129,48 @@ class CheckerboardOfficeHome211():
             random.shuffle(y)
             y = y[:self.num_categories]
             bal_styles_per_cat = [style_combs[y_i] for y_i in y]
-        
+            val_style_count = [0, 0, 0, 0]
+            novel_style_count = [0, 0, 0, 0]
+
         for cat_index in range(self.num_categories):
             random.shuffle(style_indices)
             style_count = 0
-            added_to_val = False
+            add_first_to_val = True
+            add_second_to_val = False
             for style_index in style_indices:
                 style = self.images_dirs[styles[style_index]]
                 cat = self.CATEGORIES[cat_index]
                 image_dir = os.path.join(root,
                                          style,
                                          cat)
+                paths_and_labels = ''
                 for filename in os.listdir(image_dir):
                     if filename.endswith(".jpg"):
                         path = os.path.join(style, cat, filename)
                         label = self._get_label(style_index, cat_index)
-                        path_and_label = path + ' ' + str(label) + '\n'
-                        if balance_domains:
-                            if style_index in bal_styles_per_cat[cat_index]:  
-                                train_list += path_and_label
-                            elif not added_to_val:
-                                added_to_val = True
-                                val_list += path_and_label
-                                self.cat_style_matrix[style_index, cat_index] = 1
-                            else:
-                                novel_list += path_and_label
-                                self.cat_style_matrix[style_index, cat_index] = 2
-                        else:
-                            if style_count < 2: 
-                                train_list += path_and_label
-                            elif style_count < 3:
-                                train_list += path_and_label
-                                self.cat_style_matrix[style_index, cat_index] = 1
-                            else:
-                                novel_list += path_and_label
-                                self.cat_style_matrix[style_index, cat_index] = 2
+                        paths_and_labels += path + ' ' + str(label) + '\n'
+                if balance_domains:
+                    if style_index in bal_styles_per_cat[cat_index]:  
+                        train_list += paths_and_labels
+                    elif add_second_to_val or (add_first_to_val and val_style_count[style_index] < novel_style_count[style_index]):
+                        val_list += paths_and_labels
+                        self.cat_style_matrix[style_index, cat_index] = 1
+                        val_style_count[style_index] += 1
+                        add_first_to_val = False
+                    else:
+                        novel_list += paths_and_labels
+                        self.cat_style_matrix[style_index, cat_index] = 2
+                        novel_style_count[style_index] += 1
+                        add_second_to_val = True
+                else:
+                    if style_count < 2: 
+                        train_list += paths_and_labels
+                    elif style_count < 3:
+                        train_list += paths_and_labels
+                        self.cat_style_matrix[style_index, cat_index] = 1
+                    else:
+                        novel_list += paths_and_labels
+                        self.cat_style_matrix[style_index, cat_index] = 2
                 style_count += 1
 
         # training, validation/calibration, testing split
@@ -189,18 +194,20 @@ class CheckerboardOfficeHome211():
         # str_matrix += "|\n"
         for row in self.cat_style_matrix:
             str_matrix += "|" + str(styles[style_index])
-            num_train = 0
+            num_train, num_val, num_novel = 0, 0, 0
             for val in row:
                 if val == 0:
                     str_matrix += "|T"
                     num_train += 1
                 elif val == 1:
                     str_matrix += "|V"
+                    num_val += 1
                 elif val == 2:
                     str_matrix += "|N"
+                    num_novel += 1
                 else:
                     str_matrix += "| "
-            str_matrix += f"| Train total={num_train}\n"
+            str_matrix += f"| (T, V, N)=({num_train}, {num_val}, {num_novel})\n"
             style_index += 1
         return str_matrix
 

@@ -5,7 +5,7 @@ from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.data import ForeverDataIterator
 from common.vision.transforms import ResizeImage
 import common.vision.models as models
-from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHome
+from common.vision.datasets.checkerboard_officehome_211_split import CheckerboardOfficeHome211
 # from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
 # from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -18,7 +18,7 @@ import argparse
 import shutil
 import os.path as osp
 import os
-from typing import Optional
+from typing import Optional, List, Tuple
 
 import torch
 import torch.nn as nn
@@ -39,6 +39,22 @@ import wandb
 sys.path.append('../../..')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def generate_conf_mat(pred: List[int], y_true: List[int], 
+    class_labels: str, folder_path: str, title: str, 
+    normalize: Optional[bool]=None, 
+    figsize: Optional[Tuple[int]]=(15,12)):
+    conf_mat = confusion_matrix(y_true, pred, normalize=normalize)
+    df_conf_mat = pd.DataFrame(conf_mat, index=class_labels, columns=class_labels)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    df_conf_mat.to_csv(f'{folder_path}/{title}.csv')
+    plt.figure(figsize=figsize)
+    plt.title(title)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    sn.heatmap(df_conf_mat, annot=True)
+    plt.savefig(f'{folder_path}/{title}.png')
 
 
 def main(args: argparse.Namespace):
@@ -86,15 +102,12 @@ def main(args: argparse.Namespace):
 
     # TODO: create the train, val, test, novel dataset
     transforms_list = [
-        train_transform, val_transform, val_transform, val_transform
+        train_transform, val_transform, val_transform
     ]
-    train_val_test_split = (args.train_split, args.val_split, args.test_split)
-    datasets = CheckerboardOfficeHome(
+
+    datasets = CheckerboardOfficeHome211(
         root=args.root,
         download=False,
-        use_mixed_split=args.use_mixed_split,
-        train_val_test_split=train_val_test_split,
-        styles_per_cat=args.styles_per_cat,
         balance_domains=args.balance_domains,
         transforms=transforms_list)
 
@@ -113,12 +126,6 @@ def main(args: argparse.Namespace):
                             num_workers=args.workers,
                             drop_last=True)
 
-    test_loader = DataLoader(datasets.test_dataset,
-                             batch_size=args.batch_size,
-                             shuffle=True,
-                             num_workers=args.workers,
-                             drop_last=True)
-
     novel_loader = DataLoader(datasets.novel_dataset,
                               batch_size=args.batch_size,
                               shuffle=True,
@@ -131,7 +138,6 @@ def main(args: argparse.Namespace):
     wandb.init(project=args.wandb_name, config=args)
 
     train_iter = ForeverDataIterator(train_loader)
-    # val_iter = ForeverDataIterator(val_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
@@ -183,15 +189,17 @@ def main(args: argparse.Namespace):
         model = MultidomainDiscriminator(
             in_feature=classifier.features_dim,
             hidden_size=1024,
-            num_domains=len(datasets.domains())).to(device
-        )
+            num_domains=len(datasets.domains())).to(device)
         # calculate the accuracy of a model trained to discriminate the domains using the feature representation
-        post_hoc_domain_acc = post_hoc_accuracy.calculate_multidomain_acc(
+        post_hoc_domain_acc, y_true, y_preds = post_hoc_accuracy.calculate_multidomain_acc(
                                                     model,
                                                     features,
                                                     domain_labels,
                                                     device
                                                 )
+        title = f'Post-Hoc Domain Discrimination Confusion Matrix ({dataset_type} Set)'
+        styles = ['Art', 'Clipart', 'Product', 'Real World']
+        generate_conf_mat(y_preds, y_true, styles, f'{args.log}/conf_mat/', title)
         print(f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set) = {post_hoc_domain_acc}')
         return {f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set)': post_hoc_domain_acc}
 
@@ -202,29 +210,20 @@ def main(args: argparse.Namespace):
                                           model.bottleneck).to(device)
         train_features, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        train_domain_labels = CheckerboardOfficeHome.get_style(train_labels)
+        train_domain_labels = CheckerboardOfficeHome211.get_style(train_labels)
         val_features, val_labels = collect_feature_and_labels(
             val_loader, feature_extractor, device)
-        val_domain_labels = CheckerboardOfficeHome.get_style(val_labels)
-        test_features, test_labels = collect_feature_and_labels(
-            test_loader, feature_extractor, device)
-        test_domain_labels = CheckerboardOfficeHome.get_style(test_labels)
-        non_novel_features = torch.cat(
-            [train_features, val_features, test_features], axis=0)
-        non_novel_domain_labels = torch.cat(
-            [train_domain_labels, val_domain_labels, test_domain_labels ], axis=0)
+        val_domain_labels = CheckerboardOfficeHome211.get_style(val_labels)
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
-        all_features = torch.cat([non_novel_features, novel_features], axis=0)
-        all_domain_labels = torch.cat([non_novel_domain_labels, novel_domain_labels], axis=0)
+        novel_domain_labels = CheckerboardOfficeHome211.get_style(novel_labels)
+        all_features = torch.cat([train_features, val_features, novel_features], axis=0)
+        all_domain_labels = torch.cat([train_domain_labels, val_domain_labels, novel_domain_labels], axis=0)
         
         log = {}
         # plot t-SNE and calculate post-hoc domain discriminator accuracy
         log.update(domain_analyze(train_features, train_domain_labels, 'Train'))
         log.update(domain_analyze(val_features, val_domain_labels, 'Validation'))
-        log.update(domain_analyze(test_features, test_domain_labels, 'Test'))
-        log.update(domain_analyze(non_novel_features, non_novel_domain_labels, 'Non-novel'))
         log.update(domain_analyze(novel_features, novel_domain_labels, 'Novel'))
         log.update(domain_analyze(all_features, all_domain_labels, 'Total'))
         return log
@@ -234,21 +233,12 @@ def main(args: argparse.Namespace):
                                         classifier.bottleneck).to(device)
         features, labels = collect_feature_and_labels(data_loader, 
                                         feature_extractor, device)
-        domain_labels = CheckerboardOfficeHome.get_style(labels)
+        domain_labels = CheckerboardOfficeHome211.get_style(labels)
         return domain_analyze(features, domain_labels, dataset_type)  
 
     # analysis the model
     if args.phase == 'analysis':
         wandb.log(full_analysis(classifier))
-        wandb.finish()
-        return
-
-    if args.phase == 'test':
-        acc1, test_log = validate(test_loader, classifier, multidomain_adv,
-                                  args, 'Test', True)
-        print(f'test_acc1 = {acc1}')
-        test_log.update(partial_analysis(test_loader, 'Test'))
-        wandb.log(test_log)
         wandb.finish()
         return
 
@@ -263,6 +253,7 @@ def main(args: argparse.Namespace):
 
     # start training
     best_acc1 = 0.
+    best_epoch = 0
     early_stop_count = 0
     for epoch in range(args.epochs):
         # train for one epoch
@@ -285,6 +276,7 @@ def main(args: argparse.Namespace):
         if acc1 > best_acc1:
             shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
                         logger.get_checkpoint_path('best'))
+            best_epoch = epoch
         
         
         best_acc1 = max(acc1, best_acc1)
@@ -301,16 +293,13 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 
-    acc1, test_log = validate(test_loader, classifier, multidomain_adv, args,
-                              'Test', True)
-    print("test_acc1 = {:3.1f}".format(acc1))
-
     # evaluate on novel set
     acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args,
                                'Novel', True)
     print("novel_acc1 = {:3.1f}".format(acc1))
-
-    eval_log = test_log.copy()
+    
+    eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
+                "Epoch of Best Validation Accuracy (Validation Set)": best_epoch}
     eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
@@ -325,14 +314,14 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
-    losses = AverageMeter('Loss', ':6.2f')
+    total_losses = AverageMeter('Loss', ':6.2f')
     cls_losses = AverageMeter('Cls Loss', ':6.2f')
     transfer_losses = AverageMeter('Transfer Loss', ':6.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs, domain_accs],
+        [batch_time, data_time, total_losses, cls_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # define number of classes to predict
@@ -347,8 +336,8 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         x_tr, labels_tr = next(train_iter)
 
         # retrieve the class and domain from the checkerboard office_home dataset
-        class_labels_tr = CheckerboardOfficeHome.get_category(labels_tr)
-        domain_labels_tr = CheckerboardOfficeHome.get_style(labels_tr)
+        class_labels_tr = CheckerboardOfficeHome211.get_category(labels_tr)
+        domain_labels_tr = CheckerboardOfficeHome211.get_style(labels_tr)
 
         # add training data to device
         x_tr = x_tr.to(device)
@@ -363,33 +352,32 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         # compute output
         y_tr, f_tr = model(x_tr)
 
-        # Updating the loss functions with new labels
+        # calculate losses
+        cls_loss = F.cross_entropy(y_tr, class_labels_tr)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
-
-        if args.d_steps_per_g == 0 or i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
-            # this loss functions works because of the gradient reversal layer
-            loss = transfer_loss
+        total_loss = cls_loss + transfer_loss * args.trade_off
+        
+        if i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
+            loss_to_minimize = transfer_loss
         else:
-            cls_loss = F.cross_entropy(y_tr, class_labels_tr)
-            loss = cls_loss + transfer_loss * args.trade_off
-            
+            loss_to_minimize = total_loss
 
         # calculate accuracy
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
         domain_acc = multidomain_adv.domain_discriminator_accuracy
 
         # update loss meter
-        losses.update(loss.item(), x_tr.size(0))
+        cls_losses.update(cls_loss.item(), x_tr.size(0))
+        transfer_losses.update(transfer_loss.item(), x_tr.size(0))
+        total_losses.update(total_loss.item(), x_tr.size(0))
+
+        # update accuracy meters
         cls_accs.update(cls_acc.item(), x_tr.size(0))
         domain_accs.update(domain_acc.item(), x_tr.size(0))
 
-        # seperated loss between two heads
-        cls_losses.update(cls_loss.item(), x_tr.size(0))
-        transfer_losses.update(transfer_loss.item(), x_tr.size(0))
-
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss.backward()
+        loss_to_minimize.backward()
         optimizer.step()
         lr_scheduler.step()
 
@@ -404,7 +392,7 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
     return {
         "Category Classification Loss (Training Set)": cls_losses.sum,
         'Style Discrimination Loss (Training Set)': transfer_losses.sum,
-        'Total Loss (Training Set)': losses.sum,
+        'Total Loss (Training Set)': total_losses.sum,
         'Category Classification Accuracy (Training Set)': cls_accs.avg,
         'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
         'Classification Logits': y_tr,
@@ -438,9 +426,9 @@ def validate(val_loader: DataLoader,
         confmat = None
 
     class_y_true = []
-    class_predicitons = []
+    class_preds = []
     domain_y_true = []
-    domain_predictions = []
+    domain_preds = []
     all_class_logits = []
     all_class_labels = []
 
@@ -448,9 +436,9 @@ def validate(val_loader: DataLoader,
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             images = images.to(device)
-            class_labels = CheckerboardOfficeHome.get_category(target)
+            class_labels = CheckerboardOfficeHome211.get_category(target)
             class_labels = class_labels.to(device)
-            domain_labels = CheckerboardOfficeHome.get_style(target)
+            domain_labels = CheckerboardOfficeHome211.get_style(target)
             domain_labels = domain_labels.to(device)
 
             # compute output
@@ -481,12 +469,12 @@ def validate(val_loader: DataLoader,
             # gather data for the category confusion matrix
             _, y_tr_pred_class = class_pred.topk(1)
             class_y_true.append(class_labels)
-            class_predicitons.append(y_tr_pred_class)
+            class_preds.append(y_tr_pred_class)
 
             # gather data for the category confusion matrix
             _, y_tr_pred_domain = multidomain_adv.domain_pred.topk(1)
             domain_y_true.append(domain_labels)
-            domain_predictions.append(y_tr_pred_domain)
+            domain_preds.append(y_tr_pred_domain)
 
             # record total loss on meter
             losses.update(loss.item(), images.size(0))
@@ -508,51 +496,28 @@ def validate(val_loader: DataLoader,
     all_class_probs = F.softmax(all_class_logits, dim=1).tolist()
     all_class_labels = torch.squeeze(
         torch.cat(all_class_labels, dim=0)).tolist()
-    classes = list(range(len(CheckerboardOfficeHome.CATEGORIES)))
+    classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
     ece = kernel_ece(all_class_probs, all_class_labels, classes)
     print(f"Expected Calibration Error: {ece}")
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
-        class_predicitons = torch.squeeze(torch.cat(class_predicitons,
+        class_preds = torch.squeeze(torch.cat(class_preds,
                                                     dim=0)).tolist()
         domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
-        domain_predictions = torch.squeeze(torch.cat(domain_predictions,
+        domain_preds = torch.squeeze(torch.cat(domain_preds,
                                                      dim=0)).tolist()
         styles = ['Art', 'Clipart', 'Product', 'Real World']
-        class_conf_mat = confusion_matrix(class_y_true, class_predicitons)
-        domain_conf_mat = confusion_matrix(domain_y_true, domain_predictions)
+        cats = val_loader.dataset.classes
+        # class_conf_mat = confusion_matrix(class_y_true, class_predicitons)
+        # domain_conf_mat = confusion_matrix(domain_y_true, domain_predictions)
+        folderpath = f'{args.log}/conf_mat'
         class_title = f'Category Classification Confusion Matrix ({dataset_type} Set)'
         domain_title = f'Style Discrimination Confusion Matrix ({dataset_type} Set)'
-
+        
         # save the csv of the confusion matrix
-        df_class_cm = pd.DataFrame(class_conf_mat,
-                                   index=val_loader.dataset.classes,
-                                   columns=val_loader.dataset.classes)
-        if not os.path.exists(f'{args.log}/conf_mat/'):
-            os.makedirs(f'{args.log}/conf_mat/')
-        df_class_cm.to_csv(f'{args.log}/conf_mat/{class_title}.csv')
-        df_domain_cm = pd.DataFrame(domain_conf_mat,
-                                    index=styles,
-                                    columns=styles)
-        df_domain_cm.to_csv(f'{args.log}/conf_mat/{domain_title}.csv')
-
-        # save the pngs of the category classification confusion matrix
-        plt.figure(figsize=(25, 22))
-        plt.title(class_title)
-        # TODO: Fix x and y label for confusion matrix png
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        sn.heatmap(df_class_cm, annot=True)
-        plt.savefig(f"{args.log}/conf_mat/{class_title}.png")
-
-        # save the pngs of the style discrimination classification confusion matrix
-        plt.figure(figsize=(15, 12))
-        plt.title(domain_title)
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        sn.heatmap(df_domain_cm, annot=True)
-        plt.savefig(f'{args.log}/conf_mat/{domain_title}.png')
+        generate_conf_mat(class_preds, class_y_true, cats, folderpath, class_title, figsize=(25,22))
+        generate_conf_mat(domain_preds, domain_y_true, styles, folderpath, domain_title)
 
     return top1.avg, {
         f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
@@ -635,10 +600,10 @@ if __name__ == '__main__':
                         metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs',
-                        default=20,
+                        default=30,
                         type=int,
                         metavar='N',
-                        help='number of total epochs to run')
+                        help='number of total epochs to run (default: 30)')
     parser.add_argument('-i',
                         '--iters-per-epoch',
                         default=1000,
@@ -675,48 +640,6 @@ if __name__ == '__main__':
         help="When phase is 'test', only test the model on test set."
         "When phase is 'novel', only test the model on the novel set."
         "When phase is 'analysis', only analysis the model.")
-    # parser.add_argument('--use-mixed-split',
-    #                     default=False,
-    #                     action='store_true',
-    #                     help=''''Randomly split the non-novel dataset into three partitions
-    #                         (training, validation, and testing set). All three datasets
-    #                         will share category-style combinations.''')
-    parser.add_argument(
-        '--mixed-split',
-        dest="use_mixed_split",
-        default=True,
-        action='store_true',
-        help='''Randomly split the non-novel dataset into three partitions
-                (training, validation, and testing set). All three datasets
-                will share category-style combinations.''')
-    parser.add_argument(
-        '--no-mixed-split',
-        dest="use_mixed_split",
-        default=True,
-        action='store_false',
-        help='''Split the dataset into three partitions such that the validation
-                dataset and the training dataset do not share category-combinations with
-                the training dataset. ''')
-    parser.add_argument(
-        '--train-split',
-        default=0.5,
-        type=float,
-        help='How to split the non-novel data into training data.')
-    parser.add_argument(
-        '--val-split',
-        type=float,
-        default=0.25,
-        help='How to split the non-novel data into validation data.')
-    parser.add_argument(
-        '--test-split',
-        type=float,
-        default=0.25,
-        help='How to split the non-novel data into testing data.')
-    parser.add_argument(
-        '--styles-per-cat',
-        default=2,
-        type=int,
-        help='number of styles per category in the non-novel dataset')
     # parser.add_argument('--balance-domains',
     #                     default=False,
     #                     action='store_true',
@@ -763,14 +686,14 @@ if __name__ == '__main__':
         action='store_false',
         help='''If true, load the best model when testing and analyzing.
         If false, load the latest model when testing and analyzing.''')
-    parser.add_argument('--early-stopping',
-                        default=False,
-                        action='store_true',
-                        help='use early stopping on validation set when training.')
-    parser.add_argument('--patience',
-                        default=10,
-                        type=int,
-                        help='number of epochs to wait before employing earlystopping')
+    # parser.add_argument('--early-stopping',
+    #                     default=False,
+    #                     action='store_true',
+    #                     help='use early stopping on validation set when training.')
+    # parser.add_argument('--patience',
+    #                     default=10,
+    #                     type=int,
+    #                     help='number of epochs to wait before employing earlystopping')
     parser.add_argument('--d-steps-per-g',
                         default=0,
                         type=int,
