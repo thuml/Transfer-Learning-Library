@@ -243,7 +243,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'novel':
-        acc1, novel_log = validate(novel_loader, classifier, multidomain_adv,
+        acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv,
                                    args, 'Novel', True)
         print(f'novel_acc1 = {acc1}')
         novel_log.update(partial_analysis(novel_log, 'Novel'))
@@ -261,8 +261,9 @@ def main(args: argparse.Namespace):
                           lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1, val_log = validate(val_loader, classifier, multidomain_adv, args,
-                                 'Validation', epoch == args.epochs - 1)
+        is_final_epoch = epoch == args.epochs - 1
+        acc1, val_log, t = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Validation', is_final_epoch, is_final_epoch)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -277,14 +278,12 @@ def main(args: argparse.Namespace):
             shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
                         logger.get_checkpoint_path('best'))
             best_epoch = epoch
-        
-        
         best_acc1 = max(acc1, best_acc1)
         
 
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
-    # evaluate on test set
+    # load the model used for evaluation
     if args.use_best_model:
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('best')))
@@ -294,8 +293,8 @@ def main(args: argparse.Namespace):
             torch.load(logger.get_checkpoint_path('latest')))
 
     # evaluate on novel set
-    acc1, novel_log = validate(novel_loader, classifier, multidomain_adv, args,
-                               'Novel', True)
+    acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
+                               'Novel', True, False, t)
     print("novel_acc1 = {:3.1f}".format(acc1))
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
@@ -399,12 +398,24 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
     }
 
 
+def ece_post_scaling(logits: torch.Tensor,
+                     temperature: int,
+                     class_labels: List[int], 
+                     classes: List[int]):
+    scaled_logits = logits / temperature
+    scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
+    scaled_ece = kernel_ece(scaled_class_probs, class_labels, classes)
+    return scaled_ece
+
+
 def validate(val_loader: DataLoader,
              model: ImageClassifier,
              multidomain_adv: MultidomainAdversarialLoss,
              args: argparse.Namespace,
              dataset_type: str,
-             gen_conf_mat: Optional[bool] = False) -> float:
+             gen_conf_mat: Optional[bool] = False,
+             calc_temp: Optional[bool] = False,
+             input_temperature: Optional[int] = 1):
     batch_time = AverageMeter('Time', ':6.3f')
     cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -431,6 +442,7 @@ def validate(val_loader: DataLoader,
     domain_preds = []
     all_class_logits = []
     all_class_labels = []
+    log = {}
 
     with torch.no_grad():
         end = time.time()
@@ -499,6 +511,22 @@ def validate(val_loader: DataLoader,
     classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
     ece = kernel_ece(all_class_probs, all_class_labels, classes)
     print(f"Expected Calibration Error: {ece}")
+    # TODO: Distinguish t and temperature
+    calculated_temperature = 1
+    used_temperature = None
+
+    if calc_temp:
+        calculated_temperature = temp_scaling(all_class_probs, all_class_labels, len(classes))[0]
+        print(f"Calculating Temperature: {calculated_temperature}")
+        log.update({"Calculated Temperature": calculated_temperature})
+        used_temperature = calculated_temperature
+    elif input_temperature != 1:
+        used_temperature = input_temperature
+
+    if used_temperature:
+        scaled_ece = ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes)
+        print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
+        log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
@@ -518,15 +546,18 @@ def validate(val_loader: DataLoader,
         # save the csv of the confusion matrix
         generate_conf_mat(class_preds, class_y_true, cats, folderpath, class_title, figsize=(25,22))
         generate_conf_mat(domain_preds, domain_y_true, styles, folderpath, domain_title)
-
-    return top1.avg, {
-        f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
-        f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
-        f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
-        f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
-        f"Total Loss ({dataset_type} Set)": losses.sum,
-        f"Expected Calibration Error ({dataset_type} Set)": ece,
-    }
+    
+    log.update(
+        {
+            f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
+            f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
+            f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
+            f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
+            f"Total Loss ({dataset_type} Set)": losses.sum,
+            f"Expected Calibration Error ({dataset_type} Set)": ece,
+        }
+    )
+    return top1.avg, log, calculated_temperature
 
 
 if __name__ == '__main__':

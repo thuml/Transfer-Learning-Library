@@ -78,7 +78,7 @@ def mirror_1d(d, xmin=None, xmax=None):
 # 3) If calc_acc is specified, return estimated accuarcy
 # for each item as well as its density (z)
 def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
-               binary=False, verbose=True):
+               binary=False, verbose=False):
 
     # X values for KDE evaluation points
     # These values are based on the triweight kernel but may omit 0,1
