@@ -34,6 +34,7 @@ import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
 from utils_ajay import temp_scaling, kernel_ece
+from sklearn.metrics import brier_score_loss
 import wandb
 
 sys.path.append('../../..')
@@ -50,10 +51,10 @@ def generate_conf_mat(pred: List[int], y_true: List[int],
         os.makedirs(folder_path)
     df_conf_mat.to_csv(f'{folder_path}/{title}.csv')
     plt.figure(figsize=figsize)
+    sn.heatmap(df_conf_mat, annot=True)
     plt.title(title)
     plt.xlabel('Predicted')
     plt.ylabel('True')
-    sn.heatmap(df_conf_mat, annot=True)
     plt.savefig(f'{folder_path}/{title}.png')
 
 
@@ -254,7 +255,6 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.
     best_epoch = 0
-    early_stop_count = 0
     for epoch in range(args.epochs):
         # train for one epoch
         train_log = train(train_iter, classifier, multidomain_adv, optimizer,
@@ -397,6 +397,35 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         'Classification Logits': y_tr,
     }
 
+def calibration_evaluation(class_probs: List[List[int]], 
+                           class_labels: List[int], 
+                           classes: List[int],
+                           dataset_type: str,
+                           folder_path: str,
+                           title: str,
+                           figsize: Optional[Tuple[int]] = (12, 15)):
+    ece, est_acc, z = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
+    brier = brier_score_loss(class_labels, class_probs)
+
+    # conf_mat = confusion_matrix(y_true, pred, normalize=normalize)
+    # df_conf_mat = pd.DataFrame(conf_mat, index=class_labels, columns=class_labels)
+
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
+
+    # df_conf_mat.to_csv(f'{folder_path}/{title}.csv')
+    # plt.figure(figsize=figsize)
+    # plt.title(title)
+    # plt.xlabel('Actual Accuracy')
+    # plt.ylabel('Expected Accuracy')
+    # # sn.heatmap(df_conf_mat, annot=True)
+    # plt.savefig(f'{folder_path}/{title}.png')
+
+    return {
+        f'KDE Expected Calibration Error ({dataset_type})': ece,
+        f'Brier Score ({dataset_type})': brier
+    }
+
 
 def ece_post_scaling(logits: torch.Tensor,
                      temperature: int,
@@ -516,7 +545,8 @@ def validate(val_loader: DataLoader,
     used_temperature = None
 
     if calc_temp:
-        calculated_temperature = temp_scaling(all_class_probs, all_class_labels, len(classes))[0]
+        all_class_logits_list = all_class_logits.tolist()
+        calculated_temperature = temp_scaling(all_class_logits_list, all_class_labels, len(classes))[0]
         print(f"Calculating Temperature: {calculated_temperature}")
         log.update({"Calculated Temperature": calculated_temperature})
         used_temperature = calculated_temperature

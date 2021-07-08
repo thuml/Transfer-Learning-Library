@@ -29,14 +29,14 @@ def nll_fn(t, *args):
 # If probs_test is given, return its calibrated version too.
 # Inspired by implementation of Zhang et al. (2020)
 # with additional clipping of input probs.
-def temp_scaling(probs, labels, n_classes, probs_test=[]):
+def temp_scaling(logits, labels, n_classes, probs_test=[]):
 
     y = np.eye(n_classes)[labels] # one-hot encoding
     eps = 1e-20
-    ts_probs = np.clip(probs, eps, 1 - eps)
-    ts_logits = np.log(ts_probs) - np.log(1 - ts_probs)
-    t = scipy.optimize.minimize(nll_fn, 1.0, args=(ts_logits, y),
-                                method='L-BFGS-B', bounds=((0.05, 5.0),),
+    # ts_probs = np.clip(probs, eps, 1 - eps)
+    # ts_logits = np.log(ts_probs) - np.log(1 - ts_probs)
+    t = scipy.optimize.minimize(nll_fn, 1.0, args=(logits, y),
+                                method='L-BFGS-B', bounds=((0.05, 55.0),),
                                 tol=1e-12)
     t = t.x
 
