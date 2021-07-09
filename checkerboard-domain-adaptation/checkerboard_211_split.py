@@ -17,6 +17,7 @@ import sys
 import argparse
 import shutil
 import os.path as osp
+import numpy as np
 import os
 from typing import Optional, List, Tuple
 
@@ -44,7 +45,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def generate_conf_mat(pred: List[int], y_true: List[int], 
     class_labels: str, folder_path: str, title: str, 
     normalize: Optional[bool]=None, 
-    figsize: Optional[Tuple[int]]=(15,12)):
+    figsize: Optional[Tuple[int]]=(15, 12)):
     conf_mat = confusion_matrix(y_true, pred, normalize=normalize)
     df_conf_mat = pd.DataFrame(conf_mat, index=class_labels, columns=class_labels)
     if not os.path.exists(folder_path):
@@ -397,44 +398,62 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         'Classification Logits': y_tr,
     }
 
+def brier_multi(targets, probs, num_classes):
+    shape = (targets.size, num_classes)
+    one_hot_targets = np.zeros(shape)
+    rows = np.arange(targets.size)
+    one_hot_targets[rows, targets] = 0
+    return np.mean(np.sum((probs - one_hot_targets)**2, axis=1))
+
 def calibration_evaluation(class_probs: List[List[int]], 
                            class_labels: List[int], 
                            classes: List[int],
                            dataset_type: str,
                            folder_path: str,
-                           title: str,
+                           temp_scaled: Optional[bool] = False,
                            figsize: Optional[Tuple[int]] = (12, 15)):
-    ece, est_acc, z = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
-    brier = brier_score_loss(class_labels, class_probs)
+    ece, est_acc, z, x = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
+    brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
 
-    # conf_mat = confusion_matrix(y_true, pred, normalize=normalize)
-    # df_conf_mat = pd.DataFrame(conf_mat, index=class_labels, columns=class_labels)
+    print(f"KDE Expected Calibration Error ({dataset_type} Set): {ece}")
+    print(f"Brier Score ({dataset_type}): {brier}")
 
-    # if not os.path.exists(folder_path):
-    #     os.makedirs(folder_path)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
 
-    # df_conf_mat.to_csv(f'{folder_path}/{title}.csv')
-    # plt.figure(figsize=figsize)
-    # plt.title(title)
-    # plt.xlabel('Actual Accuracy')
-    # plt.ylabel('Expected Accuracy')
+    add_on = ''
+    if temp_scaled:
+        add_on = 'Post-Temperature-Scaling '
+    title = f'Reliability Diagram {add_on}({dataset_type} Set)'
+    
+    plt.figure(figsize=figsize)
+    f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    f.suptitle(title)
+    axarr[0].plot(x, est_acc, color='red')
+    axarr[0].plot(x, x, color='blue')
+    axarr[0].set(ylabel='Expected Accuracy')
+    axarr[1].plot(x, z, color='green')
+    axarr[1].set(ylabel='Density')
+    plt.xlabel('Expected Accuracy')
+    # plt.plot(x, est_acc, color='red') # estimated error
+    # plt.plot(x, x, color='blue') # perfectly calibrated curve
     # # sn.heatmap(df_conf_mat, annot=True)
-    # plt.savefig(f'{folder_path}/{title}.png')
+    plt.savefig(f'{folder_path}/{title}.png')
 
     return {
-        f'KDE Expected Calibration Error ({dataset_type})': ece,
-        f'Brier Score ({dataset_type})': brier
+        f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
+        f'Brier Score {add_on}({dataset_type})': brier
     }
 
 
 def ece_post_scaling(logits: torch.Tensor,
                      temperature: int,
                      class_labels: List[int], 
-                     classes: List[int]):
+                     classes: List[int],
+                     dataset_type: str):
     scaled_logits = logits / temperature
     scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
-    scaled_ece = kernel_ece(scaled_class_probs, class_labels, classes)
-    return scaled_ece
+    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', True)
 
 
 def validate(val_loader: DataLoader,
@@ -538,8 +557,10 @@ def validate(val_loader: DataLoader,
     all_class_labels = torch.squeeze(
         torch.cat(all_class_labels, dim=0)).tolist()
     classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
-    ece = kernel_ece(all_class_probs, all_class_labels, classes)
-    print(f"Expected Calibration Error: {ece}")
+    #ece = kernel_ece(all_class_probs, all_class_labels, classes)
+
+    log.update(calibration_evaluation(all_class_probs, all_class_labels, classes, dataset_type, f'{args.log}/calibration/'))
+    # print(f"Expected Calibration Error: {ece}")
     # TODO: Distinguish t and temperature
     calculated_temperature = 1
     used_temperature = None
@@ -554,9 +575,10 @@ def validate(val_loader: DataLoader,
         used_temperature = input_temperature
 
     if used_temperature:
-        scaled_ece = ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes)
-        print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
-        log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
+        # scaled_ece = ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes)
+        # print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
+        # log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
+        log.update(ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type))
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()

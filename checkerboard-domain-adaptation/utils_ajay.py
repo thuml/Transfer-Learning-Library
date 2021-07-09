@@ -182,6 +182,6 @@ def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
                    pp2[np.abs(x - pr).argmin()] for pr in max_prob]
         closest = [np.abs(x - pr).argmin() for pr in max_prob]
         z = [np.sum(pp2[c]) for c in closest]
-        return ece, est_acc, z
+        return ece, est_acc, z, np.arange(0.0, 1.0 + step, step)
 
     return ece
