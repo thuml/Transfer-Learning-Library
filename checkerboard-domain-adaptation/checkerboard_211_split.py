@@ -451,7 +451,7 @@ def calibration_evaluation(class_probs: List[List[int]],
     }
 
 
-def ece_post_scaling(logits: torch.Tensor,
+def calib_eval_post_scaling(logits: torch.Tensor,
                      temperature: int,
                      class_labels: List[int], 
                      classes: List[int],
@@ -459,7 +459,7 @@ def ece_post_scaling(logits: torch.Tensor,
                      gen_reli_diag: Optional[bool] = True):
     scaled_logits = logits / temperature
     scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
-    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', True, gen_reli_diag=gen_reli_diag)
+    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', temp_scaled=True, gen_reli_diag=gen_reli_diag)
 
 
 def validate(val_loader: DataLoader,
@@ -569,9 +569,10 @@ def validate(val_loader: DataLoader,
     log.update(calibration_evaluation(
                                     all_class_probs, 
                                     all_class_labels, 
-                                    classes, dataset_type, 
-                                    f'{args.log}/calibration/'), 
-                                    gen_reli_diag=gen_reli_diag
+                                    classes, 
+                                    dataset_type, 
+                                    f'{args.log}/calibration/', 
+                                    gen_reli_diag=gen_reli_diag)
                                 )
     # print(f"Expected Calibration Error: {ece}")
     calculated_temperature = 1
@@ -591,7 +592,7 @@ def validate(val_loader: DataLoader,
         # print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
         # log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
         # TODO: Rename function
-        log.update(ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type, gen_reli_diag=gen_reli_diag))
+        log.update(calib_eval_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type, gen_reli_diag=gen_reli_diag))
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
