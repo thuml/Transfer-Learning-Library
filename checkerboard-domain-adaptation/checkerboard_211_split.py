@@ -264,7 +264,8 @@ def main(args: argparse.Namespace):
         # evaluate on validation set
         is_final_epoch = epoch == args.epochs - 1
         acc1, val_log, t = validate(val_loader, classifier, multidomain_adv, args,
-                                 'Validation', is_final_epoch, is_final_epoch)
+                                 'Validation',  gen_conf_mat=is_final_epoch, 
+                                 calc_temp=is_final_epoch, gen_reli_diag=is_final_epoch)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -357,6 +358,7 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
         total_loss = cls_loss + transfer_loss * args.trade_off
         
+        # TODO: Freeze the weights (or not)
         if i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
             loss_to_minimize = transfer_loss
         else:
@@ -411,8 +413,10 @@ def calibration_evaluation(class_probs: List[List[int]],
                            dataset_type: str,
                            folder_path: str,
                            temp_scaled: Optional[bool] = False,
-                           figsize: Optional[Tuple[int]] = (12, 15)):
-    ece, est_acc, z, x = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
+                           figsize: Optional[Tuple[int]] = (12, 15),
+                           gen_reli_diag: Optional[bool] = True):
+    # TODO: Generate image if applicable (only after debugging the graph)
+    ece, act_acc, est_acc, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
     brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
 
     print(f"KDE Expected Calibration Error ({dataset_type} Set): {ece}")
@@ -426,19 +430,20 @@ def calibration_evaluation(class_probs: List[List[int]],
         add_on = 'Post-Temperature-Scaling '
     title = f'Reliability Diagram {add_on}({dataset_type} Set)'
     
-    plt.figure(figsize=figsize)
-    f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
-    f.suptitle(title)
-    axarr[0].plot(x, est_acc, color='red')
-    axarr[0].plot(x, x, color='blue')
-    axarr[0].set(ylabel='Expected Accuracy')
-    axarr[1].plot(x, z, color='green')
-    axarr[1].set(ylabel='Density')
-    plt.xlabel('Expected Accuracy')
-    # plt.plot(x, est_acc, color='red') # estimated error
-    # plt.plot(x, x, color='blue') # perfectly calibrated curve
-    # # sn.heatmap(df_conf_mat, annot=True)
-    plt.savefig(f'{folder_path}/{title}.png')
+    if gen_reli_diag:
+        plt.figure(figsize=figsize)
+        f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+        f.suptitle(title)
+        axarr[0].plot(act_acc, est_acc, color='red')
+        axarr[0].plot(act_acc, act_acc, color='blue')
+        axarr[0].set(ylabel='Expected Accuracy')
+        axarr[1].plot(act_acc, density, color='green')
+        axarr[1].set(ylabel='Density')
+        plt.xlabel('Confidence')
+        # plt.plot(x, est_acc, color='red') # estimated error
+        # plt.plot(x, x, color='blue') # perfectly calibrated curve
+        # # sn.heatmap(df_conf_mat, annot=True)
+        plt.savefig(f'{folder_path}/{title}.png')
 
     return {
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
@@ -450,10 +455,11 @@ def ece_post_scaling(logits: torch.Tensor,
                      temperature: int,
                      class_labels: List[int], 
                      classes: List[int],
-                     dataset_type: str):
+                     dataset_type: str,
+                     gen_reli_diag: Optional[bool] = True):
     scaled_logits = logits / temperature
     scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
-    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', True)
+    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', True, gen_reli_diag=gen_reli_diag)
 
 
 def validate(val_loader: DataLoader,
@@ -463,7 +469,8 @@ def validate(val_loader: DataLoader,
              dataset_type: str,
              gen_conf_mat: Optional[bool] = False,
              calc_temp: Optional[bool] = False,
-             input_temperature: Optional[int] = 1):
+             input_temperature: Optional[int] = 1,
+             gen_reli_diag: Optional[bool] = True):
     batch_time = AverageMeter('Time', ':6.3f')
     cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -559,9 +566,14 @@ def validate(val_loader: DataLoader,
     classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
     #ece = kernel_ece(all_class_probs, all_class_labels, classes)
 
-    log.update(calibration_evaluation(all_class_probs, all_class_labels, classes, dataset_type, f'{args.log}/calibration/'))
+    log.update(calibration_evaluation(
+                                    all_class_probs, 
+                                    all_class_labels, 
+                                    classes, dataset_type, 
+                                    f'{args.log}/calibration/'), 
+                                    gen_reli_diag=gen_reli_diag
+                                )
     # print(f"Expected Calibration Error: {ece}")
-    # TODO: Distinguish t and temperature
     calculated_temperature = 1
     used_temperature = None
 
@@ -569,7 +581,7 @@ def validate(val_loader: DataLoader,
         all_class_logits_list = all_class_logits.tolist()
         calculated_temperature = temp_scaling(all_class_logits_list, all_class_labels, len(classes))[0]
         print(f"Calculating Temperature: {calculated_temperature}")
-        log.update({"Calculated Temperature": calculated_temperature})
+        log.update({f"Calculated Temperature (Using {dataset_type} Set))": calculated_temperature})
         used_temperature = calculated_temperature
     elif input_temperature != 1:
         used_temperature = input_temperature
@@ -578,7 +590,8 @@ def validate(val_loader: DataLoader,
         # scaled_ece = ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes)
         # print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
         # log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
-        log.update(ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type))
+        # TODO: Rename function
+        log.update(ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type, gen_reli_diag=gen_reli_diag))
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
@@ -605,8 +618,7 @@ def validate(val_loader: DataLoader,
             f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
             f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
             f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
-            f"Total Loss ({dataset_type} Set)": losses.sum,
-            f"Expected Calibration Error ({dataset_type} Set)": ece,
+            f"Total Loss ({dataset_type} Set)": losses.sum
         }
     )
     return top1.avg, log, calculated_temperature
