@@ -283,7 +283,7 @@ def main(args: argparse.Namespace):
         best_acc1 = max(acc1, best_acc1)
         
 
-    print("best_acc1 = {:3.1f}".format(best_acc1))
+    print("best_val_acc1 = {:3.1f}".format(best_acc1))
 
     # load the model used for evaluation
     if args.use_best_model:
@@ -404,7 +404,7 @@ def brier_multi(targets, probs, num_classes):
     shape = (targets.size, num_classes)
     one_hot_targets = np.zeros(shape)
     rows = np.arange(targets.size)
-    one_hot_targets[rows, targets] = 0
+    one_hot_targets[rows, targets] = 1
     return np.mean(np.sum((probs - one_hot_targets)**2, axis=1))
 
 def calibration_evaluation(class_probs: List[List[int]], 
