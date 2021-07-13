@@ -263,9 +263,9 @@ def main(args: argparse.Namespace):
 
         # evaluate on validation set
         is_final_epoch = epoch == args.epochs - 1
-        acc1, val_log, t = validate(val_loader, classifier, multidomain_adv, args,
-                                 'Validation',  gen_conf_mat=is_final_epoch, 
-                                 calc_temp=is_final_epoch, gen_reli_diag=is_final_epoch)
+        acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Validation',  gen_conf_mat=False, 
+                                 calc_temp=False, gen_reli_diag=False)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -281,9 +281,6 @@ def main(args: argparse.Namespace):
                         logger.get_checkpoint_path('best'))
             best_epoch = epoch
         best_acc1 = max(acc1, best_acc1)
-        
-
-    print("best_val_acc1 = {:3.1f}".format(best_acc1))
 
     # load the model used for evaluation
     if args.use_best_model:
@@ -294,13 +291,21 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 
+    # evaluate best model on validation set with more information and temp calculation
+    acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Best Model on Validation',  gen_conf_mat=True, 
+                                 calc_temp=True, gen_reli_diag=True)
+    print("best_val_acc1 = {:3.1f}".format(acc1))
+
     # evaluate on novel set
     acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
-                               'Novel', True, False, t)
+                               'Novel', gen_conf_mat=True, calc_temp=False, 
+                               input_temperature=t, gen_reli_diag=True)
     print("novel_acc1 = {:3.1f}".format(acc1))
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
                 "Epoch of Best Validation Accuracy (Validation Set)": best_epoch}
+    eval_log.update(best_val_log.copy())
     eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
@@ -419,15 +424,16 @@ def calibration_evaluation(class_probs: List[List[int]],
     ece, act_acc, est_acc, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
     brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
 
-    print(f"KDE Expected Calibration Error ({dataset_type} Set): {ece}")
-    print(f"Brier Score ({dataset_type}): {brier}")
+    add_on = ''
+    if temp_scaled:
+        add_on = 'Post-Temperature-Scaling '
+
+    print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
+    print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
 
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
-    add_on = ''
-    if temp_scaled:
-        add_on = 'Post-Temperature-Scaling '
     title = f'Reliability Diagram {add_on}({dataset_type} Set)'
     
     if gen_reli_diag:
@@ -581,7 +587,7 @@ def validate(val_loader: DataLoader,
     if calc_temp:
         all_class_logits_list = all_class_logits.tolist()
         calculated_temperature = temp_scaling(all_class_logits_list, all_class_labels, len(classes))[0]
-        print(f"Calculating Temperature: {calculated_temperature}")
+        print(f"Calculated Temperature: {calculated_temperature}")
         log.update({f"Calculated Temperature (Using {dataset_type} Set))": calculated_temperature})
         used_temperature = calculated_temperature
     elif input_temperature != 1:
