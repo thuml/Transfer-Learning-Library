@@ -315,9 +315,13 @@ def main(args: argparse.Namespace):
 
 
 
-def train(train_iter: ForeverDataIterator, model: ImageClassifier,
-          multidomain_adv: MultidomainAdversarialLoss, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, 
+          model: ImageClassifier,
+          multidomain_adv: MultidomainAdversarialLoss, 
+          optimizer: SGD,
+          lr_scheduler: LambdaLR, 
+          epoch: int, 
+          args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     total_losses = AverageMeter('Loss', ':6.2f')
@@ -329,8 +333,6 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         args.iters_per_epoch,
         [batch_time, data_time, total_losses, cls_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
-
-    # define number of classes to predict
 
     # switch to train mode
     model.train()
@@ -405,6 +407,36 @@ def train(train_iter: ForeverDataIterator, model: ImageClassifier,
         'Classification Logits': y_tr,
     }
 
+def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
+                      scaled_conf: List[int], scaled_est_acc: List[int], scaled_density: List[int],
+                      folder_path: str, dataset_type: str, figsize: Tuple[int]=(12,12)):
+    plt.figure(figsize=figsize)
+    plt.plot([0, 1], [0, 1], color='blue', label='Perfect Calibration')
+    plt.scatter(conf, est_acc, density, color='red', label='Non-Calibrated')
+    plt.scatter(scaled_conf, scaled_est_acc, scaled_density, color='green', label='Calibrated')
+    title = f"Reliability Diagram ({dataset_type} Set)"
+    plt.title(title)
+    plt.xlabel("Confidence")
+    plt.ylabel("Expected Accuracy")
+    plt.legend()
+    
+    graph_folder_path = f'{folder_path}/graph/'
+    data_folder_path = f'{folder_path}/data/'
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    if not os.path.exists(graph_folder_path):
+        os.makedirs(graph_folder_path)
+    if not os.path.exists(data_folder_path):
+        os.makedir(data_folder_path)
+        
+    plt.savefig(f'{graph_folder_path}/{title}.png')
+    np.save(f'{data_folder_path}/{title}_est_acc.npy', est_acc)
+    np.save(f'{data_folder_path}/{title}_conf.npy', conf)
+    np.save(f'{data_folder_path}/{title}_density.npy', density)
+    np.save(f'{data_folder_path}/{title}_scaled_est_acc.npy', scaled_est_acc)
+    np.save(f'{data_folder_path}/{title}_scaled_conf.npy', scaled_conf)
+    np.save(f'{data_folder_path}/{title}_scaled_density.npy', scaled_density)
+
 def brier_multi(targets, probs, num_classes):
     shape = (targets.size, num_classes)
     one_hot_targets = np.zeros(shape)
@@ -416,12 +448,13 @@ def calibration_evaluation(class_probs: List[List[int]],
                            class_labels: List[int], 
                            classes: List[int],
                            dataset_type: str,
-                           folder_path: str,
-                           temp_scaled: Optional[bool] = False,
-                           figsize: Optional[Tuple[int]] = (12, 15),
-                           gen_reli_diag: Optional[bool] = True):
+                        #    folder_path: str,
+                           temp_scaled: Optional[bool] = False):
+                        #    figsize: Optional[Tuple[int]] = (12, 12),
+                        #    gen_reli_diag: Optional[bool] = True):
     # TODO: Generate image if applicable (only after debugging the graph)
-    ece, act_acc, est_acc, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
+    ece, est_acc, conf, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
+    
     brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
 
     add_on = ''
@@ -431,30 +464,34 @@ def calibration_evaluation(class_probs: List[List[int]],
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
     print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
 
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    # if not os.path.exists(folder_path):
+    #     os.makedirs(folder_path)
 
-    title = f'Reliability Diagram {add_on}({dataset_type} Set)'
+    # title = f'Reliability Diagram {add_on}({dataset_type} Set)'
     
-    if gen_reli_diag:
-        plt.figure(figsize=figsize)
-        f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
-        f.suptitle(title)
-        axarr[0].plot(act_acc, est_acc, color='red')
-        axarr[0].plot(act_acc, act_acc, color='blue')
-        axarr[0].set(ylabel='Expected Accuracy')
-        axarr[1].plot(act_acc, density, color='green')
-        axarr[1].set(ylabel='Density')
-        plt.xlabel('Confidence')
-        # plt.plot(x, est_acc, color='red') # estimated error
-        # plt.plot(x, x, color='blue') # perfectly calibrated curve
-        # # sn.heatmap(df_conf_mat, annot=True)
-        plt.savefig(f'{folder_path}/{title}.png')
+    # if gen_reli_diag:
+    #     plt.figure(figsize=figsize)
+    #     plt.plot([0, 1], [0, 1], color='blue')
+    #     plt.scatter(conf, est_acc, density, color='red')
+    #     # np.save(f'{folder_path}/{title}_est_acc.npy', est_acc)
+    #     # np.save(f'{folder_path}/{title}_conf.npy', conf)
+    #     # np.save(f'{folder_path}/{title}_density.npy', density)
+    #     plt.title(title)
+    #     # f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
+    #     # f.suptitle(title)
+    #     # axarr[0].scatter(act_acc, est_acc, density, color='red')
+    #     # axarr[0].plot([0, 1], [0, 1], color='blue')
+    #     # axarr[0].set(ylabel='Expected Accuracy')
+    #     # axarr[1].plot(act_acc, density, color='green')
+    #     # axarr[1].set(ylabel='Density')
+    #     plt.xlabel('Confidence')
+    #     plt.ylabel('Expected Accuracy')
+    #     plt.savefig(f'{folder_path}/{title}.png')
 
     return {
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
         f'Brier Score {add_on}({dataset_type})': brier
-    }
+    }, est_acc, conf, density
 
 
 def calib_eval_post_scaling(logits: torch.Tensor,
@@ -465,7 +502,14 @@ def calib_eval_post_scaling(logits: torch.Tensor,
                      gen_reli_diag: Optional[bool] = True):
     scaled_logits = logits / temperature
     scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
-    return calibration_evaluation(scaled_class_probs, class_labels, classes, dataset_type, f'{args.log}/calibration/', temp_scaled=True, gen_reli_diag=gen_reli_diag)
+    return calibration_evaluation(
+        scaled_class_probs, 
+        class_labels, classes, 
+        dataset_type, 
+        # f'{args.log}/calibration/', 
+        temp_scaled=True 
+        #gen_reli_diag=gen_reli_diag 
+    )
 
 
 def validate(val_loader: DataLoader,
@@ -571,15 +615,15 @@ def validate(val_loader: DataLoader,
         torch.cat(all_class_labels, dim=0)).tolist()
     classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
     #ece = kernel_ece(all_class_probs, all_class_labels, classes)
-
-    log.update(calibration_evaluation(
-                                    all_class_probs, 
-                                    all_class_labels, 
-                                    classes, 
-                                    dataset_type, 
-                                    f'{args.log}/calibration/', 
-                                    gen_reli_diag=gen_reli_diag)
-                                )
+    
+    cal_log, est_acc, conf, density = calibration_evaluation(
+                                        all_class_probs, 
+                                        all_class_labels, 
+                                        classes, 
+                                        dataset_type 
+                                        # f'{args.log}/calibration/'
+                                    )
+    log.update(cal_log)
     # print(f"Expected Calibration Error: {ece}")
     calculated_temperature = 1
     used_temperature = None
@@ -594,11 +638,22 @@ def validate(val_loader: DataLoader,
         used_temperature = input_temperature
 
     if used_temperature:
-        # scaled_ece = ece_post_scaling(all_class_logits, used_temperature, all_class_labels, classes)
-        # print(f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set): {scaled_ece}")
-        # log.update({f"Expected Calibration Error Post-Temperature Scaling (T = {used_temperature}, {dataset_type} Set)": scaled_ece})
         # TODO: Rename function
-        log.update(calib_eval_post_scaling(all_class_logits, used_temperature, all_class_labels, classes, dataset_type, gen_reli_diag=gen_reli_diag))
+        scaled_cal_log, scaled_est_acc, scaled_conf, scaled_density = calib_eval_post_scaling(
+                                                                        all_class_logits, 
+                                                                        used_temperature, 
+                                                                        all_class_labels, 
+                                                                        classes, 
+                                                                        dataset_type 
+                                                                        # gen_reli_diag=gen_reli_diag
+                                                                    )
+        log.update(scaled_cal_log)
+    
+    if gen_reli_diag:
+        reliability_diag(conf, est_acc, density, scaled_conf, 
+                        scaled_est_acc, scaled_density,
+                        f'{args.log}/calibration/', dataset_type)
+        
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()

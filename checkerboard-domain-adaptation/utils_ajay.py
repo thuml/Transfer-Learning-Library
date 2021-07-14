@@ -177,17 +177,18 @@ def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
         # pr is really close to 0 or 1, and 0/1 are not in x,
         # it could find the "closest" outside of that range.
         # Fixed above to ensure 0 and 1 are in x.
-        # est_acc = [perc *
-        #            pp1[np.abs(x - pr).argmin()] /
-        #            pp2[np.abs(x - pr).argmin()] for pr in max_prob]
-        # closest = [np.abs(x - pr).argmin() for pr in max_prob]
-        # z = [np.sum(pp2[c]) for c in closest]
-        act_acc = np.arange(0.0, 1.0 + step, step)
-        start = np.abs(x).argmin()
-        end = np.abs(x - 1).argmin() + 1
-        est_acc = perc * pp1[start:end] / pp2[start:end]
-        density = pp2[start:end]
-        #return ece, est_acc, z, np.arange(0.0, 1.0 + step, step)
-        return ece, act_acc, est_acc, density
+        est_acc = [perc *
+                   pp1[np.abs(x - pr).argmin()] /
+                   pp2[np.abs(x - pr).argmin()] for pr in max_prob]
+        closest = [np.abs(x - pr).argmin() for pr in max_prob]
+        z = [np.sum(pp2[c]) for c in closest]
+        return ece, est_acc, max_prob, z
+        # act_acc = np.arange(0.0, 1.0 + step, step)
+        # start = np.abs(x).argmin()
+        # end = np.abs(x - 1).argmin() + 1
+        # est_acc = perc * pp1[start:end] / pp2[start:end]
+        # density = pp2[start:end]
+        # return ece, est_acc, z, np.arange(0.0, 1.0 + step, step)
+        # return ece, act_acc, est_acc, density
 
     return ece
