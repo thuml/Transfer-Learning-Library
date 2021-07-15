@@ -265,7 +265,7 @@ def main(args: argparse.Namespace):
         is_final_epoch = epoch == args.epochs - 1
         acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
                                  'Validation',  gen_conf_mat=False, 
-                                 calc_temp=False, gen_reli_diag=False)
+                                 calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
 
         total_log = train_log.copy()
         total_log.update(val_log.copy())
@@ -409,7 +409,7 @@ def train(train_iter: ForeverDataIterator,
 
 def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
                       scaled_conf: List[int], scaled_est_acc: List[int], scaled_density: List[int],
-                      folder_path: str, dataset_type: str, figsize: Tuple[int]=(12,12)):
+                      log_path: str, dataset_type: str, figsize: Optional[Tuple[int]]=(7,7)):
     plt.figure(figsize=figsize)
     plt.plot([0, 1], [0, 1], color='blue', label='Perfect Calibration')
     plt.scatter(conf, est_acc, density, color='red', label='Non-Calibrated')
@@ -420,14 +420,14 @@ def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
     plt.ylabel("Expected Accuracy")
     plt.legend()
     
-    graph_folder_path = f'{folder_path}/graph/'
-    data_folder_path = f'{folder_path}/data/'
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    graph_folder_path = f'{log_path}/reliability-diagram/graph/'
+    data_folder_path = f'{log_path}/reliability-diagram/data/'
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
     if not os.path.exists(graph_folder_path):
         os.makedirs(graph_folder_path)
     if not os.path.exists(data_folder_path):
-        os.makedir(data_folder_path)
+        os.makedirs(data_folder_path)
         
     plt.savefig(f'{graph_folder_path}/{title}.png')
     np.save(f'{data_folder_path}/{title}_est_acc.npy', est_acc)
@@ -448,11 +448,7 @@ def calibration_evaluation(class_probs: List[List[int]],
                            class_labels: List[int], 
                            classes: List[int],
                            dataset_type: str,
-                        #    folder_path: str,
                            temp_scaled: Optional[bool] = False):
-                        #    figsize: Optional[Tuple[int]] = (12, 12),
-                        #    gen_reli_diag: Optional[bool] = True):
-    # TODO: Generate image if applicable (only after debugging the graph)
     ece, est_acc, conf, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
     
     brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
@@ -463,53 +459,80 @@ def calibration_evaluation(class_probs: List[List[int]],
 
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
     print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
-
-    # if not os.path.exists(folder_path):
-    #     os.makedirs(folder_path)
-
-    # title = f'Reliability Diagram {add_on}({dataset_type} Set)'
     
-    # if gen_reli_diag:
-    #     plt.figure(figsize=figsize)
-    #     plt.plot([0, 1], [0, 1], color='blue')
-    #     plt.scatter(conf, est_acc, density, color='red')
-    #     # np.save(f'{folder_path}/{title}_est_acc.npy', est_acc)
-    #     # np.save(f'{folder_path}/{title}_conf.npy', conf)
-    #     # np.save(f'{folder_path}/{title}_density.npy', density)
-    #     plt.title(title)
-    #     # f, axarr = plt.subplots(2, 1, gridspec_kw={'height_ratios': [3, 1]})
-    #     # f.suptitle(title)
-    #     # axarr[0].scatter(act_acc, est_acc, density, color='red')
-    #     # axarr[0].plot([0, 1], [0, 1], color='blue')
-    #     # axarr[0].set(ylabel='Expected Accuracy')
-    #     # axarr[1].plot(act_acc, density, color='green')
-    #     # axarr[1].set(ylabel='Density')
-    #     plt.xlabel('Confidence')
-    #     plt.ylabel('Expected Accuracy')
-    #     plt.savefig(f'{folder_path}/{title}.png')
-
-    return {
+    log = {
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
         f'Brier Score {add_on}({dataset_type})': brier
-    }, est_acc, conf, density
+    }
 
+    return log, est_acc, conf, density
+
+def temp_scale_probs(logits: torch.Tensor, temperature: int):
+    scaled_logits = logits / temperature
+    return F.softmax(scaled_logits, dim=1).tolist() 
 
 def calib_eval_post_scaling(logits: torch.Tensor,
                      temperature: int,
                      class_labels: List[int], 
                      classes: List[int],
-                     dataset_type: str,
-                     gen_reli_diag: Optional[bool] = True):
+                     dataset_type: str):
     scaled_logits = logits / temperature
     scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
     return calibration_evaluation(
         scaled_class_probs, 
         class_labels, classes, 
         dataset_type, 
-        # f'{args.log}/calibration/', 
-        temp_scaled=True 
-        #gen_reli_diag=gen_reli_diag 
+        temp_scaled=True
     )
+    
+def rejection_data(probs: List[List[int]], labels: List[int], classes: List[int], use_fraction_rejected: Optional[bool]=False):
+    assert len(probs) == len(labels)
+    data = [(max(probs[i]), float(max(classes, key=lambda j: probs[i][j]) == labels[i])) for i in range(len(labels))]
+    dtype = [('max_prob', float), ('acc', float)]
+    data = np.array(data, dtype=dtype)
+    data = np.sort(data, order='max_prob')
+    total = 0.
+    for i in range(1, data.size):
+        total += data[data.size - 2 - i][1]
+        data[data.size - 1 - i][1] = total
+    for i in range(data.size):
+        if use_fraction_rejected:
+            data[i][0] = (i + 1)/data.size
+        data[i][1] /= data.size - i
+    return data
+
+def rejection_curve(probs: List[List[int]], labels: List[int], classes: List[int],
+                     log_path: str, dataset_type: str, temp_scaled: Optional[bool]=False, 
+                     use_fraction_rejected: Optional[bool]=False, figsize: Optional[Tuple[int]]=(7,7)):
+    data = rejection_data(probs, labels, classes, use_fraction_rejected=use_fraction_rejected)
+    add_on = ''
+    if temp_scaled:
+        add_on = 'Post-Temperature-Scaling '
+    
+    plt.figure(figsize=figsize)
+    plt.scatter(*zip(*data), s=1)
+    
+    
+    if use_fraction_rejected:
+        title = f'{add_on}Rejection Curve with Fraction Rejected ({dataset_type} Set)'
+        plt.xlabel("Fraction Rejected")
+    else:
+        title = f'{add_on}Rejection Curve with Rejection Threshold ({dataset_type} Set)'
+        plt.xlabel("Rejection Threshold")
+    plt.ylabel("Accuracy")
+    plt.title(title)
+    
+    graph_folder_path = f'{log_path}/rejection-curve/graph/'
+    data_folder_path = f'{log_path}/rejection-curve/data/'
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+    if not os.path.exists(graph_folder_path):
+        os.makedirs(graph_folder_path)
+    if not os.path.exists(data_folder_path):
+        os.makedirs(data_folder_path)
+    np.save(f'{data_folder_path}/{title}_data.npy', data)
+    plt.savefig(f'{graph_folder_path}/{title}.png')
+        
 
 
 def validate(val_loader: DataLoader,
@@ -520,7 +543,8 @@ def validate(val_loader: DataLoader,
              gen_conf_mat: Optional[bool] = False,
              calc_temp: Optional[bool] = False,
              input_temperature: Optional[int] = 1,
-             gen_reli_diag: Optional[bool] = True):
+             gen_reli_diag: Optional[bool] = True,
+             gen_rejection_curve: Optional[bool] = True):
     batch_time = AverageMeter('Time', ':6.3f')
     cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -620,7 +644,7 @@ def validate(val_loader: DataLoader,
                                         all_class_probs, 
                                         all_class_labels, 
                                         classes, 
-                                        dataset_type 
+                                        dataset_type
                                         # f'{args.log}/calibration/'
                                     )
     log.update(cal_log)
@@ -637,23 +661,30 @@ def validate(val_loader: DataLoader,
     elif input_temperature != 1:
         used_temperature = input_temperature
 
+    all_scaled_class_probs = None
     if used_temperature:
         # TODO: Rename function
-        scaled_cal_log, scaled_est_acc, scaled_conf, scaled_density = calib_eval_post_scaling(
-                                                                        all_class_logits, 
-                                                                        used_temperature, 
-                                                                        all_class_labels, 
-                                                                        classes, 
-                                                                        dataset_type 
-                                                                        # gen_reli_diag=gen_reli_diag
-                                                                    )
+        all_scaled_class_probs = temp_scale_probs(all_class_logits, used_temperature)
+        scaled_cal_log, scaled_est_acc, scaled_conf, scaled_density = calibration_evaluation(
+                                                                                            all_scaled_class_probs, 
+                                                                                            all_class_labels,
+                                                                                            classes,
+                                                                                            dataset_type,
+                                                                                            temp_scaled=True
+                                                                                        )
         log.update(scaled_cal_log)
     
     if gen_reli_diag:
         reliability_diag(conf, est_acc, density, scaled_conf, 
                         scaled_est_acc, scaled_density,
-                        f'{args.log}/calibration/', dataset_type)
-        
+                        args.log, dataset_type) 
+    
+    if gen_rejection_curve:
+        rejection_curve(all_class_probs, all_class_labels, classes, args.log, dataset_type)
+        rejection_curve(all_class_probs, all_class_labels, classes, args.log, dataset_type, use_fraction_rejected=True)
+        if used_temperature: 
+            rejection_curve(all_scaled_class_probs, all_class_labels, classes, args.log, dataset_type, temp_scaled=True)
+            rejection_curve(all_scaled_class_probs, all_class_labels, classes, args.log, dataset_type, temp_scaled=True, use_fraction_rejected=True)
 
     if gen_conf_mat:
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
