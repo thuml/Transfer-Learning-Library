@@ -503,7 +503,7 @@ def rejection_data(probs: List[List[int]], labels: List[int], classes: List[int]
 
 def rejection_curve(probs: List[List[int]], labels: List[int], classes: List[int],
                      log_path: str, dataset_type: str, temp_scaled: Optional[bool]=False, 
-                     use_fraction_rejected: Optional[bool]=False, figsize: Optional[Tuple[int]]=(7,7)):
+                     use_fraction_rejected: Optional[bool]=False, figsize: Optional[Tuple[int]]=(10,10)):
     data = rejection_data(probs, labels, classes, use_fraction_rejected=use_fraction_rejected)
     add_on = ''
     if temp_scaled:
