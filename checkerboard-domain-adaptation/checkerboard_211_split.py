@@ -104,7 +104,7 @@ def main(args: argparse.Namespace):
 
     # TODO: create the train, val, test, novel dataset
     transforms_list = [
-        train_transform, val_transform, val_transform
+        train_transform, val_transform, val_transform, val_transform
     ]
 
     datasets = CheckerboardOfficeHome211(
@@ -121,6 +121,12 @@ def main(args: argparse.Namespace):
                               shuffle=True,
                               num_workers=args.workers,
                               drop_last=True)
+    
+    test_loader = DataLoader(datasets.val_dataset,
+                            batch_size=args.batch_size,
+                            shuffle=True,
+                            num_workers=args.workers,
+                            drop_last=True)
 
     val_loader = DataLoader(datasets.val_dataset,
                             batch_size=args.batch_size,
@@ -213,18 +219,22 @@ def main(args: argparse.Namespace):
         train_features, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
         train_domain_labels = CheckerboardOfficeHome211.get_style(train_labels)
+        test_features, test_labels = collect_feature_and_labels(
+            test_loader, feature_extractor, device)
+        test_domain_labels = CheckerboardOfficeHome211.get_style(test_labels)
         val_features, val_labels = collect_feature_and_labels(
             val_loader, feature_extractor, device)
         val_domain_labels = CheckerboardOfficeHome211.get_style(val_labels)
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
         novel_domain_labels = CheckerboardOfficeHome211.get_style(novel_labels)
-        all_features = torch.cat([train_features, val_features, novel_features], axis=0)
-        all_domain_labels = torch.cat([train_domain_labels, val_domain_labels, novel_domain_labels], axis=0)
+        all_features = torch.cat([train_features, test_features, val_features, novel_features], axis=0)
+        all_domain_labels = torch.cat([train_domain_labels, test_domain_labels, val_domain_labels, novel_domain_labels], axis=0)
         
         log = {}
         # plot t-SNE and calculate post-hoc domain discriminator accuracy
         log.update(domain_analyze(train_features, train_domain_labels, 'Train'))
+        log.update(domain_analyze(test_features, test_domain_labels, 'Test'))
         log.update(domain_analyze(val_features, val_domain_labels, 'Validation'))
         log.update(domain_analyze(novel_features, novel_domain_labels, 'Novel'))
         log.update(domain_analyze(all_features, all_domain_labels, 'Total'))
@@ -296,6 +306,12 @@ def main(args: argparse.Namespace):
                                  'Best Model on Validation',  gen_conf_mat=True, 
                                  calc_temp=True, gen_reli_diag=True)
     print("best_val_acc1 = {:3.1f}".format(acc1))
+    
+    # evaluate best model on validation set with more information and temp calculation
+    acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
+                                 'Test',  gen_conf_mat=True, calc_temp=False, 
+                                 input_temperature=t, gen_reli_diag=True)
+    print("test_acc1 = {:3.1f}".format(acc1))
 
     # evaluate on novel set
     acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
@@ -305,7 +321,9 @@ def main(args: argparse.Namespace):
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
                 "Epoch of Best Validation Accuracy (Validation Set)": best_epoch}
+    
     eval_log.update(best_val_log.copy())
+    eval_log.update(test_log.copy())
     eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
@@ -522,8 +540,8 @@ def rejection_curve(probs: List[List[int]], labels: List[int], classes: List[int
     plt.ylabel("Accuracy")
     plt.title(title)
     
-    graph_folder_path = f'{log_path}/rejection-curve/graph/'
-    data_folder_path = f'{log_path}/rejection-curve/data/'
+    graph_folder_path = f'{log_path}/rejection-curve/graph/{dataset_type}/'
+    data_folder_path = f'{log_path}/rejection-curve/data/{dataset_type}/'
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     if not os.path.exists(graph_folder_path):
@@ -542,7 +560,7 @@ def validate(val_loader: DataLoader,
              dataset_type: str,
              gen_conf_mat: Optional[bool] = False,
              calc_temp: Optional[bool] = False,
-             input_temperature: Optional[int] = 1,
+             input_temperature: Optional[int] = None,
              gen_reli_diag: Optional[bool] = True,
              gen_rejection_curve: Optional[bool] = True):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -649,7 +667,7 @@ def validate(val_loader: DataLoader,
                                     )
     log.update(cal_log)
     # print(f"Expected Calibration Error: {ece}")
-    calculated_temperature = 1
+    calculated_temperature = None
     used_temperature = None
 
     if calc_temp:
@@ -658,7 +676,7 @@ def validate(val_loader: DataLoader,
         print(f"Calculated Temperature: {calculated_temperature}")
         log.update({f"Calculated Temperature (Using {dataset_type} Set))": calculated_temperature})
         used_temperature = calculated_temperature
-    elif input_temperature != 1:
+    elif input_temperature != None:
         used_temperature = input_temperature
 
     all_scaled_class_probs = None
@@ -674,7 +692,7 @@ def validate(val_loader: DataLoader,
                                                                                         )
         log.update(scaled_cal_log)
     
-    if gen_reli_diag:
+    if gen_reli_diag and used_temperature:
         reliability_diag(conf, est_acc, density, scaled_conf, 
                         scaled_est_acc, scaled_density,
                         args.log, dataset_type) 
