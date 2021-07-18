@@ -33,7 +33,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
-from utils_ajay import temp_scaling, kernel_ece
+from utils_ajay import temp_scaling, kernel_ece, kernel_ece_conf_interval
 from sklearn.metrics import brier_score_loss
 import wandb
 
@@ -121,7 +121,7 @@ def main(args: argparse.Namespace):
                               num_workers=args.workers,
                               drop_last=True)
     
-    test_loader = DataLoader(datasets.val_dataset,
+    test_loader = DataLoader(datasets.test_dataset,
                             batch_size=args.batch_size,
                             shuffle=True,
                             num_workers=args.workers,
@@ -465,42 +465,37 @@ def calibration_evaluation(class_probs: List[List[int]],
                            class_labels: List[int], 
                            classes: List[int],
                            dataset_type: str,
-                           temp_scaled: Optional[bool] = False):
-    ece, est_acc, conf, density = kernel_ece(class_probs, class_labels, classes, calc_acc=True)
-    
-    brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
-
+                           temp_scaled: Optional[bool] = False,
+                           ece_conf_interval: Optional[bool] = False,
+                           confidence: Optional[float] = 0.95,
+                           bootstrap_size: Optional[int] = 1_000):
+    log = {}
+    ece, est_acc, conf, density = kernel_ece(class_probs, class_labels, classes, give_kde_points=True)
     add_on = ''
     if temp_scaled:
-        add_on = 'Post-Temperature-Scaling '
+        add_on = 'Post-Temperature-Scaling' 
+    
+    if ece_conf_interval:
+        ece, ece_interval = kernel_ece_conf_interval(class_probs, class_labels, classes, verbose=False, 
+                                                     confidence=confidence, size=bootstrap_size)
+        log.update({f'KDE Expected Calibration Error Confidence Inteval {add_on}({dataset_type})': ece_interval})
+        
+    brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
+
 
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
     print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
     
-    log = {
+    log.update({
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
         f'Brier Score {add_on}({dataset_type})': brier
-    }
+    })
 
     return log, est_acc, conf, density
 
 def temp_scale_probs(logits: torch.Tensor, temperature: int):
     scaled_logits = logits / temperature
     return F.softmax(scaled_logits, dim=1).tolist() 
-
-def calib_eval_post_scaling(logits: torch.Tensor,
-                     temperature: int,
-                     class_labels: List[int], 
-                     classes: List[int],
-                     dataset_type: str):
-    scaled_logits = logits / temperature
-    scaled_class_probs = F.softmax(scaled_logits, dim=1).tolist()
-    return calibration_evaluation(
-        scaled_class_probs, 
-        class_labels, classes, 
-        dataset_type, 
-        temp_scaled=True
-    )
     
 def rejection_data(probs: List[List[int]], labels: List[int], classes: List[int], use_fraction_rejected: Optional[bool]=False):
     assert len(probs) == len(labels)
@@ -528,7 +523,6 @@ def rejection_curve(probs: List[List[int]], labels: List[int], classes: List[int
     
     plt.figure(figsize=figsize)
     plt.scatter(*zip(*data), s=1)
-    
     
     if use_fraction_rejected:
         title = f'{add_on}Rejection Curve with Fraction Rejected ({dataset_type} Set)'
@@ -560,8 +554,9 @@ def validate(val_loader: DataLoader,
              gen_conf_mat: Optional[bool] = False,
              calc_temp: Optional[bool] = False,
              input_temperature: Optional[int] = None,
-             gen_reli_diag: Optional[bool] = True,
-             gen_rejection_curve: Optional[bool] = True):
+             ece_conf_interval: Optional[bool] = False,
+             gen_reli_diag: Optional[bool] = False,
+             gen_rejection_curve: Optional[bool] = False):
     batch_time = AverageMeter('Time', ':6.3f')
     cls_losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -660,7 +655,8 @@ def validate(val_loader: DataLoader,
                                         all_class_probs, 
                                         all_class_labels, 
                                         classes, 
-                                        dataset_type
+                                        dataset_type,
+                                        ece_conf_interval=ece_conf_interval
                                         # f'{args.log}/calibration/'
                                     )
     log.update(cal_log)
@@ -684,6 +680,7 @@ def validate(val_loader: DataLoader,
                                                                                             all_class_labels,
                                                                                             classes,
                                                                                             dataset_type,
+                                                                                            ece_conf_interval=ece_conf_interval,
                                                                                             temp_scaled=True
                                                                                         )
         log.update(scaled_cal_log)

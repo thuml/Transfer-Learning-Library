@@ -3,6 +3,8 @@
 # June 21, 2021
 import sys
 import scipy
+from scipy.optimize import minimize
+from scipy.stats import norm 
 import numpy as np
 from KDEpy import FFTKDE
 
@@ -35,9 +37,9 @@ def temp_scaling(logits, labels, n_classes, probs_test=[]):
     eps = 1e-20
     # ts_probs = np.clip(probs, eps, 1 - eps)
     # ts_logits = np.log(ts_probs) - np.log(1 - ts_probs)
-    t = scipy.optimize.minimize(nll_fn, 1.0, args=(logits, y),
-                                method='L-BFGS-B', bounds=((0.05, 5.0),),
-                                tol=1e-12)
+    t = minimize(nll_fn, 1.0, args=(logits, y),
+                    method='L-BFGS-B', bounds=((0.05, 5.0),),
+                    tol=1e-12)
     t = t.x
 
     # If provided, generate calibrated probs for the test set
@@ -77,8 +79,8 @@ def mirror_1d(d, xmin=None, xmax=None):
 # are included
 # 3) If calc_acc is specified, return estimated accuarcy
 # for each item as well as its density (z)
-def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
-               binary=False, verbose=True):
+def kernel_ece(probs, labels, classes, give_kde_points=False, order=1,
+               binary=False, verbose=False):
 
     # X values for KDE evaluation points
     # These values are based on the triweight kernel but may omit 0,1
@@ -162,9 +164,33 @@ def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
     est_acc = [perc * pp1[c] / pp2[c] for c in closest]
     ece = np.sum(np.abs(max_prob - est_acc) ** order) / N
 
-    if calc_acc:
+    if give_kde_points:
         # Return accuracy and estimated mass at each test point
         z = [np.sum(pp2[c]) for c in closest]
-        return ece, est_acc, z
+        return ece, est_acc, max_prob, z
 
     return ece
+
+def mean_confidence_interval(data, confidence=0.95):
+    return np.average(data), norm.ppf(confidence) * (np.std(data)/np.sqrt(len(data)))
+
+def bootstrap_conf_interval(data_getter, data_size, confidence=0.95, size=1000):
+    bootstrap_distro = np.zeros(size)
+    for i in range(size):
+        data_indices = np.random.choice(data_size, size=data_size)
+        bootstrap_distro[i] = data_getter(data_indices)
+    return mean_confidence_interval(bootstrap_distro, confidence)
+
+def kernel_ece_conf_interval(probs, labels, classes, order=1, binary=False, confidence=0.95, size=1000):
+    
+    def data_getter(data_indices):
+        probs_star = []
+        labels_star = []
+        for i in data_indices:
+            probs_star.append(probs[i])
+            labels_star.append(labels[i])
+        return kernel_ece(probs_star, labels_star, classes, 
+                          False, order, binary)
+        
+    return bootstrap_conf_interval(data_getter, len(probs), confidence, size)
+    
