@@ -78,7 +78,7 @@ def mirror_1d(d, xmin=None, xmax=None):
 # 3) If calc_acc is specified, return estimated accuarcy
 # for each item as well as its density (z)
 def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
-               binary=False, verbose=False):
+               binary=False, verbose=True):
 
     # X values for KDE evaluation points
     # These values are based on the triweight kernel but may omit 0,1
@@ -155,40 +155,16 @@ def kernel_ece(probs, labels, classes, calc_acc=False, order=1,
     # Avg prob of being correct
     perc = np.mean(correct)
     #perc = 1.0 # ?
-    # Numerically integrate to get KDE ECE estimate
-    integral = np.zeros(x.shape)
-    for i in range(x.shape[0]):
-        conf = x[i]
-        if np.max([pp1[i], pp2[i]]) > 1e-6:
-            acc = np.min([perc * pp1[i] / pp2[i], 1.0])
-            if not np.isnan(acc):
-                integral[i] = np.abs(conf - acc) ** order * pp2[i]
-        else: # Numbers are very small, so just carry forward
-            if i > 1:
-                integral[i] = integral[i-1]
+    # Sum the differences between confidence and accuracy
+    # to get the (empirical) ECE for this data set,
+    # using the closest grid point (x) to each prediction (pr)
+    closest = [np.abs(x - pr).argmin() for pr in max_prob]
+    est_acc = [perc * pp1[c] / pp2[c] for c in closest]
+    ece = np.sum(np.abs(max_prob - est_acc) ** order) / N
 
-    # Restrict to the range [0, 1]
-    ind = np.where((x >= low_bound) & (x <= up_bound))
-    ece = np.trapz(integral[ind], x[ind]) / np.trapz(pp2[ind], x[ind])
-
-    # Find the closest x value and use it for the estimate
     if calc_acc:
-        # Note: it is finding the closest, but if
-        # pr is really close to 0 or 1, and 0/1 are not in x,
-        # it could find the "closest" outside of that range.
-        # Fixed above to ensure 0 and 1 are in x.
-        est_acc = [perc *
-                   pp1[np.abs(x - pr).argmin()] /
-                   pp2[np.abs(x - pr).argmin()] for pr in max_prob]
-        closest = [np.abs(x - pr).argmin() for pr in max_prob]
+        # Return accuracy and estimated mass at each test point
         z = [np.sum(pp2[c]) for c in closest]
-        return ece, est_acc, max_prob, z
-        # act_acc = np.arange(0.0, 1.0 + step, step)
-        # start = np.abs(x).argmin()
-        # end = np.abs(x - 1).argmin() + 1
-        # est_acc = perc * pp1[start:end] / pp2[start:end]
-        # density = pp2[start:end]
-        # return ece, est_acc, z, np.arange(0.0, 1.0 + step, step)
-        # return ece, act_acc, est_acc, density
+        return ece, est_acc, z
 
     return ece

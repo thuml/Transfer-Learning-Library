@@ -5,10 +5,9 @@ from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.data import ForeverDataIterator
 from common.vision.transforms import ResizeImage
 import common.vision.models as models
-from common.vision.datasets.checkerboard_officehome_211_split import CheckerboardOfficeHome211
-# from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
+from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHome
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
-# from dalib.modules.domain_discriminator import DomainDiscriminator
+
 from dalib.modules.multidomain_discriminator import MultidomainDiscriminator
 import random
 import time
@@ -107,7 +106,7 @@ def main(args: argparse.Namespace):
         train_transform, val_transform, val_transform, val_transform
     ]
 
-    datasets = CheckerboardOfficeHome211(
+    datasets = CheckerboardOfficeHome(
         root=args.root,
         download=False,
         balance_domains=args.balance_domains,
@@ -218,16 +217,16 @@ def main(args: argparse.Namespace):
                                           model.bottleneck).to(device)
         train_features, train_labels = collect_feature_and_labels(
             train_loader, feature_extractor, device)
-        train_domain_labels = CheckerboardOfficeHome211.get_style(train_labels)
+        train_domain_labels = CheckerboardOfficeHome.get_style(train_labels)
         test_features, test_labels = collect_feature_and_labels(
             test_loader, feature_extractor, device)
-        test_domain_labels = CheckerboardOfficeHome211.get_style(test_labels)
+        test_domain_labels = CheckerboardOfficeHome.get_style(test_labels)
         val_features, val_labels = collect_feature_and_labels(
             val_loader, feature_extractor, device)
-        val_domain_labels = CheckerboardOfficeHome211.get_style(val_labels)
+        val_domain_labels = CheckerboardOfficeHome.get_style(val_labels)
         novel_features, novel_labels = collect_feature_and_labels(
             novel_loader, feature_extractor, device)
-        novel_domain_labels = CheckerboardOfficeHome211.get_style(novel_labels)
+        novel_domain_labels = CheckerboardOfficeHome.get_style(novel_labels)
         all_features = torch.cat([train_features, test_features, val_features, novel_features], axis=0)
         all_domain_labels = torch.cat([train_domain_labels, test_domain_labels, val_domain_labels, novel_domain_labels], axis=0)
         
@@ -245,7 +244,7 @@ def main(args: argparse.Namespace):
                                         classifier.bottleneck).to(device)
         features, labels = collect_feature_and_labels(data_loader, 
                                         feature_extractor, device)
-        domain_labels = CheckerboardOfficeHome211.get_style(labels)
+        domain_labels = CheckerboardOfficeHome.get_style(labels)
         return domain_analyze(features, domain_labels, dataset_type)  
 
     # analysis the model
@@ -362,8 +361,8 @@ def train(train_iter: ForeverDataIterator,
         x_tr, labels_tr = next(train_iter)
 
         # retrieve the class and domain from the checkerboard office_home dataset
-        class_labels_tr = CheckerboardOfficeHome211.get_category(labels_tr)
-        domain_labels_tr = CheckerboardOfficeHome211.get_style(labels_tr)
+        class_labels_tr = CheckerboardOfficeHome.get_category(labels_tr)
+        domain_labels_tr = CheckerboardOfficeHome.get_style(labels_tr)
 
         # add training data to device
         x_tr = x_tr.to(device)
@@ -595,9 +594,9 @@ def validate(val_loader: DataLoader,
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
             images = images.to(device)
-            class_labels = CheckerboardOfficeHome211.get_category(target)
+            class_labels = CheckerboardOfficeHome.get_category(target)
             class_labels = class_labels.to(device)
-            domain_labels = CheckerboardOfficeHome211.get_style(target)
+            domain_labels = CheckerboardOfficeHome.get_style(target)
             domain_labels = domain_labels.to(device)
 
             # compute output
@@ -655,8 +654,7 @@ def validate(val_loader: DataLoader,
     all_class_probs = F.softmax(all_class_logits, dim=1).tolist()
     all_class_labels = torch.squeeze(
         torch.cat(all_class_labels, dim=0)).tolist()
-    classes = list(range(len(CheckerboardOfficeHome211.CATEGORIES)))
-    #ece = kernel_ece(all_class_probs, all_class_labels, classes)
+    classes = list(range(len(CheckerboardOfficeHome.CATEGORIES)))
     
     cal_log, est_acc, conf, density = calibration_evaluation(
                                         all_class_probs, 
@@ -666,7 +664,6 @@ def validate(val_loader: DataLoader,
                                         # f'{args.log}/calibration/'
                                     )
     log.update(cal_log)
-    # print(f"Expected Calibration Error: {ece}")
     calculated_temperature = None
     used_temperature = None
 
@@ -676,12 +673,11 @@ def validate(val_loader: DataLoader,
         print(f"Calculated Temperature: {calculated_temperature}")
         log.update({f"Calculated Temperature (Using {dataset_type} Set))": calculated_temperature})
         used_temperature = calculated_temperature
-    elif input_temperature != None:
+    elif input_temperature:
         used_temperature = input_temperature
 
     all_scaled_class_probs = None
     if used_temperature:
-        # TODO: Rename function
         all_scaled_class_probs = temp_scale_probs(all_class_logits, used_temperature)
         scaled_cal_log, scaled_est_acc, scaled_conf, scaled_density = calibration_evaluation(
                                                                                             all_scaled_class_probs, 
@@ -698,9 +694,11 @@ def validate(val_loader: DataLoader,
                         args.log, dataset_type) 
     
     if gen_rejection_curve:
+        # uncalibrated rejection curves
         rejection_curve(all_class_probs, all_class_labels, classes, args.log, dataset_type)
         rejection_curve(all_class_probs, all_class_labels, classes, args.log, dataset_type, use_fraction_rejected=True)
         if used_temperature: 
+            # calibrated rejection curves
             rejection_curve(all_scaled_class_probs, all_class_labels, classes, args.log, dataset_type, temp_scaled=True)
             rejection_curve(all_scaled_class_probs, all_class_labels, classes, args.log, dataset_type, temp_scaled=True, use_fraction_rejected=True)
 
