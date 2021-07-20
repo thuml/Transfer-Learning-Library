@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+
 class LeNet:
     def __init__(self, num_classes=10):
         self.num_classes = num_classes
@@ -42,18 +43,18 @@ class DTN:
 
     def backbone(self):
         return nn.Sequential(
-                nn.Conv2d(3, 64, kernel_size=5, stride=2, padding=2),
-                nn.BatchNorm2d(64),
-                nn.Dropout2d(0.1),
-                nn.ReLU(),
-                nn.Conv2d(64, 128, kernel_size=5, stride=2, padding=2),
-                nn.BatchNorm2d(128),
-                nn.Dropout2d(0.3),
-                nn.ReLU(),
-                nn.Conv2d(128, 256, kernel_size=5, stride=2, padding=2),
-                nn.BatchNorm2d(256),
-                nn.Dropout2d(0.5),
-                nn.ReLU(),
+            nn.Conv2d(3, 64, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(64),
+            nn.Dropout2d(0.1),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(128),
+            nn.Dropout2d(0.3),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(256),
+            nn.Dropout2d(0.5),
+            nn.ReLU(),
         )
 
     def bottleneck(self):
@@ -61,11 +62,11 @@ class DTN:
 
     def head(self):
         return nn.Sequential(
-                nn.Linear(self.bottleneck_dim, 512),
-                nn.BatchNorm1d(512),
-                nn.ReLU(),
-                nn.Dropout(),
-                nn.Linear(512, self.num_classes)
+            nn.Linear(self.bottleneck_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(512, self.num_classes)
         )
 
     def complete(self):
