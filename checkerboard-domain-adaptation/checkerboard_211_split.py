@@ -173,9 +173,9 @@ def main(args: argparse.Namespace):
 
     # define loss function for domain discrimination
     if args.use_warm_grl:
-        grl = GradientReverseLayer()
-    else:
         grl = WarmStartGradientReverseLayer()
+    else:
+        grl = GradientReverseLayer()
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri, grl=grl).to(device)
 
     # resume from the best or latest checkpoint
