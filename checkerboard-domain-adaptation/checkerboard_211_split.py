@@ -7,6 +7,7 @@ from common.vision.transforms import ResizeImage
 import common.vision.models as models
 from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHome
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
+from dalib.modules.grl import WarmStartGradientReverseLayer, GradientReverseLayer
 
 from dalib.modules.multidomain_discriminator import MultidomainDiscriminator
 import random
@@ -33,8 +34,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
-from utils_ajay import temp_scaling, kernel_ece, kernel_ece_conf_interval
-from sklearn.metrics import brier_score_loss
+from utils_ajay import temp_scaling, kernel_ece, kernel_ece_conf_interval, brier_multi, brier_conf_interval
 import wandb
 
 sys.path.append('../../..')
@@ -151,7 +151,8 @@ def main(args: argparse.Namespace):
     backbone = models.__dict__[args.arch](pretrained=True)
     classifier = ImageClassifier(backbone,
                                  len(datasets.classes()),
-                                 bottleneck_dim=args.bottleneck_dim).to(device)
+                                 bottleneck_dim=args.bottleneck_dim,
+                                 finetune=args.finetune).to(device)
 
     multidomain_discri = MultidomainDiscriminator(
         in_feature=classifier.features_dim,
@@ -168,9 +169,14 @@ def main(args: argparse.Namespace):
     lr_scheduler = LambdaLR(
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
+    lambda_trade_off = args.trade_off
 
     # define loss function for domain discrimination
-    multidomain_adv = MultidomainAdversarialLoss(multidomain_discri).to(device)
+    if args.use_warm_grl:
+        grl = GradientReverseLayer()
+    else:
+        grl = WarmStartGradientReverseLayer()
+    multidomain_adv = MultidomainAdversarialLoss(multidomain_discri, grl=grl).to(device)
 
     # resume from the best or latest checkpoint
     if args.phase != 'train':
@@ -209,7 +215,6 @@ def main(args: argparse.Namespace):
         generate_conf_mat(y_preds, y_true, styles, f'{args.log}/conf_mat/', title)
         print(f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set) = {post_hoc_domain_acc}')
         return {f'Post-Hoc Domain Discrimination Accuracy ({dataset_type} Set)': post_hoc_domain_acc}
-
 
     def full_analysis(model: ImageClassifier):
         # extract features from train, validation, test, and novel dataset
@@ -267,8 +272,8 @@ def main(args: argparse.Namespace):
     best_epoch = 0
     for epoch in range(args.epochs):
         # train for one epoch
-        train_log = train(train_iter, classifier, multidomain_adv, optimizer,
-                          lr_scheduler, epoch, args)
+        train_log, lambda_trade_off = train(train_iter, classifier, multidomain_adv, optimizer,
+                          lr_scheduler, lambda_trade_off, epoch, args)
 
         # evaluate on validation set
         is_final_epoch = epoch == args.epochs - 1
@@ -281,8 +286,8 @@ def main(args: argparse.Namespace):
         wandb.log(total_log)
 
         # remember best acc@1 and save checkpoint
-        # torch.save(classifier.state_dict(),
-        #            logger.get_checkpoint_path('latest'))
+        torch.save(classifier.state_dict(),
+                   logger.get_checkpoint_path('latest'))
         torch.save(classifier.state_dict(),
                    logger.get_checkpoint_path(f'epoch {epoch}'))
         if acc1 > best_acc1:
@@ -296,26 +301,25 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('best')))
     else:
-        # TODO: Fix to go after the latest model
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 
     # evaluate best model on validation set with more information and temp calculation
     acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
                                  'Best Model on Validation',  gen_conf_mat=True, 
-                                 calc_temp=True, gen_reli_diag=True)
+                                 conf_interval=True, calc_temp=True, gen_reli_diag=True)
     print("best_val_acc1 = {:3.1f}".format(acc1))
     
     # evaluate best model on validation set with more information and temp calculation
     acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
                                  'Test',  gen_conf_mat=True, calc_temp=False, 
-                                 input_temperature=t, gen_reli_diag=True)
+                                 conf_interval=True, input_temperature=t, gen_reli_diag=True)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     # evaluate on novel set
     acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
                                'Novel', gen_conf_mat=True, calc_temp=False, 
-                               input_temperature=t, gen_reli_diag=True)
+                               conf_interval=True, input_temperature=t, gen_reli_diag=True)
     print("novel_acc1 = {:3.1f}".format(acc1))
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
@@ -330,15 +334,22 @@ def main(args: argparse.Namespace):
     wandb.finish()
     logger.close()
 
-
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+    
+def get_grad_list(backbone: nn.Module):
+    return [param.grad.detach().clone() for name, param in backbone.named_parameters() if param.grad != None]
 
 def train(train_iter: ForeverDataIterator, 
           model: ImageClassifier,
           multidomain_adv: MultidomainAdversarialLoss, 
           optimizer: SGD,
-          lr_scheduler: LambdaLR, 
+          lr_scheduler: LambdaLR,
+          lambda_trade_off: int, 
           epoch: int, 
-          args: argparse.Namespace):
+          args: argparse.Namespace, 
+          num_domains: Optional[int] = 4):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     total_losses = AverageMeter('Loss', ':6.2f')
@@ -356,7 +367,8 @@ def train(train_iter: ForeverDataIterator,
     multidomain_adv.train()
 
     end = time.time()
-
+    target_transfer_loss = np.log(num_domains)
+    lambda_diagnostic = None
     for i in range(args.iters_per_epoch):
         x_tr, labels_tr = next(train_iter)
 
@@ -380,9 +392,12 @@ def train(train_iter: ForeverDataIterator,
         # calculate losses
         cls_loss = F.cross_entropy(y_tr, class_labels_tr)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
-        total_loss = cls_loss + transfer_loss * args.trade_off
+        # TODO: Find scheduler for trade_off
+        if args.use_lagrange_multiplier:
+            lambda_trade_off += get_lr(optimizer) * -(transfer_loss.item() - target_transfer_loss)
+        total_loss = cls_loss + transfer_loss * lambda_trade_off # args.trade_off
         
-        # TODO: Freeze the weights (or not)
+        # # TODO: Freeze the weights (or not)
         if i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
             loss_to_minimize = transfer_loss
         else:
@@ -395,7 +410,7 @@ def train(train_iter: ForeverDataIterator,
         # update loss meter
         cls_losses.update(cls_loss.item(), x_tr.size(0))
         transfer_losses.update(transfer_loss.item(), x_tr.size(0))
-        total_losses.update(total_loss.item(), x_tr.size(0))
+        # total_losses.update(total_loss.item(), x_tr.size(0))
 
         # update accuracy meters
         cls_accs.update(cls_acc.item(), x_tr.size(0))
@@ -403,6 +418,23 @@ def train(train_iter: ForeverDataIterator,
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
+        
+        # TODO: 
+        # cls_loss.backward(retain_graph=True)
+        
+        # transfer_loss *= lambda_trade_off # args.trade_off
+        # transfer_loss.backward()
+        # total_backbone_grads = get_grad_list(model.backbone)
+        # lambda_diagnostic_update = []
+        # for cls_grad, total_grad in zip(cls_backbone_grad_list, total_backbone_grads):
+        #     transfer_grad = (total_grad - cls_grad)/lambda_trade_off
+        #     lambda_diagnostic_update.append(torch.div(cls_grad, transfer_grad))
+        # if lambda_diagnostic:
+        #     for i in range(len(lambda_diagnostic)):
+        #         lambda_diagnostic[i] += lambda_diagnostic_update[i] 
+        # else:
+        #     lambda_diagnostic = lambda_diagnostic_update
+        
         loss_to_minimize.backward()
         optimizer.step()
         lr_scheduler.step()
@@ -414,15 +446,24 @@ def train(train_iter: ForeverDataIterator,
         if i % args.print_freq == 0:
             progress.display(i)
 
-    # wandb
-    return {
+    log = {}
+    # for i in range(len(lambda_diagnostic)):
+    #     lambda_diagnostic[i] /= args.iters_per_epoch
+    #     if not (torch.any(lambda_diagnostic[i].isnan()).item() or
+    #            torch.any(lambda_diagnostic[i].isinf()).item()):
+    #         log.update({f'Lambda Diagnotic for Backbone layer {i} (Training Set)': wandb.Histogram(lambda_diagnostic[i].cpu())})
+        
+    log.update({
+        "Lambda Trade Off (Training Set)": lambda_trade_off,
         "Category Classification Loss (Training Set)": cls_losses.sum,
         'Style Discrimination Loss (Training Set)': transfer_losses.sum,
         'Total Loss (Training Set)': total_losses.sum,
         'Category Classification Accuracy (Training Set)': cls_accs.avg,
         'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
         'Classification Logits': y_tr,
-    }
+    })
+    
+    return log, lambda_trade_off
 
 def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
                       scaled_conf: List[int], scaled_est_acc: List[int], scaled_density: List[int],
@@ -454,33 +495,33 @@ def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
     np.save(f'{data_folder_path}/{title}_scaled_conf.npy', scaled_conf)
     np.save(f'{data_folder_path}/{title}_scaled_density.npy', scaled_density)
 
-def brier_multi(targets, probs, num_classes):
-    shape = (targets.size, num_classes)
-    one_hot_targets = np.zeros(shape)
-    rows = np.arange(targets.size)
-    one_hot_targets[rows, targets] = 1
-    return np.mean(np.sum((probs - one_hot_targets)**2, axis=1))
 
 def calibration_evaluation(class_probs: List[List[int]], 
                            class_labels: List[int], 
                            classes: List[int],
                            dataset_type: str,
                            temp_scaled: Optional[bool] = False,
-                           ece_conf_interval: Optional[bool] = False,
+                           conf_interval: Optional[bool] = False,
                            confidence: Optional[float] = 0.95,
-                           bootstrap_size: Optional[int] = 1_000):
+                           bootstrap_size: Optional[int] = 1000):
     log = {}
     ece, est_acc, conf, density = kernel_ece(class_probs, class_labels, classes, give_kde_points=True)
+    
     add_on = ''
     if temp_scaled:
-        add_on = 'Post-Temperature-Scaling' 
+        add_on = 'Post-Temperature-Scaling ' 
     
-    if ece_conf_interval:
-        ece, ece_interval = kernel_ece_conf_interval(class_probs, class_labels, classes, verbose=False, 
+    if conf_interval:
+        ece, ece_lower, ece_upper = kernel_ece_conf_interval(class_probs, class_labels, classes, 
                                                      confidence=confidence, size=bootstrap_size)
-        log.update({f'KDE Expected Calibration Error Confidence Inteval {add_on}({dataset_type})': ece_interval})
-        
-    brier = brier_multi(np.array(class_labels), np.array(class_probs), len(classes))
+        brier, brier_lower, brier_upper = brier_conf_interval(class_probs, class_labels, len(classes), confidence, bootstrap_size)
+        log.update({f'KDE Expected Calibration Error Lower Bound {add_on}({dataset_type}, Confidence = {confidence})': ece_lower,
+                    f'KDE Expected Calibration Error Upper Bound {add_on}({dataset_type}, Confidence = {confidence})': ece_upper,
+                    f'Brier Score Lower Bound {add_on}({dataset_type}, Confidence = {confidence})': brier_lower,
+                    f'Brier Score Upper Bound {add_on}({dataset_type}, Confidence = {confidence})': brier_upper})
+    else:
+        brier = brier_multi(class_probs, class_labels, len(classes))    
+    
 
 
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
@@ -554,7 +595,7 @@ def validate(val_loader: DataLoader,
              gen_conf_mat: Optional[bool] = False,
              calc_temp: Optional[bool] = False,
              input_temperature: Optional[int] = None,
-             ece_conf_interval: Optional[bool] = False,
+             conf_interval: Optional[bool] = False,
              gen_reli_diag: Optional[bool] = False,
              gen_rejection_curve: Optional[bool] = False):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -600,7 +641,7 @@ def validate(val_loader: DataLoader,
             # compute loss
             cls_loss = F.cross_entropy(class_pred, class_labels)
             transfer_loss = multidomain_adv(features, domain_labels)
-            loss = cls_loss + transfer_loss * args.trade_off
+            # loss = cls_loss + transfer_loss * args.trade_off
 
             # measure accuracy and record class loss
             acc1, acc5 = accuracy(class_pred, class_labels, topk=(1, 5))
@@ -630,7 +671,7 @@ def validate(val_loader: DataLoader,
             domain_preds.append(y_tr_pred_domain)
 
             # record total loss on meter
-            losses.update(loss.item(), images.size(0))
+            # losses.update(loss.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -656,7 +697,7 @@ def validate(val_loader: DataLoader,
                                         all_class_labels, 
                                         classes, 
                                         dataset_type,
-                                        ece_conf_interval=ece_conf_interval
+                                        conf_interval=conf_interval
                                         # f'{args.log}/calibration/'
                                     )
     log.update(cal_log)
@@ -680,7 +721,7 @@ def validate(val_loader: DataLoader,
                                                                                             all_class_labels,
                                                                                             classes,
                                                                                             dataset_type,
-                                                                                            ece_conf_interval=ece_conf_interval,
+                                                                                            conf_interval=conf_interval,
                                                                                             temp_scaled=True
                                                                                         )
         log.update(scaled_cal_log)
@@ -724,7 +765,7 @@ def validate(val_loader: DataLoader,
             f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
             f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
             f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
-            f"Total Loss ({dataset_type} Set)": losses.sum
+            # f"Total Loss ({dataset_type} Set)": losses.sum
         }
     )
     return top1.avg, log, calculated_temperature
@@ -887,6 +928,44 @@ if __name__ == '__main__':
         action='store_false',
         help='''If true, load the best model when testing and analyzing.
         If false, load the latest model when testing and analyzing.''')
+    parser.add_argument(
+        '--largrange-multiplier',
+        dest="use_lagrange_multiplier",
+        default=False,
+        action='store_true',
+        help='''If true, make updates to lambda_trade_off based on the difference between 
+        the loss for the domain discriminator and when the domain discriminator
+        makes random guesses.''')
+    parser.add_argument(
+        '--no-lagrange-multiplier',
+        dest="use_best_model",
+        default=False,
+        action='store_false',
+        help='''If false, make no updates to the lambda_trade_off.''')
+    parser.add_argument(
+        '--warm-grl',
+        dest="use_warm_grl",
+        default=True,
+        action='store_true',
+        help='''If true, use the Warm Gradient Reversal Layer''')
+    parser.add_argument(
+        '--no-warm-grl',
+        dest="use_warm_grl",
+        default=True,
+        action='store_false',
+        help='''If false, don't use the Warm Gradient Reversal Layer.''')
+    parser.add_argument(
+        '--finetune',
+        dest="finetune",
+        default=True,
+        action='store_true',
+        help='''If true, set the learning rate of backbone to 0.1 of learning rate.''')
+    parser.add_argument(
+        '--no-finetune',
+        dest="finetune",
+        default=True,
+        action='store_false',
+        help='''If false, set the learning rate of backbone to 1.0 of learning rate.''')
     # parser.add_argument('--early-stopping',
     #                     default=False,
     #                     action='store_true',

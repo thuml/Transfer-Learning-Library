@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..modules.grl import WarmStartGradientReverseLayer
+from ..modules.grl import WarmStartGradientReverseLayer, GradientReverseLayer
 from common.modules.classifier import Classifier as ClassifierBase
 from common.utils.metric import accuracy
 
@@ -64,9 +64,6 @@ class MultidomainAdversarialLoss(nn.Module):
             F.cross_entropy(
                 input, target, weight=weight, reduction=reduction
             )
-        # self.bce = lambda input, target, weight: \
-        #     F.binary_cross_entropy(
-        #         input, target, weight=weight, reduction=reduction)
         self.domain_discriminator_accuracy = None
 
     def forward(self, f: torch.Tensor, d_labels: torch.Tensor, 
@@ -77,24 +74,6 @@ class MultidomainAdversarialLoss(nn.Module):
         if w is None:
             w = torch.ones((self.domain_pred.shape[-1], 1)).to(f.device)
         return self.loss(self.domain_pred, d_labels, w)
-    
-    # def forward(self, f_s: torch.Tensor, d_label_s: torch.Tensor, 
-    #             f_t: Optional[torch.Tensor] = None, d_label_t: Optional[torch.Tensor] = None,
-    #             w_s: Optional[torch.Tensor] = None, w_t: Optional[torch.Tensor] = None) -> torch.Tensor:
-    #     f = self.grl(torch.cat((f_s, f_t), dim=0))
-    #     d = self.multidomain_discriminator(f)
-    #     d_s, d_t = d.chunk(2, dim=0)
-    #     self.domain_discriminator_accuracy = accuracy(
-    #         d, torch.cat((d_label_s, d_label_t), dim=0))[0]
-    #     # TODO: Get num classes
-    #     if w_s is None:
-    #         w_s = torch.ones((d.shape[-1], 1)).to(f_s.device)
-    #     if w_t is None:
-    #         w_t = torch.ones((d.shape[-1], 1)).to(f_s.device)
-    #     return 0.5 * (self.loss(d_s, d_label_s, w_s) + self.loss(d_t, d_label_t, w_t))
-    #     #return 0.5 * (self.bce(d_s, d_label_s, w_s.view_as(d_s)) + self.bce(d_t, d_label_t, w_t.view_as(d_t)))
-
-
 
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):

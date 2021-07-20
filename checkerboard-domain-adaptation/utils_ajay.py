@@ -171,8 +171,22 @@ def kernel_ece(probs, labels, classes, give_kde_points=False, order=1,
 
     return ece
 
+def squared_error(probs, labels, num_classes):
+    probs = np.array(probs)
+    labels = np.array(labels)
+    shape = (labels.size, num_classes)
+    one_hot_targets = np.zeros(shape)
+    rows = np.arange(labels.size)
+    one_hot_targets[rows, labels] = 1
+    return np.sum((probs - one_hot_targets)**2, axis=1)
+
+def brier_multi(probs, labels, num_classes):
+    return np.mean(squared_error(probs, labels, num_classes))
+
 def mean_confidence_interval(data, confidence=0.95):
-    return np.average(data), norm.ppf(confidence) * (np.std(data)/np.sqrt(len(data)))
+    lower = max(0, 0.5 - confidence/2)
+    upper = min(1, 0.5 + confidence/2)
+    return np.average(data), np.quantile(data, lower, interpolation='midpoint'), np.quantile(data, upper, interpolation='midpoint')
 
 def bootstrap_conf_interval(data_getter, data_size, confidence=0.95, size=1000):
     bootstrap_distro = np.zeros(size)
@@ -193,4 +207,16 @@ def kernel_ece_conf_interval(probs, labels, classes, order=1, binary=False, conf
                           False, order, binary)
         
     return bootstrap_conf_interval(data_getter, len(probs), confidence, size)
+
+def brier_conf_interval(probs, labels, num_classes, confidence=0.95, size=1000):
+    squared_error_arr = squared_error(probs, labels, num_classes)
+    
+    def data_getter(data_indices):
+        return np.average(squared_error_arr[data_indices])
+    
+    return bootstrap_conf_interval(data_getter, len(probs), confidence, size)
+
+# statsmodels.stats.proportion.proportion_confint
+# method = "agresti_coull"
+
     
