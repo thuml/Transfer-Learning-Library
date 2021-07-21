@@ -1,3 +1,4 @@
 from .resnet import *
+from .ibn import *
 
-__all__ = ['resnet', 'digits']
+__all__ = ['resnet', 'digits', 'ibn']
