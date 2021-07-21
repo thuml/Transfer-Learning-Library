@@ -16,7 +16,7 @@ import torchvision.transforms as T
 
 sys.path.append('../../..')
 from common.vision.models.reid.loss import CrossEntropyLabelSmooth, SoftTripletLoss
-from common.vision.models.reid.classifier import ReidClassifier
+from common.vision.models.reid.identifier import ReIdentifier
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.split import Split
 from common.vision.samplers.reid import RandomMultipleGallerySampler
@@ -94,7 +94,7 @@ def main(args: argparse.Namespace):
     # create model
     num_classes = source_dataset.num_train_pids
     backbone = models.__dict__[args.arch](pretrained=True)
-    model = ReidClassifier(backbone, num_classes, finetune=False).to(device)
+    model = ReIdentifier(backbone, num_classes, finetune=False).to(device)
     model = DataParallel(model)
 
     if args.phase == 'test':

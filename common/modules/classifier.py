@@ -74,12 +74,12 @@ class Classifier(nn.Module):
         predictions = self.head(f)
         return predictions, f
 
-    def get_parameters(self, base_lr=1.0, rate=0.1) -> List[Dict]:
+    def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer
         """
         params = [
-            {"params": self.backbone.parameters(), "lr": rate * base_lr if self.finetune else 1.0 * base_lr},
+            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
             {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
