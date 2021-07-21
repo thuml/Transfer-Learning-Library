@@ -69,6 +69,10 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=> loading pre-trained model from '{}'".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
     num_classes = train_dataset.num_classes
     classifier = Classifier(backbone, num_classes).to(device)
 
@@ -91,7 +95,6 @@ def main(args: argparse.Namespace):
         # train for one epoch
         train(train_iter, classifier, optimizer, epoch, args)
         lr_scheduler.step()
-
         # evaluate on validation set
         acc1 = validate(val_loader, classifier, args)
 
@@ -205,7 +208,6 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-
     parser = argparse.ArgumentParser(description='Baseline for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
@@ -221,6 +223,9 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
+    parser.add_argument('--pretrained', default=None,
+                        help="pretrained checkpoint of the backbone. "
+                             "(default: None, use the ImageNet supervised pretrained backbone)")
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',

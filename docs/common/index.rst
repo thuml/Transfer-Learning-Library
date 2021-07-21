@@ -8,6 +8,7 @@ Common Package
     :titlesonly:
 
     modules
+    loss
     vision/datasets
     vision/models
     vision/transforms

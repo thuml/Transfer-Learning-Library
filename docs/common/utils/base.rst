@@ -26,6 +26,10 @@ Data
 .. autoclass:: common.utils.data.ForeverDataIterator
    :members:
 
+.. autoclass:: common.utils.data.CombineDataset
+   :members:
+
+.. autofunction:: common.utils.data.send_to_device
 
 Logger
 -----------

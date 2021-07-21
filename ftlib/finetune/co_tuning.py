@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 import tqdm
+from .lwf import Classifier as ClassifierBase
 
 __all__ = ['Classifier', 'CoTuningLoss', 'Relationship']
 
@@ -103,8 +104,9 @@ class Relationship(object):
         return np.concatenate(conditional)
 
 
-class Classifier(nn.Module):
-    """A Classifier class for Co-Tuning.
+class Classifier(ClassifierBase):
+    """A Classifier used in `Co-Tuning for Transfer Learning (NIPS 2020)
+    <http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf>`_..
 
     Args:
         backbone (torch.nn.Module): Any backbone to extract 2-d features from data.
@@ -129,33 +131,7 @@ class Classifier(nn.Module):
     """
     def __init__(self, backbone: nn.Module, num_classes: int,  head_source,
                  head_target: Optional[nn.Module] = None, finetune=True):
-        super(Classifier, self).__init__()
-        self.backbone = backbone
-        self.num_classes = num_classes
-        self.bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
-        )
-        self._features_dim = self.backbone.out_features
-        self.head_source = head_source
-        if head_target is None:
-            self.head_target = nn.Linear(self._features_dim, num_classes)
-        else:
-            self.head_target = head_target
-        self.finetune = finetune
-
-    @property
-    def features_dim(self) -> int:
-        """The dimension of features before the final `head` layer"""
-        return self._features_dim
-
-    def forward(self, x: torch.Tensor):
-        """"""
-        f = self.backbone(x)
-        f = self.bottleneck(f)
-        y_s = self.head_source(f)
-        y_t = self.head_target(f)
-        return y_s, y_t
+        super(Classifier, self).__init__(backbone, num_classes, head_source, head_target, finetune=finetune)
 
     def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,

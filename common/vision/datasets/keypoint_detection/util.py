@@ -126,3 +126,13 @@ def visualize_heatmap(image, heatmaps, filename):
         colored_heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
         masked_image = colored_heatmap * 0.7 + resized_image * 0.3
         cv2.imwrite(filename.format(k), masked_image)
+        
+
+def area(left, upper, right, lower):
+    return max(right - left + 1, 0) * max(lower - upper + 1, 0)
+
+
+def intersection(box_a, box_b):
+    left_a, upper_a, right_a, lower_a = box_a
+    left_b, upper_b, right_b, lower_b = box_b
+    return max(left_a, left_b), max(upper_a, upper_b), min(right_a, right_b), min(lower_a, lower_b)

@@ -13,15 +13,14 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.stochnorm import convert_model
-from common.modules.classifier import Classifier
 import common.vision.datasets as datasets
 import common.vision.models as models
-from common.vision.transforms import ResizeImage
+from common.vision.transforms import MultipleApply
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.data import ForeverDataIterator
 from common.utils.logger import CompleteLogger
+from ftlib.finetune.bi_tuning import Classifier, Bituning
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,19 +43,19 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = T.Compose([
-        ResizeImage(256),
-        T.RandomResizedCrop(224),
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        normalize
-    ])
     val_transform = T.Compose([
-        ResizeImage(256),
+        T.Resize(256),
         T.CenterCrop(224),
         T.ToTensor(),
         normalize
     ])
+    train_augmentation = [
+        T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        normalize
+    ]
+    train_transform = MultipleApply([T.Compose(train_augmentation), T.Compose(train_augmentation)])
 
     dataset = datasets.__dict__[args.data]
     train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate,
@@ -69,24 +68,32 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
-    if args.pretrained:
-        print("=> loading pre-trained model from '{}'".format(args.pretrained))
-        pretrained_dict = torch.load(args.pretrained)
-        backbone.load_state_dict(pretrained_dict, strict=False)
     num_classes = train_dataset.num_classes
-    classifier = Classifier(backbone, num_classes).to(device)
-    classifier = convert_model(classifier, p=args.prob)
+    backbone_q = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=> loading pre-trained backbone from '{}'".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone_q.load_state_dict(pretrained_dict, strict=False)
+    classifier_q = Classifier(backbone_q, num_classes, projection_dim=args.projection_dim)
+    if args.pretrained_fc:
+        print("=> loading pre-trained fc from '{}'".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = models.__dict__[args.arch](pretrained=True)
+    classifier_k = Classifier(backbone_k, num_classes).to(device)
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    optimizer = SGD(classifier_q.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-        classifier.load_state_dict(checkpoint)
-        acc1 = validate(val_loader, classifier, args)
+        classifier_q.load_state_dict(checkpoint)
+        acc1 = validate(val_loader, classifier_q, args)
         print(acc1)
         return
 
@@ -95,14 +102,14 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, epoch, args)
+        train(train_iter, bituning, optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = validate(val_loader, classifier_q, args)
 
         # remember best acc@1 and save checkpoint
-        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
+        torch.save(classifier_q.state_dict(), logger.get_checkpoint_path('latest'))
         if acc1 > best_acc1:
             shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
         best_acc1 = max(acc1, best_acc1)
@@ -111,41 +118,52 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-          epoch: int, args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, bituning, optimizer: SGD, epoch:int, args:argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
+    cls_losses = AverageMeter('Cls Loss', ':3.2f')
+    contrastive_losses = AverageMeter('Contrastive Loss', ':3.2f')
     losses = AverageMeter('Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs],
+        [batch_time, data_time, losses, cls_losses, contrastive_losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
+    classifier_criterion = torch.nn.CrossEntropyLoss().to(device)
+    contrastive_criterion = torch.nn.KLDivLoss(reduction='batchmean').to(device)
+
     # switch to train mode
-    model.train()
+    bituning.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
         x, labels = next(train_iter)
+        img_q, img_k = x[0], x[1]
 
-        x = x.to(device)
-        label = labels.to(device)
+        img_q = img_q.to(device)
+        img_k = img_k.to(device)
+        labels = labels.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        y, f = model(x)
+        y, logits_z, logits_y, bituning_labels = bituning(img_q, img_k, labels)
+        cls_loss = classifier_criterion(y, labels)
+        contrastive_loss_z = contrastive_criterion(logits_z, bituning_labels)
+        contrastive_loss_y = contrastive_criterion(logits_y, bituning_labels)
+        contrastive_loss = (contrastive_loss_z + contrastive_loss_y)
+        loss = cls_loss + contrastive_loss * args.trade_off
 
-        cls_loss = F.cross_entropy(y, label)
-        loss = cls_loss
+        # measure accuracy and record loss
+        losses.update(loss.item(), x[0].size(0))
+        cls_losses.update(cls_loss.item(), x[0].size(0))
+        contrastive_losses.update(contrastive_loss.item(), x[0].size(0))
 
-        cls_acc = accuracy(y, label)[0]
-
-        losses.update(loss.item(), x.size(0))
-        cls_accs.update(cls_acc.item(), x.size(0))
+        cls_acc = accuracy(y, labels)[0]
+        cls_accs.update(cls_acc.item(), x[0].size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -180,7 +198,7 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
             target = target.to(device)
 
             # compute output
-            output, _ = model(images)
+            output = model(images)
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
@@ -212,8 +230,7 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-
-    parser = argparse.ArgumentParser(description='StochNorm for Finetuning')
+    parser = argparse.ArgumentParser(description='Bi-tuning for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -228,11 +245,19 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet50)')
-    parser.add_argument('--prob', '--probability', default=0.5, type=float,
-                        metavar='P', help='Probability for StochNorm layers')
     parser.add_argument('--pretrained', default=None,
                         help="pretrained checkpoint of the backbone. "
                              "(default: None, use the ImageNet supervised pretrained backbone)")
+    parser.add_argument('--pretrained-fc', default=None,
+                        help="pretrained checkpoint of the fc. "
+                             "(default: None)")
+    parser.add_argument('--T', default=0.07, type=float, help="temperature. (default: 0.07)")
+    parser.add_argument('--K', type=int, default=40, help="queue size. (default: 40)")
+    parser.add_argument('--m', type=float, default=0.999, help="momentum coefficient. (default: 0.999)")
+    parser.add_argument('--projection-dim', type=int, default=128,
+                        help="dimension of the projection head. (default: 128)")
+    parser.add_argument('--trade-off', type=float, default=1.0, help="trade-off parameters. (default: 1.0)")
+
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
@@ -240,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12,), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
@@ -261,4 +286,3 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     main(args)
-
