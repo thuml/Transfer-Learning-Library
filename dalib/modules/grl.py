@@ -19,11 +19,12 @@ class GradientReverseFunction(Function):
 
 
 class GradientReverseLayer(nn.Module):
-    def __init__(self):
+    def __init__(self, coeff):
+        self.coeff = coeff
         super(GradientReverseLayer, self).__init__()
 
     def forward(self, *input):
-        return GradientReverseFunction.apply(*input)
+        return GradientReverseFunction.apply(*input, self.coeff)
 
 
 class WarmStartGradientReverseLayer(nn.Module):
