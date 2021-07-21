@@ -1,4 +1,4 @@
 from .resnet import *
-from .ibn import *
+from ..ibn import *
 
-__all__ = ['resnet', 'ibn']
+__all__ = ['resnet']

@@ -1,6 +1,6 @@
 from common.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
 
-__all__ = ['resnet50']
+__all__ = ['reid_resnet50']
 
 
 class ReidResNet(ResNet):
@@ -23,7 +23,7 @@ class ReidResNet(ResNet):
         return x
 
 
-def _resnet(arch, block, layers, pretrained, progress, **kwargs):
+def _reid_resnet(arch, block, layers, pretrained, progress, **kwargs):
     model = ReidResNet(block, layers, **kwargs)
     if pretrained:
         model_dict = model.state_dict()
@@ -35,7 +35,7 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
-def resnet50(pretrained=False, progress=True, **kwargs):
+def reid_resnet50(pretrained=False, progress=True, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -43,5 +43,5 @@ def resnet50(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
-                   **kwargs)
+    return _reid_resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
+                        **kwargs)

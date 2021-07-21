@@ -52,7 +52,9 @@ class ReIdentifier(nn.Module):
         """
         params = [
             {"params": self.backbone.parameters(), "lr": rate * base_lr if self.finetune else 1.0 * base_lr},
+            {"params": self.pool.parameters(), "lr": 1.0 * base_lr},
             {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
+            {"params": self.feature_bn.parameters(), "lr": 1.0 * base_lr},
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
 

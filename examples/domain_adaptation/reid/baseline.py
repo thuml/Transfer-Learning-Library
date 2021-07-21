@@ -18,12 +18,11 @@ sys.path.append('../../..')
 from common.vision.models.reid.loss import CrossEntropyLabelSmooth, SoftTripletLoss
 from common.vision.models.reid.identifier import ReIdentifier
 import common.vision.datasets.reid as datasets
-from common.vision.datasets.reid.split import Split
-from common.vision.samplers.reid import RandomMultipleGallerySampler
+from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
 import common.vision.models.reid as models
 from common.utils.scheduler import WarmupMultiStepLR
 from common.utils.metric.reid import validate
-from common.utils.data import ForeverDataIterator
+from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
@@ -71,24 +70,26 @@ def main(args: argparse.Namespace):
     source_train_set = sorted(source_dataset.train)
     sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
     train_source_loader = DataLoader(
-        Split(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_source_iter = ForeverDataIterator(train_source_loader)
     val_loader = DataLoader(
-        Split(list(set(source_dataset.query) | set(source_dataset.gallery)), root=source_dataset.images_dir,
-              transform=val_transform),
+        convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
+                                   root=source_dataset.images_dir,
+                                   transform=val_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
     # target dataset
     target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
     target_train_set = sorted(target_dataset.train)
     train_target_loader = DataLoader(
-        Split(target_train_set, root=target_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=True, pin_memory=True, drop_last=True)
     train_target_iter = ForeverDataIterator(train_target_loader)
     test_loader = DataLoader(
-        Split(list(set(target_dataset.query) | set(target_dataset.gallery)), root=target_dataset.images_dir,
-              transform=val_transform),
+        convert_to_pytorch_dataset(list(set(target_dataset.query) | set(target_dataset.gallery)),
+                                   root=target_dataset.images_dir,
+                                   transform=val_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
     # create model
@@ -235,11 +236,11 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
     # model parameters
-    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='reid_resnet50',
                         choices=architecture_names,
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
-                             ' (default: resnet50)')
+                             ' (default: reid_resnet50)')
     # training parameters
     parser.add_argument('--trade-off', type=float, default=1,
                         help='trade-off hyper parameter between cross entropy loss and triplet loss')
