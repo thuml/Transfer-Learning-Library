@@ -95,7 +95,13 @@ def main(args: argparse.Namespace):
     # create model
     num_classes = source_dataset.num_train_pids
     backbone = models.__dict__[args.arch](pretrained=True)
-    model = ReIdentifier(backbone, num_classes, finetune=False).to(device)
+    model = ReIdentifier(backbone, num_classes, finetune=args.finetune).to(device)
+
+    optimizer = Adam(model.get_parameters(base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
+    lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
+                                     warmup_iters=args.warmup_step)
+
+    # parallel
     model = DataParallel(model)
 
     if args.phase == 'test':
@@ -108,10 +114,6 @@ def main(args: argparse.Namespace):
         validate(test_loader, model, target_dataset.query, target_dataset.gallery, device, cmc_flag=True,
                  rerank=args.rerank)
         return
-
-    optimizer = Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
-    lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
-                                     warmup_iters=args.warmup_step)
 
     # define loss function
     criterion_ce = CrossEntropyLabelSmooth(num_classes).to(device)
@@ -241,6 +243,8 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: reid_resnet50)')
+    parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
+    parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
     parser.add_argument('--trade-off', type=float, default=1,
                         help='trade-off hyper parameter between cross entropy loss and triplet loss')
