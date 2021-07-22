@@ -9,6 +9,7 @@ from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHom
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
 from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 from dalib.modules.grl import WarmStartGradientReverseLayer, GradientReverseLayer
+from dalib.modules.gl import GradientLayer
 
 from dalib.modules.multidomain_discriminator import MultidomainDiscriminator
 from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -148,32 +149,36 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    
+    # gradient layer makes backpropagation more efficient
     classifier = ImageClassifier(backbone,
                                  len(datasets.classes()),
                                  bottleneck_dim=args.bottleneck_dim,
-                                 finetune=args.finetune).to(device)
+                                 gl=GradientLayer(coeff=args.alpha_trade_off)).to(device)
     
     num_domains = len(datasets.domains())
-    if args.use_warm_grl:
-        grl = WarmStartGradientReverseLayer(hi=1/num_domains)
-    else:
-        grl = GradientReverseLayer(coeff=1/num_domains)
-
+    # TODO
+    
     domain_advs = []
     # define optimizer and lr scheduler
     # TODO base_lr parameters can set alpha and (1 - alpha) trade-off between category classifier and domain discriminator
     params = classifier.get_parameters()
     for _ in range(num_domains):
+        if args.use_warm_grl:
+            grl = WarmStartGradientReverseLayer(hi=(1 - args.alpha_trade_off)/num_domains)
+        else:
+            grl = GradientReverseLayer(coeff=(1 - args.alpha_trade_off)/num_domains)
         domain_discriminator = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
         # define loss function for domain discrimination
         domain_advs.append(DomainAdversarialLoss(domain_discriminator, grl=grl).to(device))
         params += domain_discriminator.get_parameters()
-        
+       
     optimizer = SGD(params,
                     args.lr,
                     momentum=args.momentum,
                     weight_decay=args.weight_decay,
                     nesterov=True)
+    
     lr_scheduler = LambdaLR(
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
@@ -276,7 +281,6 @@ def main(args: argparse.Namespace):
                           lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        is_final_epoch = epoch == args.epochs - 1
         acc1, val_log, _ = validate(val_loader, classifier, domain_advs, args,
                                  'Validation',  gen_conf_mat=False, 
                                  calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
@@ -402,13 +406,13 @@ def train(train_iter: ForeverDataIterator,
             total_transfer_loss += transfer_loss
             target_index += 1
             
-        total_loss = cls_loss + total_transfer_loss
+        combined_loss = cls_loss + total_transfer_loss
         
         # TODO: Freeze the weights (or not)
         if i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
             loss_to_minimize = total_transfer_loss
         else:
-            loss_to_minimize = total_loss
+            loss_to_minimize = combined_loss
 
         # calculate accuracy
         cls_acc = accuracy(y_tr, class_labels_tr)[0]
@@ -421,9 +425,9 @@ def train(train_iter: ForeverDataIterator,
         # update domain accuracy and loss meters
         for j in range(num_domains):
             transfer_losses_meter[j].update(transfer_losses[j].item(), x_tr.size(0))
-            domain_accs_meter[j].update(domain_acc[i].item(), x_tr.size(0))
+            domain_accs_meter[j].update(domain_acc[j].item(), x_tr.size(0))
         
-        total_losses_meter.update(total_loss.item(), x_tr.size(0))
+        total_losses_meter.update(combined_loss.item(), x_tr.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -443,8 +447,8 @@ def train(train_iter: ForeverDataIterator,
         log.update({f'Style {i} Discrimination Loss (Training Set)': transfer_losses_meter[i].avg,
                     f'Style {i} Discrimination Accuracy (Training Set)': domain_accs_meter[i].avg,})
     log.update({
-        "Category Classification Loss (Training Set)": cls_losses_meter.sum,
-        'Total Loss (Training Set)': total_losses_meter.sum,
+        "Category Classification Loss (Training Set)": cls_losses_meter.avg,
+        'Total Loss (Training Set)': total_losses_meter.avg,
         'Category Classification Accuracy (Training Set)': cls_accs_meter.avg,
         'Classification Logits': y_tr,
     })
@@ -508,9 +512,13 @@ def calibration_evaluation(class_probs: List[List[int]],
         brier = brier_multi(class_probs, class_labels, len(classes))    
     
 
-
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
+    print(f'KDE Expected Calibration Error Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_lower}')
+    print(f'KDE Expected Calibration Error Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_upper}')
+    
     print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
+    print(f'Brier Score Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_lower}')
+    print(f'Brier Score Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_upper}')
     
     log.update({
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
@@ -593,7 +601,7 @@ def validate(val_loader: DataLoader,
         transfer_losses_meter.append(AverageMeter(f'Transfer Loss {i}', ':6.2f'))
         domain_accs_meter.append(AverageMeter(f'Domain Acc {i}', ':3.1f'))
     
-    losses = AverageMeter('Total Loss', ':6.2f')
+  
 
     progress = ProgressMeter(len(val_loader),
                              [batch_time, cls_losses, top1, top5] + transfer_losses_meter + domain_accs_meter,
@@ -671,6 +679,7 @@ def validate(val_loader: DataLoader,
             class_y_true.append(class_labels)
             class_preds.append(y_tr_pred_class)
 
+            # TODO: produce confusion matrices for each domain discrimination head
             # # gather data for the category confusion matrix
             # _, y_tr_pred_domain = multidomain_adv.domain_pred.topk(1)
             # domain_y_true.append(domain_labels)
@@ -749,9 +758,9 @@ def validate(val_loader: DataLoader,
         class_y_true = torch.squeeze(torch.cat(class_y_true, dim=0)).tolist()
         class_preds = torch.squeeze(torch.cat(class_preds,
                                                     dim=0)).tolist()
-        domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
-        domain_preds = torch.squeeze(torch.cat(domain_preds,
-                                                     dim=0)).tolist()
+        # domain_y_true = torch.squeeze(torch.cat(domain_y_true, dim=0)).tolist()
+        # domain_preds = torch.squeeze(torch.cat(domain_preds,
+        #                                              dim=0)).tolist()
         styles = ['Art', 'Clipart', 'Product', 'Real World']
         cats = val_loader.dataset.classes
         folderpath = f'{args.log}/conf_mat'
@@ -800,10 +809,10 @@ if __name__ == '__main__':
                         default=256,
                         type=int,
                         help='Dimension of bottleneck')
-    parser.add_argument('--trade-off',
-                        default=1.,
+    parser.add_argument('--alpha-trade-off',
+                        default=0.5,
                         type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
+                        help='the trade-off hyper-parameter for transfer loss. Input range is [0, 1).')
     # training parameters
     parser.add_argument('-b',
                         '--batch-size',
@@ -813,7 +822,7 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr',
                         '--learning-rate',
-                        default=0.01,
+                        default=0.001,
                         type=float,
                         metavar='LR',
                         help='initial learning rate',
@@ -845,10 +854,10 @@ if __name__ == '__main__':
                         metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs',
-                        default=30,
+                        default=60,
                         type=int,
                         metavar='N',
-                        help='number of total epochs to run (default: 30)')
+                        help='number of total epochs to run (default: 60)')
     parser.add_argument('-i',
                         '--iters-per-epoch',
                         default=1000,
@@ -935,18 +944,6 @@ if __name__ == '__main__':
         default=True,
         action='store_false',
         help='''If false, don't use the Warm Gradient Reversal Layer.''')
-    parser.add_argument(
-        '--finetune',
-        dest="finetune",
-        default=True,
-        action='store_true',
-        help='''If true, set the learning rate of backbone to 0.1 of learning rate.''')
-    parser.add_argument(
-        '--no-finetune',
-        dest="finetune",
-        default=True,
-        action='store_false',
-        help='''If false, set the learning rate of backbone to 1.0 of learning rate.''')
     parser.add_argument('--d-steps-per-g',
                         default=0,
                         type=int,

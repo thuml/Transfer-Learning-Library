@@ -19,7 +19,8 @@ class GradientReverseFunction(Function):
 
 
 class GradientReverseLayer(nn.Module):
-    def __init__(self, coeff):
+    
+    def __init__(self, coeff: Optional[float] = 1.):
         self.coeff = coeff
         super(GradientReverseLayer, self).__init__()
 

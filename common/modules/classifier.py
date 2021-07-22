@@ -1,3 +1,4 @@
+from dalib.modules.gl import GradientLayer
 from typing import Tuple, Optional, List, Dict
 import torch.nn as nn
 import torch
@@ -41,7 +42,8 @@ class Classifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True):
+                 bottleneck_dim: Optional[int] = -1, gl: Optional[GradientLayer] = None, 
+                 head: Optional[nn.Module] = None):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
@@ -55,12 +57,16 @@ class Classifier(nn.Module):
             self.bottleneck = bottleneck
             assert bottleneck_dim > 0
             self._features_dim = bottleneck_dim
+        
+        if gl is None:
+            self.gl = GradientLayer()
+        else:
+            self.gl = gl
 
         if head is None:
             self.head = nn.Linear(self._features_dim, num_classes)
         else:
             self.head = head
-        self.finetune = finetune
 
     @property
     def features_dim(self) -> int:
@@ -71,17 +77,24 @@ class Classifier(nn.Module):
         """"""
         f = self.backbone(x)
         f = self.bottleneck(f)
+        f = self.gl(f)
         predictions = self.head(f)
         return predictions, f
 
-    def get_parameters(self, base_lr=1.0) -> List[Dict]:
+    def get_parameters(self, backbone_lr: Optional[float] = 1., bottleneck_lr: Optional[float] = 1., head_lr: Optional[float] = 1.) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,
             such as the relative learning rate of each layer
         """
+        # params = [
+        #     {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
+        #     {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
+        #     {"params": self.head.parameters(), "lr": 1.0 * base_lr},
+        # ]
+        
         params = [
-            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
-            {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
-            {"params": self.head.parameters(), "lr": 1.0 * base_lr},
+            {"params": self.backbone.parameters(), "lr": backbone_lr},
+            {"params": self.bottleneck.parameters(), "lr": bottleneck_lr},
+            {"params": self.head.parameters(), "lr": head_lr},
         ]
 
         return params

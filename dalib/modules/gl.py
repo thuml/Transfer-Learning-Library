@@ -16,6 +16,16 @@ class GradientFunction(Function):
     @staticmethod
     def backward(ctx: Any, grad_output: torch.Tensor) -> Tuple[torch.Tensor, Any]:
         return grad_output * ctx.coeff, None
+    
+class GradientLayer(nn.Module):
+    
+    def __init__(self, coeff: Optional[float] = 1.):
+        self.coeff = coeff
+        super(GradientLayer, self).__init__()
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        """"""
+        return GradientFunction.apply(input, self.coeff)
 
 
 class WarmStartGradientLayer(nn.Module):

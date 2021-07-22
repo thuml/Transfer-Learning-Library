@@ -171,7 +171,7 @@ def main(args: argparse.Namespace):
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
     lambda_trade_off = args.trade_off
 
-    # define loss function for domain discrimination
+    # select the grl for the domain discriminator architecture
     if args.use_warm_grl:
         grl = WarmStartGradientReverseLayer()
     else:
@@ -276,13 +276,13 @@ def main(args: argparse.Namespace):
                           lr_scheduler, lambda_trade_off, epoch, args)
 
         # evaluate on validation set
-        is_final_epoch = epoch == args.epochs - 1
-        acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
-                                 'Validation',  gen_conf_mat=False, 
-                                 calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
+        # is_final_epoch = epoch == args.epochs - 1
+        # acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
+        #                          'Validation',  gen_conf_mat=False, 
+        #                          calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
 
         total_log = train_log.copy()
-        total_log.update(val_log.copy())
+        # total_log.update(val_log.copy())
         wandb.log(total_log)
 
         # remember best acc@1 and save checkpoint
@@ -290,11 +290,11 @@ def main(args: argparse.Namespace):
                    logger.get_checkpoint_path('latest'))
         torch.save(classifier.state_dict(),
                    logger.get_checkpoint_path(f'epoch {epoch}'))
-        if acc1 > best_acc1:
-            shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
-                        logger.get_checkpoint_path('best'))
-            best_epoch = epoch
-        best_acc1 = max(acc1, best_acc1)
+        # if acc1 > best_acc1:
+        #     shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
+        #                 logger.get_checkpoint_path('best'))
+        #     best_epoch = epoch
+        # best_acc1 = max(acc1, best_acc1)
 
     # load the model used for evaluation
     if args.use_best_model:
@@ -304,30 +304,30 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 
-    # evaluate best model on validation set with more information and temp calculation
-    acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
-                                 'Best Model on Validation',  gen_conf_mat=True, 
-                                 conf_interval=True, calc_temp=True, gen_reli_diag=True)
-    print("best_val_acc1 = {:3.1f}".format(acc1))
+    # # evaluate best model on validation set with more information and temp calculation
+    # acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
+    #                              'Best Model on Validation',  gen_conf_mat=True, 
+    #                              conf_interval=True, calc_temp=True, gen_reli_diag=True)
+    # print("best_val_acc1 = {:3.1f}".format(acc1))
     
-    # evaluate best model on validation set with more information and temp calculation
-    acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
-                                 'Test',  gen_conf_mat=True, calc_temp=False, 
-                                 conf_interval=True, input_temperature=t, gen_reli_diag=True)
-    print("test_acc1 = {:3.1f}".format(acc1))
+    # # evaluate best model on validation set with more information and temp calculation
+    # acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
+    #                              'Test',  gen_conf_mat=True, calc_temp=False, 
+    #                              conf_interval=True, input_temperature=t, gen_reli_diag=True)
+    # print("test_acc1 = {:3.1f}".format(acc1))
 
-    # evaluate on novel set
-    acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
-                               'Novel', gen_conf_mat=True, calc_temp=False, 
-                               conf_interval=True, input_temperature=t, gen_reli_diag=True)
-    print("novel_acc1 = {:3.1f}".format(acc1))
+    # # evaluate on novel set
+    # acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
+    #                            'Novel', gen_conf_mat=True, calc_temp=False, 
+    #                            conf_interval=True, input_temperature=t, gen_reli_diag=True)
+    # print("novel_acc1 = {:3.1f}".format(acc1))
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
                 "Epoch of Best Validation Accuracy (Validation Set)": best_epoch}
     
-    eval_log.update(best_val_log.copy())
-    eval_log.update(test_log.copy())
-    eval_log.update(novel_log.copy())
+    # eval_log.update(best_val_log.copy())
+    # eval_log.update(test_log.copy())
+    # eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
 

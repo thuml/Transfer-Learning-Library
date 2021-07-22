@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import torch.nn as nn
 
 __all__ = ['DomainDiscriminator']
@@ -46,7 +46,7 @@ class DomainDiscriminator(nn.Sequential):
                 nn.Sigmoid()
             )
 
-    def get_parameters(self) -> List[Dict]:
-        return [{"params": self.parameters(), "lr": 1.}]
+    def get_parameters(self, base_lr: Optional[float] = 1.) -> List[Dict]:
+        return [{"params": self.parameters(), "lr": base_lr}]
 
 
