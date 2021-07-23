@@ -17,8 +17,8 @@ class Market1501(BaseImageDataset):
     # images: 12936 (train) + 3368 (query) + 15913 (gallery)
     """
     dataset_dir = 'Market-1501-v15.09.15'
-    archive_name = 'Market-1501-v15.09.15.zip'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/1cd241a6febb4eee8de8/?dl=1'
+    archive_name = 'Market-1501-v15.09.15.tgz'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/aad1f51c221f40c7b2a7/?dl=1'
 
     def __init__(self, root, verbose=True):
         super(Market1501, self).__init__()

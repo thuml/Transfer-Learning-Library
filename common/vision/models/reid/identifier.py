@@ -8,27 +8,31 @@ class ReIdentifier(nn.Module):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
                  bottleneck_dim: Optional[int] = -1, finetune=True):
         super(ReIdentifier, self).__init__()
-        self.backbone = backbone
-        self.num_classes = num_classes
-        self.pool = nn.Sequential(
+        self.backbone = nn.Sequential(
+            backbone,
             nn.AdaptiveAvgPool2d(output_size=(1, 1)),
             nn.Flatten()
         )
+        self.num_classes = num_classes
         if bottleneck is None:
-            self.bottleneck = nn.Identity()
+            feature_bn = nn.BatchNorm1d(backbone.out_features)
+            self.bottleneck = feature_bn
             self._features_dim = backbone.out_features
         else:
-            self.bottleneck = bottleneck
-            assert bottleneck_dim > 0
+            feature_bn = nn.BatchNorm1d(bottleneck_dim)
+            self.bottleneck = nn.Sequential(
+                bottleneck,
+                feature_bn
+            )
             self._features_dim = bottleneck_dim
-        self.feature_bn = nn.BatchNorm1d(self.features_dim)
+
         self.head = nn.Linear(self.features_dim, num_classes, bias=False)
         self.finetune = finetune
 
         # initialize feature_bn and head
-        self.feature_bn.bias.requires_grad_(False)
-        init.constant_(self.feature_bn.weight, 1)
-        init.constant_(self.feature_bn.bias, 0)
+        feature_bn.bias.requires_grad_(False)
+        init.constant_(feature_bn.weight, 1)
+        init.constant_(feature_bn.bias, 0)
         init.normal_(self.head.weight, std=0.001)
 
     @property
@@ -38,9 +42,7 @@ class ReIdentifier(nn.Module):
 
     def forward(self, x: torch.Tensor):
         f = self.backbone(x)
-        f = self.pool(f)
         bn_f = self.bottleneck(f)
-        bn_f = self.feature_bn(bn_f)
         if not self.training:
             return bn_f
         predictions = self.head(bn_f)
@@ -52,9 +54,7 @@ class ReIdentifier(nn.Module):
         """
         params = [
             {"params": self.backbone.parameters(), "lr": rate * base_lr if self.finetune else 1.0 * base_lr},
-            {"params": self.pool.parameters(), "lr": 1.0 * base_lr},
             {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
-            {"params": self.feature_bn.parameters(), "lr": 1.0 * base_lr},
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
 

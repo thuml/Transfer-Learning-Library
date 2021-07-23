@@ -19,8 +19,8 @@ class DukeMTMC(BaseImageDataset):
     # cameras: 8
     """
     dataset_dir = '.'
-    archive_name = 'DukeMTMC-reID.zip'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/f9047f0c52f5477587e1/?dl=1'
+    archive_name = 'DukeMTMC-reID.tgz'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/89f1edaf0f83434f8070/?dl=1'
 
     def __init__(self, root, verbose=True):
         super(DukeMTMC, self).__init__()

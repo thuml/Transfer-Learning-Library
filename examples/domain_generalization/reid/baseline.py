@@ -54,6 +54,7 @@ def main(args: argparse.Namespace):
         T.RandomHorizontalFlip(p=0.5),
         T.Pad(10),
         T.RandomCrop((args.height, args.width)),
+        T.ColorJitter(brightness=0.2, contrast=0.15, saturation=0, hue=0),
         T.ToTensor(),
         normalize
     ])
@@ -69,10 +70,10 @@ def main(args: argparse.Namespace):
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
     source_train_set = sorted(source_dataset.train)
     sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
-    train_source_loader = DataLoader(
+    train_loader = DataLoader(
         convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
-    train_source_iter = ForeverDataIterator(train_source_loader)
+    train_iter = ForeverDataIterator(train_loader)
     val_loader = DataLoader(
         convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
                                    root=source_dataset.images_dir,
@@ -81,11 +82,6 @@ def main(args: argparse.Namespace):
 
     # target dataset
     target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
-    target_train_set = sorted(target_dataset.train)
-    train_target_loader = DataLoader(
-        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
-        batch_size=args.batch_size, num_workers=args.workers, shuffle=True, pin_memory=True, drop_last=True)
-    train_target_iter = ForeverDataIterator(train_target_loader)
     test_loader = DataLoader(
         convert_to_pytorch_dataset(list(set(target_dataset.query) | set(target_dataset.gallery)),
                                    root=target_dataset.images_dir,
@@ -97,10 +93,10 @@ def main(args: argparse.Namespace):
     backbone = models.__dict__[args.arch](pretrained=True)
     model = ReIdentifier(backbone, num_classes, finetune=args.finetune).to(device)
 
+    # define optimizer and learning rate scheduler
     optimizer = Adam(model.get_parameters(base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
     lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
                                      warmup_iters=args.warmup_step)
-
     # parallel
     model = DataParallel(model)
 
@@ -127,7 +123,7 @@ def main(args: argparse.Namespace):
         print(lr_scheduler.get_lr())
 
         # train for one epoch
-        train(train_source_iter, train_target_iter, model, criterion_ce, criterion_triplet, optimizer, epoch, args)
+        train(train_iter, model, criterion_ce, criterion_triplet, optimizer, epoch, args)
 
         # update learning rate
         lr_scheduler.step()
@@ -161,9 +157,8 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model,
-          criterion_ce: CrossEntropyLabelSmooth, criterion_triplet: SoftTripletLoss, optimizer: Adam, epoch: int,
-          args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, model, criterion_ce: CrossEntropyLabelSmooth,
+          criterion_triplet: SoftTripletLoss, optimizer: Adam, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses_ce = AverageMeter('CeLoss', ':3.2f')
@@ -182,31 +177,27 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     end = time.time()
 
     for i in range(args.iters_per_epoch):
-        x_s, _, labels_s, _ = next(train_source_iter)
-        x_t, _, _, _ = next(train_target_iter)
-
-        x_s = x_s.to(device)
-        x_t = x_t.to(device)
-        labels_s = labels_s.to(device)
+        x, _, labels, _ = next(train_iter)
+        x = x.to(device)
+        labels = labels.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, f_s = model(x_s)
-        y_t, f_t = model(x_t)
+        y, f = model(x)
 
         # cross entropy loss
-        loss_ce = criterion_ce(y_s, labels_s)
+        loss_ce = criterion_ce(y, labels)
         # triplet loss
-        loss_triplet = criterion_triplet(f_s, f_s, labels_s)
+        loss_triplet = criterion_triplet(f, f, labels)
         loss = loss_ce + loss_triplet * args.trade_off
 
-        cls_acc = accuracy(y_s, labels_s)[0]
-        losses_ce.update(loss_ce.item(), x_s.size(0))
-        losses_triplet.update(loss_triplet.item(), x_s.size(0))
-        losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
+        cls_acc = accuracy(y, labels)[0]
+        losses_ce.update(loss_ce.item(), x.size(0))
+        losses_triplet.update(loss_triplet.item(), x.size(0))
+        losses.update(loss.item(), x.size(0))
+        cls_accs.update(cls_acc.item(), x.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -231,7 +222,7 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description="Baseline for Domain Adaptation ReID")
+    parser = argparse.ArgumentParser(description="Baseline for Domain Generalization ReID")
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
