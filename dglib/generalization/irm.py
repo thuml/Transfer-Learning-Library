@@ -1,35 +1,13 @@
-from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
 
 
-class TradeOffScheduler(object):
-
-    def __init__(self, anneal_iters, trade_off, anneal_trade_off: Optional[float] = 1):
-        self.anneal_trade_off = anneal_trade_off
-        self.trade_off = trade_off
-        self.count = 0
-        self.anneal_iters = anneal_iters
-
-    def step(self):
-        self.count += 1
-
-    def get_count(self):
-        return self.count
-
-    def get_trade_off(self):
-        if self.count >= self.anneal_iters:
-            return self.trade_off
-        else:
-            return self.anneal_trade_off
-
-
-class IrmPenaltyLoss(nn.Module):
+class InvariancePenaltyLoss(nn.Module):
 
     def __init__(self):
-        super(IrmPenaltyLoss, self).__init__()
+        super(InvariancePenaltyLoss, self).__init__()
         self.scale = torch.tensor(1.).requires_grad_()
 
     def forward(self, y: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:

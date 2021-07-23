@@ -155,17 +155,16 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
         x_all = x_all.to(device)
         labels_all = labels_all.to(device)
 
+        # compute output
+        y_all, f_all = model(x_all)
+
         # measure data loading time
         data_time.update(time.time() - end)
 
-        y_all, f_all = [], []
+        # separate into different domains
+        y_all = y_all.chunk(num_domains, dim=0)
+        f_all = f_all.chunk(num_domains, dim=0)
         labels_all = labels_all.chunk(num_domains, dim=0)
-        for x_per_domain in x_all.chunk(num_domains, dim=0):
-            # compute output for each domain
-            y_per_domain, f_per_domain = model(x_per_domain)
-
-            y_all.append(y_per_domain)
-            f_all.append(f_per_domain)
 
         loss_ce = 0
         loss_penalty = 0
@@ -295,7 +294,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 36)')
-    parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=5e-4, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')

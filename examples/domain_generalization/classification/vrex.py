@@ -16,7 +16,6 @@ import torch.nn.functional as F
 from get_dataset import get_dataset
 
 sys.path.append('../../..')
-from dglib.generalization.irm import TradeOffScheduler
 from dglib.generalization.sampler import DefaultSampler
 from dglib.generalization.classifier import ImageClassifier as Classifier
 import common.vision.datasets as datasets
@@ -90,7 +89,6 @@ def main(args: argparse.Namespace):
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
                     nesterov=True)
     lr_scheduler = CosineAnnealingLR(optimizer, args.epochs * args.iters_per_epoch)
-    trade_off_scheduler = TradeOffScheduler(args.anneal_iters, args.trade_off)
 
     # for simplicity
     assert args.anneal_iters % args.iters_per_epoch == 0
@@ -106,7 +104,7 @@ def main(args: argparse.Namespace):
     best_val_acc1 = 0.
     best_test_acc1 = 0.
     for epoch in range(args.epochs):
-        if trade_off_scheduler.get_count() == args.anneal_iters:
+        if epoch * args.iters_per_epoch == args.anneal_iters:
             # reset optimizer to avoid sharp jump in gradient magnitudes
             optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum,
                             weight_decay=args.wd, nesterov=True)
@@ -114,7 +112,7 @@ def main(args: argparse.Namespace):
 
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, lr_scheduler, trade_off_scheduler, num_domains, epoch, args)
+        train(train_iter, classifier, optimizer, lr_scheduler, num_domains, epoch, args)
 
         # evaluate on validation set
         print("Validation on source domain...")
@@ -139,7 +137,7 @@ def main(args: argparse.Namespace):
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR,
-          trade_off_scheduler: TradeOffScheduler, num_domains: int, epoch: int, args: argparse.Namespace):
+          num_domains: int, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -177,7 +175,12 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
         # penalty loss
         loss_penalty = ((loss_ce_per_domain - loss_ce) ** 2).mean()
 
-        trade_off = trade_off_scheduler.get_trade_off()
+        global_iter = epoch * args.iters_per_epoch + i
+        if global_iter >= args.anneal_iters:
+            trade_off = args.trade_off
+        else:
+            trade_off = 1
+
         loss = loss_ce + loss_penalty * trade_off
         cls_acc = accuracy(y_all, labels_all)[0]
 
@@ -191,9 +194,6 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
         loss.backward()
         optimizer.step()
         lr_scheduler.step()
-
-        # update trade off scheduler
-        trade_off_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
