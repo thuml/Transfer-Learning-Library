@@ -1,4 +1,4 @@
 from .resnet import *
-from .module import *
+from .mixstyle import *
 
 __all__ = ['resnet']

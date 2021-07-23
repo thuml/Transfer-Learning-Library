@@ -1,4 +1,4 @@
-from .module import MixStyle
+from .mixstyle import MixStyle
 from common.vision.models.reid.resnet import ReidResNet
 from common.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
 

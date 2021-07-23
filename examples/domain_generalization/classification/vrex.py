@@ -16,8 +16,8 @@ import torch.nn.functional as F
 from get_dataset import get_dataset
 
 sys.path.append('../../..')
-from dglib.generalization.sampler import DefaultSampler
-from dglib.generalization.classifier import ImageClassifier as Classifier
+from dglib.modules.sampler import DefaultSampler
+from dglib.modules.classifier import ImageClassifier as Classifier
 import common.vision.datasets as datasets
 import common.vision.models as models
 from common.vision.transforms import ResizeImage
