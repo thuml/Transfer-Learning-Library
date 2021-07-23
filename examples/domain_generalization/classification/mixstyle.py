@@ -18,7 +18,7 @@ from get_dataset import get_dataset
 sys.path.append('../../..')
 import dglib.generalization.mixstyle.models as models
 from dglib.generalization.mixstyle.sampler import RandomDomainSampler
-from dglib.generalization.classifier import ImageClassifier as Classifier
+from dglib.modules.classifier import ImageClassifier as Classifier
 import common.vision.datasets as datasets
 from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
