@@ -70,7 +70,7 @@ class WarmStartGradientReverseLayer(nn.Module):
             2.0 * (self.hi - self.lo) / (1.0 + np.exp(-self.alpha * self.iter_num / self.max_iters))
             - (self.hi - self.lo) + self.lo
         )
-        if self.auto_step:
+        if torch.is_grad_enabled() and self.auto_step:
             self.step()
         return GradientReverseFunction.apply(input, coeff)
 

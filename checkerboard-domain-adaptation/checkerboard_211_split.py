@@ -8,6 +8,7 @@ import common.vision.models as models
 from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHome
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
 from dalib.modules.grl import WarmStartGradientReverseLayer, GradientReverseLayer
+from dalib.modules.gl import GradientLayer, WarmStartGradientLayer
 
 from dalib.modules.multidomain_discriminator import MultidomainDiscriminator
 import random
@@ -149,10 +150,16 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    num_backprop = args.iters_per_epoch * args.epochs
+    if args.use_cool_grl:
+        gl = WarmStartGradientLayer(alpha=10., lo=0., hi=args.alpha_trade_off, max_iters=num_backprop, auto_step=True)
+    else:
+        gl = GradientLayer(coeff=args.alpha_trade_off)
+    
     classifier = ImageClassifier(backbone,
                                  len(datasets.classes()),
                                  bottleneck_dim=args.bottleneck_dim,
-                                 finetune=args.finetune).to(device)
+                                 gl=gl).to(device)
 
     multidomain_discri = MultidomainDiscriminator(
         in_feature=classifier.features_dim,
@@ -169,13 +176,15 @@ def main(args: argparse.Namespace):
     lr_scheduler = LambdaLR(
         optimizer, lambda x: args.lr *
         (1. + args.lr_gamma * float(x))**(-args.lr_decay))
-    lambda_trade_off = args.trade_off
 
+    
     # select the grl for the domain discriminator architecture
     if args.use_warm_grl:
-        grl = WarmStartGradientReverseLayer()
+        grl = WarmStartGradientReverseLayer(lo=0., hi=1 - args.alpha_trade_off, max_iters=num_backprop, auto_step=True)
+    if args.use_cool_grl:
+        grl = WarmStartGradientReverseLayer(alpha=10., lo=1., hi=1. - args.alpha_trade_off, max_iters=num_backprop, auto_step=True)
     else:
-        grl = GradientReverseLayer()
+        grl = GradientReverseLayer(coeff=1 - args.alpha_trade_off)
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri, grl=grl).to(device)
 
     # resume from the best or latest checkpoint
@@ -272,17 +281,17 @@ def main(args: argparse.Namespace):
     best_epoch = 0
     for epoch in range(args.epochs):
         # train for one epoch
-        train_log, lambda_trade_off = train(train_iter, classifier, multidomain_adv, optimizer,
-                          lr_scheduler, lambda_trade_off, epoch, args)
+        train_log = train(train_iter, classifier, multidomain_adv, optimizer,
+                          lr_scheduler, epoch, args)
 
         # evaluate on validation set
         # is_final_epoch = epoch == args.epochs - 1
-        # acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
-        #                          'Validation',  gen_conf_mat=False, 
-        #                          calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
+        acc1, val_log, _ = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Validation',  gen_conf_mat=False, 
+                                 calc_temp=False, gen_reli_diag=False, gen_rejection_curve=False)
 
         total_log = train_log.copy()
-        # total_log.update(val_log.copy())
+        total_log.update(val_log.copy())
         wandb.log(total_log)
 
         # remember best acc@1 and save checkpoint
@@ -290,11 +299,11 @@ def main(args: argparse.Namespace):
                    logger.get_checkpoint_path('latest'))
         torch.save(classifier.state_dict(),
                    logger.get_checkpoint_path(f'epoch {epoch}'))
-        # if acc1 > best_acc1:
-        #     shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
-        #                 logger.get_checkpoint_path('best'))
-        #     best_epoch = epoch
-        # best_acc1 = max(acc1, best_acc1)
+        if acc1 > best_acc1:
+            shutil.copy(logger.get_checkpoint_path(f'epoch {epoch}'),
+                        logger.get_checkpoint_path('best'))
+            best_epoch = epoch
+        best_acc1 = max(acc1, best_acc1)
 
     # load the model used for evaluation
     if args.use_best_model:
@@ -304,30 +313,30 @@ def main(args: argparse.Namespace):
         classifier.load_state_dict(
             torch.load(logger.get_checkpoint_path('latest')))
 
-    # # evaluate best model on validation set with more information and temp calculation
-    # acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
-    #                              'Best Model on Validation',  gen_conf_mat=True, 
-    #                              conf_interval=True, calc_temp=True, gen_reli_diag=True)
-    # print("best_val_acc1 = {:3.1f}".format(acc1))
+    # evaluate best model on validation set with more information and temp calculation
+    acc1, best_val_log, t = validate(val_loader, classifier, multidomain_adv, args,
+                                 'Best Model on Validation',  gen_conf_mat=True, 
+                                 conf_interval=True, calc_temp=True, gen_reli_diag=True)
+    print("best_val_acc1 = {:3.1f}".format(acc1))
     
-    # # evaluate best model on validation set with more information and temp calculation
-    # acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
-    #                              'Test',  gen_conf_mat=True, calc_temp=False, 
-    #                              conf_interval=True, input_temperature=t, gen_reli_diag=True)
-    # print("test_acc1 = {:3.1f}".format(acc1))
+    # evaluate best model on validation set with more information and temp calculation
+    acc1, test_log, _ = validate(test_loader, classifier, multidomain_adv, args,
+                                 'Test',  gen_conf_mat=True, calc_temp=False, 
+                                 conf_interval=True, input_temperature=t, gen_reli_diag=True)
+    print("test_acc1 = {:3.1f}".format(acc1))
 
-    # # evaluate on novel set
-    # acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
-    #                            'Novel', gen_conf_mat=True, calc_temp=False, 
-    #                            conf_interval=True, input_temperature=t, gen_reli_diag=True)
-    # print("novel_acc1 = {:3.1f}".format(acc1))
+    # evaluate on novel set
+    acc1, novel_log, _ = validate(novel_loader, classifier, multidomain_adv, args,
+                               'Novel', gen_conf_mat=True, calc_temp=False, 
+                               conf_interval=True, input_temperature=t, gen_reli_diag=True)
+    print("novel_acc1 = {:3.1f}".format(acc1))
     
     eval_log = {"Best Category Classification Accuracy (Validation Set)": best_acc1,
                 "Epoch of Best Validation Accuracy (Validation Set)": best_epoch}
     
-    # eval_log.update(best_val_log.copy())
-    # eval_log.update(test_log.copy())
-    # eval_log.update(novel_log.copy())
+    eval_log.update(best_val_log.copy())
+    eval_log.update(test_log.copy())
+    eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
 
@@ -346,10 +355,8 @@ def train(train_iter: ForeverDataIterator,
           multidomain_adv: MultidomainAdversarialLoss, 
           optimizer: SGD,
           lr_scheduler: LambdaLR,
-          lambda_trade_off: int, 
           epoch: int, 
-          args: argparse.Namespace, 
-          num_domains: Optional[int] = 4):
+          args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     total_losses = AverageMeter('Loss', ':6.2f')
@@ -367,8 +374,6 @@ def train(train_iter: ForeverDataIterator,
     multidomain_adv.train()
 
     end = time.time()
-    target_transfer_loss = np.log(num_domains)
-    lambda_diagnostic = None
     for i in range(args.iters_per_epoch):
         x_tr, labels_tr = next(train_iter)
 
@@ -392,12 +397,8 @@ def train(train_iter: ForeverDataIterator,
         # calculate losses
         cls_loss = F.cross_entropy(y_tr, class_labels_tr)
         transfer_loss = multidomain_adv(f_tr, domain_labels_tr)
-        # TODO: Find scheduler for trade_off
-        if args.use_lagrange_multiplier:
-            lambda_trade_off += get_lr(optimizer) * -(transfer_loss.item() - target_transfer_loss)
-        total_loss = cls_loss + transfer_loss * lambda_trade_off # args.trade_off
+        total_loss = cls_loss + transfer_loss
         
-        # # TODO: Freeze the weights (or not)
         if i % (1 + args.d_steps_per_g) < args.d_steps_per_g:
             loss_to_minimize = transfer_loss
         else:
@@ -418,23 +419,6 @@ def train(train_iter: ForeverDataIterator,
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        
-        # TODO: 
-        # cls_loss.backward(retain_graph=True)
-        
-        # transfer_loss *= lambda_trade_off # args.trade_off
-        # transfer_loss.backward()
-        # total_backbone_grads = get_grad_list(model.backbone)
-        # lambda_diagnostic_update = []
-        # for cls_grad, total_grad in zip(cls_backbone_grad_list, total_backbone_grads):
-        #     transfer_grad = (total_grad - cls_grad)/lambda_trade_off
-        #     lambda_diagnostic_update.append(torch.div(cls_grad, transfer_grad))
-        # if lambda_diagnostic:
-        #     for i in range(len(lambda_diagnostic)):
-        #         lambda_diagnostic[i] += lambda_diagnostic_update[i] 
-        # else:
-        #     lambda_diagnostic = lambda_diagnostic_update
-        
         loss_to_minimize.backward()
         optimizer.step()
         lr_scheduler.step()
@@ -447,23 +431,17 @@ def train(train_iter: ForeverDataIterator,
             progress.display(i)
 
     log = {}
-    # for i in range(len(lambda_diagnostic)):
-    #     lambda_diagnostic[i] /= args.iters_per_epoch
-    #     if not (torch.any(lambda_diagnostic[i].isnan()).item() or
-    #            torch.any(lambda_diagnostic[i].isinf()).item()):
-    #         log.update({f'Lambda Diagnotic for Backbone layer {i} (Training Set)': wandb.Histogram(lambda_diagnostic[i].cpu())})
         
     log.update({
-        "Lambda Trade Off (Training Set)": lambda_trade_off,
-        "Category Classification Loss (Training Set)": cls_losses.sum,
-        'Style Discrimination Loss (Training Set)': transfer_losses.sum,
+        "Category Classification Loss (Training Set)": cls_losses.avg,
+        'Style Discrimination Loss (Training Set)': transfer_losses.avg,
         'Total Loss (Training Set)': total_losses.sum,
         'Category Classification Accuracy (Training Set)': cls_accs.avg,
         'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
         'Classification Logits': y_tr,
     })
     
-    return log, lambda_trade_off
+    return log
 
 def reliability_diag(conf: List[int], est_acc: List[int], density: List[int],
                       scaled_conf: List[int], scaled_est_acc: List[int], scaled_density: List[int],
@@ -641,7 +619,6 @@ def validate(val_loader: DataLoader,
             # compute loss
             cls_loss = F.cross_entropy(class_pred, class_labels)
             transfer_loss = multidomain_adv(features, domain_labels)
-            # loss = cls_loss + transfer_loss * args.trade_off
 
             # measure accuracy and record class loss
             acc1, acc5 = accuracy(class_pred, class_labels, topk=(1, 5))
@@ -761,9 +738,9 @@ def validate(val_loader: DataLoader,
     
     log.update(
         {
-            f"Category Classification Loss ({dataset_type} Set)": cls_losses.sum,
+            f"Category Classification Loss ({dataset_type} Set)": cls_losses.avg,
             f'Category Classification Accuracy ({dataset_type} Set)': top1.avg,
-            f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.sum,
+            f"Style Discriminator Loss ({dataset_type} Set)": transfer_losses.avg,
             f'Style Discriminator Accuracy ({dataset_type} Set)': domain_accs.avg,
             # f"Total Loss ({dataset_type} Set)": losses.sum
         }
@@ -801,6 +778,10 @@ if __name__ == '__main__':
                         default=1.,
                         type=float,
                         help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--alpha-trade-off',
+                        default=0.5,
+                        type=float,
+                        help='the trade-off hyper-parameter between the classification loss and transfer loss')
     # training parameters
     parser.add_argument('-b',
                         '--batch-size',
@@ -954,6 +935,18 @@ if __name__ == '__main__':
         default=True,
         action='store_false',
         help='''If false, don't use the Warm Gradient Reversal Layer.''')
+    parser.add_argument(
+        '--cool-grl',
+        dest="use_cool_grl",
+        default=False,
+        action='store_true',
+        help='''If true, use the Cool Gradient Reversal Layer''')
+    parser.add_argument(
+        '--no-cool-grl',
+        dest="use_cool_grl",
+        default=False,
+        action='store_false',
+        help='''If false, don't use the Cool Gradient Reversal Layer.''')
     parser.add_argument(
         '--finetune',
         dest="finetune",

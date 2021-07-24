@@ -77,8 +77,8 @@ class Classifier(nn.Module):
         """"""
         f = self.backbone(x)
         f = self.bottleneck(f)
-        f = self.gl(f)
-        predictions = self.head(f)
+        cls_head_input = self.gl(f)
+        predictions = self.head(cls_head_input)
         return predictions, f
 
     def get_parameters(self, backbone_lr: Optional[float] = 1., bottleneck_lr: Optional[float] = 1., head_lr: Optional[float] = 1.) -> List[Dict]:

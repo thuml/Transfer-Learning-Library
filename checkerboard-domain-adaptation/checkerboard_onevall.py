@@ -9,7 +9,7 @@ from common.vision.datasets.checkerboard_officehome import CheckerboardOfficeHom
 from dalib.adaptation.mdann import MultidomainAdversarialLoss, ImageClassifier
 from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
 from dalib.modules.grl import WarmStartGradientReverseLayer, GradientReverseLayer
-from dalib.modules.gl import GradientLayer
+from dalib.modules.gl import WarmStartGradientLayer, GradientLayer
 
 from dalib.modules.multidomain_discriminator import MultidomainDiscriminator
 from dalib.modules.domain_discriminator import DomainDiscriminator
@@ -150,6 +150,7 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     
+    
     # gradient layer makes backpropagation more efficient
     classifier = ImageClassifier(backbone,
                                  len(datasets.classes()),
@@ -160,12 +161,16 @@ def main(args: argparse.Namespace):
     # TODO
     
     domain_advs = []
+    # TODO: Fix
+    num_backprop = args.bactch_size * args.iters_per_epoch * args.epochs
     # define optimizer and lr scheduler
     # TODO base_lr parameters can set alpha and (1 - alpha) trade-off between category classifier and domain discriminator
     params = classifier.get_parameters()
     for _ in range(num_domains):
         if args.use_warm_grl:
-            grl = WarmStartGradientReverseLayer(hi=(1 - args.alpha_trade_off)/num_domains)
+            grl = WarmStartGradientReverseLayer(hi=(1. - args.alpha_trade_off)/num_domains, max_iters=num_backprop, auto_step=True)
+        elif args.use_cool_grl:
+            grl = WarmStartGradientReverseLayer(lo=1. - args.alpha_trade_off, hi=0., )
         else:
             grl = GradientReverseLayer(coeff=(1 - args.alpha_trade_off)/num_domains)
         domain_discriminator = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
@@ -504,6 +509,11 @@ def calibration_evaluation(class_probs: List[List[int]],
         ece, ece_lower, ece_upper = kernel_ece_conf_interval(class_probs, class_labels, classes, 
                                                      confidence=confidence, size=bootstrap_size)
         brier, brier_lower, brier_upper = brier_conf_interval(class_probs, class_labels, len(classes), confidence, bootstrap_size)
+        
+        print(f'KDE Expected Calibration Error Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_upper}')
+        print(f'KDE Expected Calibration Error Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_lower}')
+        print(f'Brier Score Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_lower}')
+        print(f'Brier Score Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_upper}')
         log.update({f'KDE Expected Calibration Error Lower Bound {add_on}({dataset_type}, Confidence = {confidence})': ece_lower,
                     f'KDE Expected Calibration Error Upper Bound {add_on}({dataset_type}, Confidence = {confidence})': ece_upper,
                     f'Brier Score Lower Bound {add_on}({dataset_type}, Confidence = {confidence})': brier_lower,
@@ -511,14 +521,8 @@ def calibration_evaluation(class_probs: List[List[int]],
     else:
         brier = brier_multi(class_probs, class_labels, len(classes))    
     
-
     print(f"KDE Expected Calibration Error {add_on}({dataset_type} Set): {ece}")
-    print(f'KDE Expected Calibration Error Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_lower}')
-    print(f'KDE Expected Calibration Error Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {ece_upper}')
-    
     print(f"Brier Score {add_on}({dataset_type} Set): {brier}")
-    print(f'Brier Score Lower Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_lower}')
-    print(f'Brier Score Upper Bound {add_on}({dataset_type}, Confidence = {confidence}): {brier_upper}')
     
     log.update({
         f'KDE Expected Calibration Error {add_on}({dataset_type})': ece,
