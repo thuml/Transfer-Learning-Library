@@ -26,6 +26,9 @@ from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
 
+sys.path.append('.')
+import utils
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -70,24 +73,29 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    dataset = datasets.__dict__[args.data]
-    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    # dataset = datasets.__dict__[args.data]
+    # train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    # train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+    #                                  shuffle=True, num_workers=args.workers, drop_last=True)
+    # val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
+    # val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    # if args.data == 'DomainNet':
+    #     test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
+    #     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    # else:
+    #     test_loader = val_loader
+    train_source_dataset, _, val_dataset, test_dataset, num_classes = utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    else:
-        test_loader = val_loader
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
-    num_classes = train_source_dataset.num_classes
+    # backbone = models.__dict__[args.arch](pretrained=True)
+    backbone = utils.get_models(args.arch)
     classifier = Classifier(backbone, num_classes).to(device)
 
     # define optimizer and lr scheduler
@@ -117,7 +125,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = utils.validate(test_loader, classifier, args, device)
         print(acc1)
         return
 
@@ -129,7 +137,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -141,7 +149,7 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
+    acc1 = utils.validate(test_loader, classifier, args, device)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
@@ -196,55 +204,55 @@ def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: 
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1, top5],
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-    if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
-    else:
-        confmat = None
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            output, _ = model(images)
-            loss = F.cross_entropy(output, target)
-
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            if confmat:
-                confmat.update(target, output.argmax(1))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-        if confmat:
-            print(confmat.format(classes))
-
-    return top1.avg
+# def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
+#     batch_time = AverageMeter('Time', ':6.3f')
+#     losses = AverageMeter('Loss', ':.4e')
+#     top1 = AverageMeter('Acc@1', ':6.2f')
+#     top5 = AverageMeter('Acc@5', ':6.2f')
+#     progress = ProgressMeter(
+#         len(val_loader),
+#         [batch_time, losses, top1, top5],
+#         prefix='Test: ')
+#
+#     # switch to evaluate mode
+#     model.eval()
+#     if args.per_class_eval:
+#         classes = val_loader.dataset.classes
+#         confmat = ConfusionMatrix(len(classes))
+#     else:
+#         confmat = None
+#
+#     with torch.no_grad():
+#         end = time.time()
+#         for i, (images, target) in enumerate(val_loader):
+#             images = images.to(device)
+#             target = target.to(device)
+#
+#             # compute output
+#             output, _ = model(images)
+#             loss = F.cross_entropy(output, target)
+#
+#             # measure accuracy and record loss
+#             acc1, acc5 = accuracy(output, target, topk=(1, 5))
+#             if confmat:
+#                 confmat.update(target, output.argmax(1))
+#             losses.update(loss.item(), images.size(0))
+#             top1.update(acc1.item(), images.size(0))
+#             top5.update(acc5.item(), images.size(0))
+#
+#             # measure elapsed time
+#             batch_time.update(time.time() - end)
+#             end = time.time()
+#
+#             if i % args.print_freq == 0:
+#                 progress.display(i)
+#
+#         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
+#               .format(top1=top1, top5=top5))
+#         if confmat:
+#             print(confmat.format(classes))
+#
+#     return top1.avg
 
 
 if __name__ == '__main__':
