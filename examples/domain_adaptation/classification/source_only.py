@@ -17,11 +17,9 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from common.modules.classifier import Classifier
-import common.vision.datasets as datasets
-import common.vision.models as models
 from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
@@ -73,17 +71,6 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    # dataset = datasets.__dict__[args.data]
-    # train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
-    # train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
-    #                                  shuffle=True, num_workers=args.workers, drop_last=True)
-    # val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
-    # val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    # if args.data == 'DomainNet':
-    #     test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
-    #     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    # else:
-    #     test_loader = val_loader
     train_source_dataset, _, val_dataset, test_dataset, num_classes = utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -94,7 +81,6 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    # backbone = models.__dict__[args.arch](pretrained=True)
     backbone = utils.get_models(args.arch)
     classifier = Classifier(backbone, num_classes).to(device)
 
@@ -204,74 +190,13 @@ def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: 
             progress.display(i)
 
 
-# def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
-#     batch_time = AverageMeter('Time', ':6.3f')
-#     losses = AverageMeter('Loss', ':.4e')
-#     top1 = AverageMeter('Acc@1', ':6.2f')
-#     top5 = AverageMeter('Acc@5', ':6.2f')
-#     progress = ProgressMeter(
-#         len(val_loader),
-#         [batch_time, losses, top1, top5],
-#         prefix='Test: ')
-#
-#     # switch to evaluate mode
-#     model.eval()
-#     if args.per_class_eval:
-#         classes = val_loader.dataset.classes
-#         confmat = ConfusionMatrix(len(classes))
-#     else:
-#         confmat = None
-#
-#     with torch.no_grad():
-#         end = time.time()
-#         for i, (images, target) in enumerate(val_loader):
-#             images = images.to(device)
-#             target = target.to(device)
-#
-#             # compute output
-#             output, _ = model(images)
-#             loss = F.cross_entropy(output, target)
-#
-#             # measure accuracy and record loss
-#             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-#             if confmat:
-#                 confmat.update(target, output.argmax(1))
-#             losses.update(loss.item(), images.size(0))
-#             top1.update(acc1.item(), images.size(0))
-#             top5.update(acc5.item(), images.size(0))
-#
-#             # measure elapsed time
-#             batch_time.update(time.time() - end)
-#             end = time.time()
-#
-#             if i % args.print_freq == 0:
-#                 progress.display(i)
-#
-#         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-#               .format(top1=top1, top5=top5))
-#         if confmat:
-#             print(confmat.format(classes))
-#
-#     return top1.avg
-
-
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='Source Only for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
@@ -279,9 +204,9 @@ if __name__ == '__main__':
                         help='whether use center crop during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,

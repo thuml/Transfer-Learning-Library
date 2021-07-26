@@ -13,6 +13,14 @@ from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
 
 
+def get_model_names():
+    return sorted(
+        name for name in models.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(models.__dict__[name])
+    ) + timm.list_models()
+
+
 def get_models(model_name):
     if model_name in models.__dict__:
         # load models from common.vision.models
@@ -39,6 +47,13 @@ def convert_from_wilds_dataset(wild_dataset):
             return len(self.dataset)
 
     return Dataset()
+
+
+def get_dataset_names():
+    return sorted(
+        name for name in datasets.__dict__
+        if not name.startswith("__") and callable(datasets.__dict__[name])
+    ) + wilds.supported_datasets
 
 
 def get_dataset(dataset_name, root, source, target, train_transform, val_transform):
