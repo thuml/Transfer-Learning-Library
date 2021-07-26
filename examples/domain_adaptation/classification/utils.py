@@ -92,7 +92,7 @@ def validate(val_loader, model, args, device) -> float:
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1, = accuracy(output, target, topk=(1,))
             if confmat:
                 confmat.update(target, output.argmax(1))
             losses.update(loss.item(), images.size(0))
