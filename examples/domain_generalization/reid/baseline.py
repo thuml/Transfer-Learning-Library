@@ -250,7 +250,7 @@ if __name__ == '__main__':
                              "each identity has num_instances instances, "
                              "default: 4")
     parser.add_argument('--lr', type=float, default=0.00035,
-                        help="learning rate of new parameters, for pretrained ")
+                        help="initial learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=80)
     parser.add_argument('--warmup-step', type=int, default=10)
