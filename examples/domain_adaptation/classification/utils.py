@@ -21,7 +21,7 @@ def get_model_names():
     ) + timm.list_models()
 
 
-def get_models(model_name):
+def get_model(model_name):
     if model_name in models.__dict__:
         # load models from common.vision.models
         backbone = models.__dict__[model_name](pretrained=True)

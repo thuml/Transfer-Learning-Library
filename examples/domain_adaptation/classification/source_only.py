@@ -81,7 +81,7 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = utils.get_models(args.arch)
+    backbone = utils.get_model(args.arch)
     classifier = Classifier(backbone, num_classes).to(device)
 
     # define optimizer and lr scheduler
