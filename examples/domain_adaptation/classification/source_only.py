@@ -71,7 +71,8 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    train_source_dataset, _, val_dataset, test_dataset, num_classes = utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_dataset, _, val_dataset, test_dataset, num_classes = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
@@ -82,8 +83,14 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
-    classifier = Classifier(backbone, num_classes).to(device)
-
+    if args.add_pool:
+        pool_layer = nn.Sequential(
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten()
+        )
+    else:
+        pool_layer = nn.Identity()
+    classifier = Classifier(backbone, num_classes, pool_layer=pool_layer).to(device)
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
@@ -208,6 +215,8 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--add-pool', action='store_true',
+                        help='whether add pool layer after the feature extractor.')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',

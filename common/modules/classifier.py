@@ -41,15 +41,19 @@ class Classifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True):
+                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True, pool_layer=None):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
-        if bottleneck is None:
-            self.bottleneck = nn.Sequential(
+        if pool_layer is None:
+            self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
                 nn.Flatten()
             )
+        else:
+            self.pool_layer = pool_layer
+        if bottleneck is None:
+            self.bottleneck = nn.Identity()
             self._features_dim = backbone.out_features
         else:
             self.bottleneck = bottleneck
@@ -69,7 +73,7 @@ class Classifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
-        f = self.backbone(x)
+        f = self.pool_layer(self.backbone(x))
         f = self.bottleneck(f)
         predictions = self.head(f)
         return predictions, f

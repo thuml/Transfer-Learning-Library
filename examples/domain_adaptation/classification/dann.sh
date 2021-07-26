@@ -46,3 +46,7 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t c -a r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2i
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2r
+
+# wlids
+CUDA_VISIBLE_DEVICES=7 python dann.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/iwildcam
+CUDA_VISIBLE_DEVICES=7 python dann.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/fmow

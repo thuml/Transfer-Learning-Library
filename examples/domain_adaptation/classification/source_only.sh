@@ -73,3 +73,21 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltec
 CUDA_VISIBLE_DEVICES=4 python source_only.py data/wilds -d iwildcam -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/iwildcam --lr 0.01
 CUDA_VISIBLE_DEVICES=4 python source_only.py data/wilds -d camelyon17 -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/camelyon17 --lr 0.01
 CUDA_VISIBLE_DEVICES=6 python source_only.py data/wilds -d fmow -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/fmow --lr 0.01
+
+# Test on Other Architecture
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Ar -t Cl -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Cl
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Ar -t Pr -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Pr
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Ar -t Rw -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Rw
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Cl -t Ar -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Cl2Ar
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Cl -t Pr -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Cl2Pr
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Cl -t Rw -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Cl2Rw
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Pr -t Ar -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Pr2Ar
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Pr -t Cl -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Pr2Cl
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Pr -t Rw -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Pr2Rw
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Rw -t Ar -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Rw2Ar
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Rw -t Cl -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Rw2Cl
+CUDA_VISIBLE_DEVICES=3 python source_only.py data/office-home -d OfficeHome -s Rw -t Pr -a vit_small_patch16_224 --epochs 20 -i 500 --seed 0 --log logs/src_only_vit/OfficeHome_Rw2Pr
+
+
+# ViT
+CUDA_VISIBLE_DEVICES=5 python source_only.py data/office-home -d OfficeHome -s Ar -t Cl -a efficientnet_b0 --epochs 20 -i 500 --seed 0 --add-pool --log logs/test

@@ -313,20 +313,24 @@ class ImageClassifier(GeneralModule):
 
     def __init__(self, backbone: nn.Module, num_classes: int,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
-                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
+                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True, pool_layer=None):
         grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
                                                        auto_step=False) if grl is None else grl
 
+        if pool_layer is None:
+            pool_layer = nn.Sequential(
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten()
+            )
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            pool_layer,
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        bottleneck[2].weight.data.normal_(0, 0.005)
-        bottleneck[2].bias.data.fill_(0.1)
+        bottleneck[1].weight.data.normal_(0, 0.005)
+        bottleneck[1].bias.data.fill_(0.1)
 
         # The classifier head used for final predictions.
         head = nn.Sequential(
@@ -386,49 +390,104 @@ class ImageRegressor(GeneralModule):
 
     """
 
-    def __init__(self, backbone: nn.Module, num_factors: int,
+    def __init__(self, backbone: nn.Module, num_factors: int, bottleneck = None, head=None, adv_head=None,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
         grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000, auto_step=False)
-        bottleneck = nn.Sequential(
-            nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(bottleneck_dim),
-            nn.ReLU(),
-        )
+        if bottleneck is None:
+            bottleneck = nn.Sequential(
+                nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(bottleneck_dim),
+                nn.ReLU(),
+            )
 
         # The regressor head used for final predictions.
-        head = nn.Sequential(
-            nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
-            nn.Linear(width, num_factors),
-            nn.Sigmoid()
-        )
-        for layer in head:
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                nn.init.normal_(layer.weight, 0, 0.01)
-                nn.init.constant_(layer.bias, 0)
+        if head is None:
+            head = nn.Sequential(
+                nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten(),
+                nn.Linear(width, num_factors),
+                nn.Sigmoid()
+            )
+            for layer in head:
+                if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, 0, 0.01)
+                    nn.init.constant_(layer.bias, 0)
         # The adversarial regressor head
-        adv_head = nn.Sequential(
-            nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
-            nn.Linear(width, num_factors),
-            nn.Sigmoid()
-        )
-        for layer in adv_head:
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                nn.init.normal_(layer.weight, 0, 0.01)
-                nn.init.constant_(layer.bias, 0)
+        if adv_head is None:
+            adv_head = nn.Sequential(
+                nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten(),
+                nn.Linear(width, num_factors),
+                nn.Sigmoid()
+            )
+            for layer in adv_head:
+                if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, 0, 0.01)
+                    nn.init.constant_(layer.bias, 0)
         super(ImageRegressor, self).__init__(backbone, num_factors, bottleneck,
                                               head, adv_head, grl_layer, finetune)
         self.num_factors = num_factors
+
+
+class SequenceClassifier(GeneralModule):
+
+    def __init__(self, backbone: nn.Module, num_classes: int,
+                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
+                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
+        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
+                                                       auto_step=False) if grl is None else grl
+
+        # bottleneck = nn.Sequential(
+        #     nn.Linear(backbone.out_features, bottleneck_dim),
+        #     nn.BatchNorm1d(bottleneck_dim),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.5)
+        # )
+        # bottleneck[0].weight.data.normal_(0, 0.005)
+        # bottleneck[0].bias.data.fill_(0.1)
+        bottleneck = nn.Identity()
+        bottleneck_dim = backbone.out_features
+
+        # The classifier head used for final predictions.
+        head = nn.Sequential(
+            nn.Linear(bottleneck_dim, width),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(width, num_classes)
+        )
+        # The adversarial classifier head
+        adv_head = nn.Sequential(
+            nn.Linear(bottleneck_dim, width),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(width, num_classes)
+        )
+        for dep in range(2):
+            head[dep * 3].weight.data.normal_(0, 0.01)
+            head[dep * 3].bias.data.fill_(0.0)
+            adv_head[dep * 3].weight.data.normal_(0, 0.01)
+            adv_head[dep * 3].bias.data.fill_(0.0)
+        super(SequenceClassifier, self).__init__(backbone, num_classes, bottleneck,
+                                              head, adv_head, grl_layer, finetune)
+
+    def forward(self, *args, **kwargs):
+        """"""
+        hidden_state = self.backbone(*args, **kwargs)[0]  # (bs, seq_len, dim)
+        pooled_output = hidden_state[:, 0]  # (bs, dim)
+        features = self.bottleneck(pooled_output)
+        outputs = self.head(features)
+        features_adv = self.grl_layer(features)
+        outputs_adv = self.adv_head(features_adv)
+        return outputs, outputs_adv

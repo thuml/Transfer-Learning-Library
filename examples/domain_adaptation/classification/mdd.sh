@@ -46,3 +46,11 @@ CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s s -t c -a re
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 40 -i 5000 -p 500 --bottleneck-dim 2048 --seed 0 --lr 0.004 --log logs/mdd/DomainNet_s2i
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 40 -i 5000 -p 500 --bottleneck-dim 2048 --seed 0 --lr 0.004 --log logs/mdd/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 40 -i 5000 -p 500 --bottleneck-dim 2048 --seed 0 --lr 0.004 --log logs/mdd/DomainNet_s2r
+
+# wlids
+CUDA_VISIBLE_DEVICES=6 python mdd.py data/wilds -d iwildcam -a resnet50 --epochs 40 -i 1000 --bottleneck-dim 2048 --seed 0 --log logs/mdd/iwildcam
+CUDA_VISIBLE_DEVICES=6 python mdd.py data/wilds -d fmow -a resnet50 --epochs 40 -i 1000 --bottleneck-dim 2048 --seed 0 --log logs/mdd/fmow
+
+# ViT
+CUDA_VISIBLE_DEVICES=3 python mdd.py data/wilds -d iwildcam -a vit_base_patch16_224 --epochs 40 -i 1000 --bottleneck-dim 2048 --seed 0 --log logs/test -b 24
+CUDA_VISIBLE_DEVICES=5 python mdd.py data/wilds -d iwildcam -a efficientnet_b2 --epochs 40 -i 1000 --bottleneck-dim 2048 --seed 0 --log logs/test -b 32 --add-pool

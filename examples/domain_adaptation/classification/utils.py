@@ -3,6 +3,7 @@ import sys
 import time
 import timm
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import wilds
 
@@ -28,8 +29,8 @@ def get_model(model_name):
     else:
         # load models from pytorch-image-models
         backbone = timm.create_model(model_name, pretrained=True)
-        backbone.copy_head = lambda: copy.deepcopy(backbone.fc)
-        backbone.out_features = backbone.fc.in_features
+        backbone.copy_head = backbone.get_classifier
+        backbone.out_features = backbone.get_classifier().in_features
         backbone.reset_classifier(0, '')
     return backbone
 
@@ -68,7 +69,7 @@ def get_dataset(dataset_name, root, source, target, train_transform, val_transfo
                                    transform=val_transform)
         else:
             test_dataset = val_dataset
-        num_classes = dataset.num_classes
+        num_classes = train_source_dataset.num_classes
     else:
         # load datasets from common.vision.datasets
         dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
