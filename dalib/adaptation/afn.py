@@ -108,8 +108,8 @@ class ImageClassifier(ClassfierBase):
                  bottleneck_dim: Optional[int] = 1000, dropout_p: Optional[float] = 0.5, **kwargs):
         assert num_blocks >= 1
         layers = [nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            # nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            # nn.Flatten(),
             Block(backbone.out_features, bottleneck_dim, dropout_p)
         )]
         for _ in range(num_blocks - 1):

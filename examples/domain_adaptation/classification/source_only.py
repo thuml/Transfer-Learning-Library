@@ -83,13 +83,7 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
-    if args.add_pool:
-        pool_layer = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
-        )
-    else:
-        pool_layer = nn.Identity()
+    pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, pool_layer=pool_layer).to(device)
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
@@ -215,8 +209,8 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
-    parser.add_argument('--add-pool', action='store_true',
-                        help='whether add pool layer after the feature extractor.')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',

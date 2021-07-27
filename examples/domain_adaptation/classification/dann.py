@@ -87,13 +87,7 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
-    if args.add_pool:
-        pool_layer = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
-        )
-    else:
-        pool_layer = nn.Identity()
+    pool_layer = nn.Identity() if args.no_pool else None
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
@@ -236,8 +230,8 @@ if __name__ == '__main__':
                              ' (default: resnet18)')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
-    parser.add_argument('--add-pool', action='store_true',
-                        help='whether add pool layer after the feature extractor.')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     # training parameters

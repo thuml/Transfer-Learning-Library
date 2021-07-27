@@ -13,6 +13,7 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
+import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy\
@@ -86,13 +87,7 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
-    if args.add_pool:
-        pool_layer = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
-        )
-    else:
-        pool_layer = nn.Identity()
+    pool_layer = nn.Identity() if args.no_pool else None
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
                                  width=args.bottleneck_dim, pool_layer=pool_layer).to(device)
     mdd = MarginDisparityDiscrepancy(args.margin).to(device)
@@ -172,8 +167,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     classifier.train()
     mdd.train()
 
-    criterion = nn.CrossEntropyLoss().to(device)
-
     end = time.time()
     for i in range(args.iters_per_epoch):
         optimizer.zero_grad()
@@ -196,7 +189,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         y_s_adv, y_t_adv = outputs_adv.chunk(2, dim=0)
 
         # compute cross entropy loss on source domain
-        cls_loss = criterion(y_s, labels_s)
+        cls_loss = F.cross_entropy(y_s, labels_s)
         # compute margin disparity discrepancy between domains
         # for adversarial classifier, minimize negative mdd is equal to maximize mdd
         transfer_loss = -mdd(y_s, y_s_adv, y_t, y_t_adv)
@@ -243,8 +236,8 @@ if __name__ == '__main__':
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
     parser.add_argument('--bottleneck-dim', default=1024, type=int)
-    parser.add_argument('--add-pool', action='store_true',
-                        help='whether add pool layer after the feature extractor.')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     parser.add_argument('--margin', type=float, default=4., help="margin gamma")
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')

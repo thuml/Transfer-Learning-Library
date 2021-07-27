@@ -29,9 +29,12 @@ def get_model(model_name):
     else:
         # load models from pytorch-image-models
         backbone = timm.create_model(model_name, pretrained=True)
-        backbone.copy_head = backbone.get_classifier
-        backbone.out_features = backbone.get_classifier().in_features
-        backbone.reset_classifier(0, '')
+        try:
+            backbone.out_features = backbone.get_classifier().in_features
+            backbone.reset_classifier(0, '')
+        except:
+            backbone.out_features = backbone.head.in_features
+            backbone.head = nn.Identity()
     return backbone
 
 
@@ -57,12 +60,14 @@ def get_dataset_names():
     ) + wilds.supported_datasets
 
 
-def get_dataset(dataset_name, root, source, target, train_transform, val_transform):
+def get_dataset(dataset_name, root, source, target, train_source_transform, val_transform, train_target_transform=None):
+    if train_target_transform is None:
+        train_target_transform = train_source_transform
     if dataset_name in datasets.__dict__:
         # load datasets from common.vision.datasets
         dataset = datasets.__dict__[dataset_name]
-        train_source_dataset = dataset(root=root, task=source, download=True, transform=train_transform)
-        train_target_dataset = dataset(root=root, task=target, download=True, transform=train_transform)
+        train_source_dataset = dataset(root=root, task=source, download=True, transform=train_source_transform)
+        train_target_dataset = dataset(root=root, task=target, download=True, transform=train_target_transform)
         val_dataset = dataset(root=root, task=target, download=True, transform=val_transform)
         if dataset_name == 'DomainNet':
             test_dataset = dataset(root=root, task=target, split='test', download=True,
@@ -74,8 +79,8 @@ def get_dataset(dataset_name, root, source, target, train_transform, val_transfo
         # load datasets from common.vision.datasets
         dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
         num_classes = dataset.n_classes
-        train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_transform))
-        train_target_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=train_transform))
+        train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_source_transform))
+        train_target_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=train_target_transform))
         val_dataset = test_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=val_transform))
     return train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes
 

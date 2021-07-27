@@ -47,6 +47,20 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t i -a r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2r
 
-# wlids
-CUDA_VISIBLE_DEVICES=7 python dann.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/iwildcam
-CUDA_VISIBLE_DEVICES=7 python dann.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/fmow
+# Wilds Dataset
+CUDA_VISIBLE_DEVICES=0 python dann.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/iwildcam
+CUDA_VISIBLE_DEVICES=0 python dann.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/fmow
+
+# Office-Home on Vision Transformer
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Ar -t Cl -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Ar2Cl
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Ar -t Pr -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Ar2Pr
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Ar -t Rw -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Ar2Rw
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Cl -t Ar -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Cl2Ar
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Cl -t Pr -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Cl2Pr
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Cl -t Rw -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Cl2Rw
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Pr -t Ar -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Pr2Ar
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Pr -t Cl -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Pr2Cl
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Pr -t Rw -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Pr2Rw
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Rw -t Ar -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Rw2Ar
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Rw -t Cl -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Rw2Cl
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Rw -t Pr -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --log logs/dann_vit/OfficeHome_Rw2Pr
