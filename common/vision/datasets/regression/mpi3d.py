@@ -57,9 +57,9 @@ class MPI3D(ImageRegression):
         factor_index = [self.FACTORS.index(factor) for factor in factors]
 
         if target_transform is None:
-            target_transform = lambda x: x[list(factor_index)] / 40.
+            target_transform = lambda x: x[list(factor_index)] / 39.
         else:
-            target_transform = lambda x: target_transform(x[list(factor_index)]) / 40.
+            target_transform = lambda x: target_transform(x[list(factor_index)]) / 39.
 
         data_list_file = os.path.join(root, "image_list", "{}_{}.txt".format(self.image_list[task], split))
 

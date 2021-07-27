@@ -7,17 +7,18 @@ import shutil
 from typing import Tuple
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
-import torch.nn as nn
 
 sys.path.append('../../..')
+from common.modules.regressor import Regressor
+from dalib.adaptation.rsd import RepresentationSubspaceDistance
 from common.modules.instance_normalization import convert_model
-from dalib.adaptation.mdd import RegressionMarginDisparityDiscrepancy as MarginDisparityDiscrepancy, ImageRegressor
 import common.vision.datasets.regression as datasets
 import common.vision.models as models
 from common.utils.data import ForeverDataIterator
@@ -71,20 +72,23 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    num_factors = train_source_dataset.num_factors
     backbone = models.__dict__[args.arch](pretrained=True)
-    bottleneck_dim = args.bottleneck_dim
-    regressor = ImageRegressor(backbone, num_factors,
-                               bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
     if args.normalization == 'IN':
-        regressor = convert_model(regressor)
-    regressor = regressor.to(device)
+        backbone = convert_model(backbone)
+    num_factors = train_source_dataset.num_factors
+    bottleneck = nn.Sequential(
+        nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+        nn.Flatten()
+    )
+    regressor = Regressor(backbone=backbone, num_factors=num_factors, bottleneck=bottleneck, bottleneck_dim=backbone.out_features).to(device)
     print(regressor)
-    mdd = MarginDisparityDiscrepancy(args.margin).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(regressor.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    # define loss function
+    rsd = RepresentationSubspaceDistance(args.trade_off_bmp)
 
     if args.phase == 'test':
         regressor.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
@@ -97,7 +101,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         # train for one epoch
         print("lr", lr_scheduler.get_lr())
-        train(train_source_iter, train_target_iter, regressor, mdd, optimizer,
+        train(train_source_iter, train_target_iter, regressor, rsd, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
@@ -116,23 +120,22 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
-          model, mdd: MarginDisparityDiscrepancy, optimizer: SGD,
+          model: Regressor, rsd, optimizer: SGD,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
-    source_losses = AverageMeter('Source Loss', ':6.3f')
-    trans_losses = AverageMeter('Trans Loss', ':6.3f')
+    mse_losses = AverageMeter('MSE Loss', ':6.3f')
+    rsd_losses = AverageMeter('RSD Loss', ':6.3f')
     mae_losses_s = AverageMeter('MAE Loss (s)', ':6.3f')
     mae_losses_t = AverageMeter('MAE Loss (t)', ':6.3f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, source_losses, trans_losses, mae_losses_s, mae_losses_t],
+        [batch_time, data_time, mse_losses, rsd_losses, mae_losses_s, mae_losses_t],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    mdd.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
@@ -149,25 +152,17 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         data_time.update(time.time() - end)
 
         # compute output
-        x = torch.cat([x_s, x_t], dim=0)
-        outputs, outputs_adv = model(x)
-        y_s, y_t = outputs.chunk(2, dim=0)
-        y_s_adv, y_t_adv = outputs_adv.chunk(2, dim=0)
+        y_s, f_s = model(x_s)
+        y_t, f_t = model(x_t)
 
-        # compute mean square loss on source domain
         mse_loss = F.mse_loss(y_s, labels_s)
-
-        # compute margin disparity discrepancy between domains
-        transfer_loss = mdd(y_s, y_s_adv, y_t, y_t_adv)
-        # for adversarial classifier, minimize negative mdd is equal to maximize mdd
-        loss = mse_loss - transfer_loss * args.trade_off
-        model.step()
-
         mae_loss_s = F.l1_loss(y_s, labels_s)
         mae_loss_t = F.l1_loss(y_t, labels_t)
+        rsd_loss = rsd(f_s, f_t)
+        loss = mse_loss + rsd_loss * args.trade_off
 
-        source_losses.update(mse_loss.item(), x_s.size(0))
-        trans_losses.update(transfer_loss.item(), x_s.size(0))
+        mse_losses.update(mse_loss.item(), x_s.size(0))
+        rsd_losses.update(rsd_loss.item(), x_s.size(0))
         mae_losses_s.update(mae_loss_s.item(), x_s.size(0))
         mae_losses_t.update(mae_loss_t.item(), x_s.size(0))
 
@@ -184,7 +179,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model, args: argparse.Namespace, factors) -> Tuple[float, float]:
+def validate(val_loader: DataLoader, model: Regressor, args: argparse.Namespace, factors) -> Tuple[float, float]:
     batch_time = AverageMeter('Time', ':6.3f')
     mae_losses = [AverageMeter('mae {}'.format(factor), ':6.3f') for factor in factors]
     progress = ProgressMeter(
@@ -231,7 +226,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='MDD for Regression Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Source Only for Regression Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -247,11 +242,9 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('--bottleneck-dim', default=512, type=int)
-    parser.add_argument('--normalization', default='BN', type=str, choices=['BN', 'IN'])
-    parser.add_argument('--margin', type=float, default=1., help="margin gamma")
-    parser.add_argument('--trade-off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--normalization', default='BN', type=str, choices=["BN", "IN"])
+    parser.add_argument('--trade-off', default=0.001, type=float)
+    parser.add_argument('--trade-off-bmp', default=0.1, type=float)
     # training parameters
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
@@ -263,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.001, type=float,
-                        metavar='W', help='weight decay (default: 1e-3)')
+                        metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
@@ -274,7 +267,7 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--log", type=str, default='mdd',
+    parser.add_argument("--log", type=str, default='src_only',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model.")

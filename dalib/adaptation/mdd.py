@@ -202,7 +202,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
 
     """
 
-    def __init__(self, margin: Optional[float] = 1, loss_function=F.mse_loss, **kwargs):
+    def __init__(self, margin: Optional[float] = 1, loss_function=F.l1_loss, **kwargs):
         def source_discrepancy(y: torch.Tensor, y_adv: torch.Tensor):
             return loss_function(y_adv, y.detach(), reduction='none')
 
