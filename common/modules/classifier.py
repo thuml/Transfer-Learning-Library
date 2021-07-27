@@ -72,11 +72,15 @@ class Classifier(nn.Module):
     def features_dim(self) -> int:
         """The dimension of features before the final `head` layer"""
         return self._features_dim
+    
+    def featurizer_forward(self, x: torch.tensor) -> torch.Tensor:
+        f = self.backbone(x)
+        f = self.bottleneck(f)
+        return f
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
-        f = self.backbone(x)
-        f = self.bottleneck(f)
+        f = self.featurizer_forward(x)
         cls_head_input = self.gl(f)
         predictions = self.head(cls_head_input)
         return predictions, f
