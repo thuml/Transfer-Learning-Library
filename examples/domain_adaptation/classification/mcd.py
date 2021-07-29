@@ -18,14 +18,15 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dalib.adaptation.mcd import ImageClassifierHead, entropy, classifier_discrepancy
-import common.vision.datasets as datasets
-import common.vision.models as models
 from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
+
+sys.path.append('.')
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -71,31 +72,25 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    dataset = datasets.__dict__[args.data]
-    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    if args.data == 'DomainNet':
-        test_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    else:
-        test_loader = val_loader
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    G = models.__dict__[args.arch](pretrained=True).to(device)  # feature extractor
-    num_classes = train_source_dataset.num_classes
+    G = utils.get_model(args.arch).to(device)  # feature extractor
     # two image classifier heads
-    F1 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
-    F2 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
+    pool_layer = nn.Identity() if args.no_pool else None
+    F1 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim, pool_layer).to(device)
+    F2 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim, pool_layer).to(device)
 
     # define optimizer
     # the learning rate is fixed according to origin paper
@@ -317,22 +312,12 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
 
 
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='MCD for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
@@ -340,11 +325,13 @@ if __name__ == '__main__':
                         help='whether use center crop during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
     parser.add_argument('--bottleneck-dim', default=1024, type=int)
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('--num-k', type=int, default=4, metavar='K',

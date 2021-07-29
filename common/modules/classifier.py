@@ -41,15 +41,19 @@ class Classifier(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True):
+                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True, pool_layer=None):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
-        if bottleneck is None:
-            self.bottleneck = nn.Sequential(
+        if pool_layer is None:
+            self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
                 nn.Flatten()
             )
+        else:
+            self.pool_layer = pool_layer
+        if bottleneck is None:
+            self.bottleneck = nn.Identity()
             self._features_dim = backbone.out_features
         else:
             self.bottleneck = bottleneck
@@ -69,7 +73,7 @@ class Classifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
-        f = self.backbone(x)
+        f = self.pool_layer(self.backbone(x))
         f = self.bottleneck(f)
         predictions = self.head(f)
         return predictions, f
@@ -84,4 +88,51 @@ class Classifier(nn.Module):
             {"params": self.head.parameters(), "lr": 1.0 * base_lr},
         ]
 
+        return params
+
+
+class ImageClassifier(Classifier):
+    pass
+
+
+class SequenceClassifier(Classifier):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
+                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True):
+        if bottleneck is None:
+            bottleneck = nn.Sequential(
+                nn.Linear(backbone.out_features, backbone.out_features),
+                nn.ReLU(),
+                nn.Dropout(0.2),
+            )
+            bottleneck_dim = backbone.out_features
+        if head is None:
+            head = nn.Linear(bottleneck_dim, num_classes)
+        super(SequenceClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, head, finetune)
+
+    def forward(self, *args, **kwargs):
+        """"""
+        hidden_state = self.backbone(*args, **kwargs)[0]  # (bs, seq_len, dim)
+        pooled_output = hidden_state[:, 0]  # (bs, dim)
+        f = self.bottleneck(pooled_output)
+        predictions = self.head(f)
+        return predictions, f
+
+    def get_parameters(self, base_lr=1.0) -> List[Dict]:
+        """A parameter list which decides optimization hyper-parameters,
+            such as the relative learning rate of each layer
+        """
+        no_decay = ["bias", "LayerNorm.weight"]
+        params = [
+            {"params": [p for n, p in self.backbone.named_parameters() if not any(nd in n for nd in no_decay)],
+             "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
+            {"params": [p for n, p in self.backbone.named_parameters() if any(nd in n for nd in no_decay)],
+             "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr, "weight_decay": 0.0},
+            {"params": [p for n, p in self.bottleneck.named_parameters() if not any(nd in n for nd in no_decay)], "lr": 1. * base_lr},
+            {"params": [p for n, p in self.bottleneck.named_parameters() if any(nd in n for nd in no_decay)],
+             "lr": 1. * base_lr, "weight_decay": 0.0},
+            {"params": [p for n, p in self.head.named_parameters() if not any(nd in n for nd in no_decay)],
+             "lr": 1. * base_lr},
+            {"params": [p for n, p in self.head.named_parameters() if any(nd in n for nd in no_decay)],
+             "lr": 1. * base_lr, "weight_decay": 0.0},
+        ]
         return params

@@ -16,6 +16,7 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from common.modules.regressor import Regressor
+from common.modules.instance_normalization import convert_model
 import common.vision.datasets.regression as datasets
 import common.vision.models as models
 from common.utils.data import ForeverDataIterator
@@ -70,9 +71,11 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
+    if args.normalization == 'IN':
+        backbone = convert_model(backbone)
     num_factors = train_source_dataset.num_factors
     regressor = Regressor(backbone=backbone, num_factors=num_factors).to(device)
-
+    print(regressor)
     # define optimizer and lr scheduler
     optimizer = SGD(regressor.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
@@ -225,8 +228,9 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
+    parser.add_argument('--normalization', default='BN', type=str, choices=["IN", "BN"])
     # training parameters
-    parser.add_argument('-b', '--batch-size', default=128, type=int,
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,

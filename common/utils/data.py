@@ -1,13 +1,13 @@
 import itertools
+import torch
 import random
 from collections import defaultdict
 import numpy as np
 
 import torch
 from torch.utils.data import Sampler
-from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import DataLoader, Dataset
-from typing import TypeVar, Iterable
+from typing import TypeVar, Iterable, Dict, List
 
 
 T_co = TypeVar('T_co', covariant=True)
@@ -144,3 +144,18 @@ class CombineDataset(Dataset[T_co]):
 
     def __getitem__(self, idx):
         return list(itertools.chain(*[d[idx] for d in self.datasets]))
+
+
+def concatenate(tensors):
+    if isinstance(tensors[0], torch.Tensor):
+        return torch.cat(tensors, dim=0)
+    elif isinstance(tensors[0], List):
+        ret = []
+        for i in range(len(tensors[0])):
+            ret.append(concatenate([t[i] for t in tensors]))
+        return ret
+    elif isinstance(tensors[0], Dict):
+        ret = dict()
+        for k in tensors[0].keys():
+            ret[k] = concatenate([t[k] for t in tensors])
+        return ret
