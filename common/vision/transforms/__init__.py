@@ -22,6 +22,9 @@ class ResizeImage(object):
         th, tw = self.size
         return img.resize((th, tw))
 
+    def __repr__(self):
+        return self.__class__.__name__ + '(size={0})'.format(self.size)
+
 
 class MultipleApply:
     """Apply a list of transformations to an image and get multiple transformed images.

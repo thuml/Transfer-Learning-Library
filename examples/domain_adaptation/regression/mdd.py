@@ -74,10 +74,51 @@ def main(args: argparse.Namespace):
     num_factors = train_source_dataset.num_factors
     backbone = models.__dict__[args.arch](pretrained=True)
     bottleneck_dim = args.bottleneck_dim
-    regressor = ImageRegressor(backbone, num_factors,
-                               bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
     if args.normalization == 'IN':
-        regressor = convert_model(regressor)
+        backbone = convert_model(backbone)
+        bottleneck = nn.Sequential(
+            nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+        )
+        head = nn.Sequential(
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
+            nn.Linear(bottleneck_dim, num_factors),
+            nn.Sigmoid()
+        )
+        for layer in head:
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                nn.init.normal_(layer.weight, 0, 0.01)
+                nn.init.constant_(layer.bias, 0)
+        adv_head = nn.Sequential(
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
+            nn.Linear(bottleneck_dim, num_factors),
+            nn.Sigmoid()
+        )
+        for layer in adv_head:
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                nn.init.normal_(layer.weight, 0, 0.01)
+                nn.init.constant_(layer.bias, 0)
+        regressor = ImageRegressor(backbone, num_factors, bottleneck=bottleneck, head=head, adv_head=adv_head,
+                               bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
+    else:
+        regressor = ImageRegressor(backbone, num_factors,
+                                   bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
+
     regressor = regressor.to(device)
     print(regressor)
     mdd = MarginDisparityDiscrepancy(args.margin).to(device)
@@ -262,8 +303,8 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.001, type=float,
-                        metavar='W', help='weight decay (default: 1e-3)')
+    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
+                        metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
