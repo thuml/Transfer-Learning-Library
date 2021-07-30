@@ -1,5 +1,5 @@
+import os.path as osp
 import numpy as np
-from .utils import *
 
 
 class BaseDataset(object):

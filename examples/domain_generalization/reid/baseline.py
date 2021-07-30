@@ -250,18 +250,18 @@ if __name__ == '__main__':
                              "each identity has num_instances instances, "
                              "default: 4")
     parser.add_argument('--lr', type=float, default=0.00035,
-                        help="learning rate of new parameters, for pretrained ")
+                        help="initial learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=80)
     parser.add_argument('--warmup-step', type=int, default=10)
     parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
                         help='milestones for the learning rate decay')
     parser.add_argument('--eval-step', type=int, default=40)
-    parser.add_argument('--iters_per_epoch', type=int, default=400)
+    parser.add_argument('--iters-per-epoch', type=int, default=400)
     parser.add_argument('--print-freq', type=int, default=40)
     parser.add_argument('--seed', default=None, type=int, help='seed for initializing training.')
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
-    parser.add_argument("--log", type=str, default='src_only',
+    parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
