@@ -1,18 +1,10 @@
-from collections import defaultdict, OrderedDict
-
+from collections import defaultdict
+import time
 import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import average_precision_score
-
-
-def to_numpy(tensor):
-    if torch.is_tensor(tensor):
-        return tensor.cpu().numpy()
-    elif type(tensor).__module__ != 'numpy':
-        raise ValueError("Cannot convert {} to numpy array"
-                         .format(type(tensor)))
-    return tensor
+from common.utils.meter import AverageMeter, ProgressMeter
 
 
 def unique_sample(ids_dict, num):
@@ -23,29 +15,17 @@ def unique_sample(ids_dict, num):
     return mask
 
 
-def cmc(distmat, query_ids=None, gallery_ids=None,
-        query_cams=None, gallery_cams=None, topk=100,
-        separate_camera_set=False,
-        single_gallery_shot=False,
-        first_match_break=False):
-    distmat = to_numpy(distmat)
-    m, n = distmat.shape
-    # Fill up default values
-    if query_ids is None:
-        query_ids = np.arange(m)
-    if gallery_ids is None:
-        gallery_ids = np.arange(n)
-    if query_cams is None:
-        query_cams = np.zeros(m).astype(np.int32)
-    if gallery_cams is None:
-        gallery_cams = np.ones(n).astype(np.int32)
+def cmc(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams, topk=100, separate_camera_set=False,
+        single_gallery_shot=False, first_match_break=False):
+    dist_mat = dist_mat.cpu().numpy()
+    m, n = dist_mat.shape
     # Ensure numpy array
     query_ids = np.asarray(query_ids)
     gallery_ids = np.asarray(gallery_ids)
     query_cams = np.asarray(query_cams)
     gallery_cams = np.asarray(gallery_cams)
     # Sort and find correct matches
-    indices = np.argsort(distmat, axis=1)
+    indices = np.argsort(dist_mat, axis=1)
     matches = (gallery_ids[indices] == query_ids[:, np.newaxis])
     # Compute CMC for each query
     ret = np.zeros(topk)
@@ -87,26 +67,16 @@ def cmc(distmat, query_ids=None, gallery_ids=None,
     return ret.cumsum() / num_valid_queries
 
 
-def mean_ap(distmat, query_ids=None, gallery_ids=None,
-            query_cams=None, gallery_cams=None):
-    distmat = to_numpy(distmat)
-    m, n = distmat.shape
-    # Fill up default values
-    if query_ids is None:
-        query_ids = np.arange(m)
-    if gallery_ids is None:
-        gallery_ids = np.arange(n)
-    if query_cams is None:
-        query_cams = np.zeros(m).astype(np.int32)
-    if gallery_cams is None:
-        gallery_cams = np.ones(n).astype(np.int32)
+def mean_ap(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams):
+    dist_mat = dist_mat.cpu().numpy()
+    m, n = dist_mat.shape
     # Ensure numpy array
     query_ids = np.asarray(query_ids)
     gallery_ids = np.asarray(gallery_ids)
     query_cams = np.asarray(query_cams)
     gallery_cams = np.asarray(gallery_cams)
     # Sort and find correct matches
-    indices = np.argsort(distmat, axis=1)
+    indices = np.argsort(dist_mat, axis=1)
     matches = (gallery_ids[indices] == query_ids[:, np.newaxis])
     # Compute AP for each query
     aps = []
@@ -115,7 +85,7 @@ def mean_ap(distmat, query_ids=None, gallery_ids=None,
         valid = ((gallery_ids[indices[i]] != query_ids[i]) |
                  (gallery_cams[indices[i]] != query_cams[i]))
         y_true = matches[i, valid]
-        y_score = -distmat[i][indices[i]][valid]
+        y_score = -dist_mat[i][indices[i]][valid]
         if not np.any(y_true): continue
         aps.append(average_precision_score(y_true, y_score))
     if len(aps) == 0:
@@ -126,6 +96,11 @@ def mean_ap(distmat, query_ids=None, gallery_ids=None,
 def re_ranking(q_g_dist, q_q_dist, g_g_dist, k1=20, k2=6, lambda_value=0.3):
     # The following naming, e.g. gallery_num, is different from outer scope.
     # Don't care about it.
+
+    # convert to numpy nd-array
+    q_g_dist = q_g_dist.cpu().numpy()
+    q_q_dist = q_q_dist.cpu().numpy()
+    g_g_dist = g_g_dist.cpu().numpy()
 
     original_dist = np.concatenate(
         [np.concatenate([q_q_dist, q_g_dist], axis=1),
@@ -192,97 +167,91 @@ def re_ranking(q_g_dist, q_q_dist, g_g_dist, k1=20, k2=6, lambda_value=0.3):
     return final_dist
 
 
-def extract_reid_feature(data_loader, model, device, normalize):
-    model.eval()
+def extract_reid_feature(data_loader, model, device, normalize, print_freq=200):
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(data_loader),
+        [batch_time],
+        prefix='Collect feature: ')
 
-    features = OrderedDict()
-    labels = OrderedDict()
+    # switch to eval mode
+    model.eval()
+    feature_dict = dict()
 
     with torch.no_grad():
-        for i, (images, filenames, ids, _) in enumerate(data_loader):
+        end = time.time()
+        for i, (images_batch, filenames_batch, _, _) in enumerate(data_loader):
 
-            images = images.to(device)
-            fs = model(images)
+            images_batch = images_batch.to(device)
+            features_batch = model(images_batch)
             if normalize:
-                fs = F.normalize(fs)
+                features_batch = F.normalize(features_batch)
 
-            for filename, f, id in zip(filenames, fs, ids):
-                features[filename] = f
-                labels[filename] = id
+            for filename, feature in zip(filenames_batch, features_batch):
+                feature_dict[filename] = feature
 
-    return features, labels
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if i % print_freq == 0:
+                progress.display(i)
+
+    return feature_dict
 
 
-def pairwise_distance(features, query=None, gallery=None, metric=None):
-    if query is None and gallery is None:
-        n = len(features)
-        x = torch.cat(list(features.values()))
-        x = x.view(n, -1)
-        if metric is not None:
-            x = metric.transform(x)
-        dist_m = torch.pow(x, 2).sum(dim=1, keepdim=True) * 2
-        dist_m = dist_m.expand(n, n) - 2 * torch.mm(x, x.t())
-        return dist_m
-
-    x = torch.cat([features[f].unsqueeze(0) for f, _, _ in query], 0)
-    y = torch.cat([features[f].unsqueeze(0) for f, _, _ in gallery], 0)
+def pairwise_distance(feature_dict, query, gallery):
+    # concat
+    x = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in query], dim=0)
+    y = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in gallery], dim=0)
     m, n = x.size(0), y.size(0)
+    # flatten
     x = x.view(m, -1)
     y = y.view(n, -1)
-    if metric is not None:
-        x = metric.transform(x)
-        y = metric.transform(y)
-    dist_m = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
-             torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t()
-    dist_m.addmm_(1, -2, x, y.t())
-    return dist_m, x.cpu().numpy(), y.cpu().numpy()
+    # compute dist_mat
+    dist_mat = torch.pow(x, 2).sum(dim=1, keepdim=True).expand(m, n) + \
+               torch.pow(y, 2).sum(dim=1, keepdim=True).expand(n, m).t() - \
+               2 * torch.matmul(x, y.t())
+    return dist_mat
 
 
-def evaluate_all(distmat, query=None, gallery=None, query_ids=None, gallery_ids=None, query_cams=None,
-                 gallery_cams=None, cmc_topk=(1, 5, 10), cmc_flag=False):
-    if query is not None and gallery is not None:
-        query_ids = [pid for _, pid, _ in query]
-        gallery_ids = [pid for _, pid, _ in gallery]
-        query_cams = [cam for _, _, cam in query]
-        gallery_cams = [cam for _, _, cam in gallery]
-    else:
-        assert (query_ids is not None and gallery_ids is not None
-                and query_cams is not None and gallery_cams is not None)
+def evaluate_all(dist_mat, query, gallery, cmc_topk=(1, 5, 10), cmc_flag=False):
+    query_ids = [pid for _, pid, _ in query]
+    gallery_ids = [pid for _, pid, _ in gallery]
+    query_cams = [camid for _, _, camid in query]
+    gallery_cams = [camid for _, _, camid in gallery]
 
     # Compute mean AP
-    mAP = mean_ap(distmat, query_ids, gallery_ids, query_cams, gallery_cams)
+    mAP = mean_ap(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams)
     print('Mean AP: {:4.1%}'.format(mAP))
 
     if not cmc_flag:
         return mAP
 
     cmc_configs = {
-        'config': dict(separate_camera_set=False,
-                       single_gallery_shot=False,
-                       first_match_break=True)
+        'config': dict(separate_camera_set=False, single_gallery_shot=False, first_match_break=True)
     }
-    cmc_scores = {name: cmc(distmat, query_ids, gallery_ids,
-                            query_cams, gallery_cams, **params)
-                  for name, params in cmc_configs.items()}
+    cmc_scores = {name: cmc(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams, **params) for name, params in
+                  cmc_configs.items()}
 
     print('CMC Scores:')
     for k in cmc_topk:
-        print('  top-{:<4}{:12.1%}'
-              .format(k,
-                      cmc_scores['config'][k - 1]))
+        print('  top-{:<4}{:12.1%}'.format(k, cmc_scores['config'][k - 1]))
     return cmc_scores['config'][0], mAP
 
 
-def validate(val_loader, model, query, gallery, device, criterion='cosine', metric=None, cmc_flag=False, rerank=False):
+def validate(val_loader, model, query, gallery, device, criterion='cosine', cmc_flag=False, rerank=False):
     assert criterion in ['cosine', 'euclidean']
+    # when criterion == 'cosine', normalize feature of single image into unit norm
     normalize = (criterion == 'cosine')
-    features, _ = extract_reid_feature(val_loader, model, device, normalize)
-    distmat, query_features, gallery_features = pairwise_distance(features, query, gallery, metric=metric)
-    results = evaluate_all(distmat, query=query, gallery=gallery, cmc_flag=cmc_flag)
+
+    feature_dict = extract_reid_feature(val_loader, model, device, normalize)
+    dist_mat = pairwise_distance(feature_dict, query, gallery)
+    results = evaluate_all(dist_mat, query=query, gallery=gallery, cmc_flag=cmc_flag)
     if not rerank:
         return results
-    print('Applying person re-ranking ...')
-    distmat_qq = pairwise_distance(features, query, query, metric=metric)
-    distmat_gg = pairwise_distance(features, gallery, gallery, metric=metric)
-    distmat = re_ranking(distmat.numpy(), distmat_qq.numpy(), distmat_gg.numpy())
-    return evaluate_all(distmat, query=query, gallery=gallery, cmc_flag=cmc_flag)
+    print('Applying person re-ranking')
+    dist_mat_query = pairwise_distance(feature_dict, query, query)
+    dist_mat_gallery = pairwise_distance(feature_dict, gallery, gallery)
+    dist_mat = re_ranking(dist_mat, dist_mat_query, dist_mat_gallery)
+    return evaluate_all(dist_mat, query=query, gallery=gallery, cmc_flag=cmc_flag)
