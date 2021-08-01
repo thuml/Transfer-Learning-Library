@@ -77,7 +77,7 @@ class Relationship(object):
         with torch.no_grad():
             for i, (x, label) in enumerate(tqdm.tqdm(self.data_loader)):
                 x = x.to(self.device)
-                y_s, _ = self.classifier(x)
+                y_s, _ = self.classifier(x, training=True)
 
                 source_predictions.append(F.softmax(y_s, dim=1).detach().cpu().numpy())
                 target_labels.append(label)
@@ -130,8 +130,9 @@ class Classifier(ClassifierBase):
 
     """
     def __init__(self, backbone: nn.Module, num_classes: int,  head_source,
-                 head_target: Optional[nn.Module] = None, finetune=True):
-        super(Classifier, self).__init__(backbone, num_classes, head_source, head_target, finetune=finetune)
+                 head_target: Optional[nn.Module] = None, finetune=True, pool_layer=None):
+        super(Classifier, self).__init__(backbone, num_classes, head_source, head_target,
+                                         finetune=finetune, pool_layer=pool_layer)
 
     def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,

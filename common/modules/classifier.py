@@ -76,7 +76,10 @@ class Classifier(nn.Module):
         f = self.pool_layer(self.backbone(x))
         f = self.bottleneck(f)
         predictions = self.head(f)
-        return predictions, f
+        if self.training:
+            return predictions, f
+        else:
+            return predictions
 
     def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,

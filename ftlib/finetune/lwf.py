@@ -12,7 +12,7 @@ def collect_pretrain_labels(data_loader, classifier, device):
     with torch.no_grad():
         for i, (x, label) in enumerate(tqdm.tqdm(data_loader)):
             x = x.to(device)
-            y_s, _ = classifier(x)
+            y_s, _ = classifier(x, training=True)
             source_predictions.append(y_s.detach().cpu())
     return torch.cat(source_predictions, dim=0)
 
@@ -44,15 +44,19 @@ class Classifier(nn.Module):
     """
     def __init__(self, backbone: nn.Module, num_classes: int,  head_source,
                  head_target: Optional[nn.Module] = None, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1,  finetune=True):
+                 bottleneck_dim: Optional[int] = -1,  finetune=True, pool_layer=None):
         super(Classifier, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
-        if bottleneck is None:
-            self.bottleneck = nn.Sequential(
+        if pool_layer is None:
+            self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
                 nn.Flatten()
             )
+        else:
+            self.pool_layer = pool_layer
+        if bottleneck is None:
+            self.bottleneck = nn.Identity()
             self._features_dim = backbone.out_features
         else:
             self.bottleneck = bottleneck
@@ -71,13 +75,17 @@ class Classifier(nn.Module):
         """The dimension of features before the final `head` layer"""
         return self._features_dim
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, training=False):
         """"""
         f = self.backbone(x)
+        f = self.pool_layer(f)
         f = self.bottleneck(f)
         y_s = self.head_source(f)
         y_t = self.head_target(f)
-        return y_s, y_t
+        if training:
+            return y_s, y_t
+        else:
+            return y_t
 
     def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,

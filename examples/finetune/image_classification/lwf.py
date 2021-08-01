@@ -5,24 +5,24 @@ import warnings
 import sys
 import argparse
 import shutil
+
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader, TensorDataset
-import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
 from ftlib.finetune.lwf import collect_pretrain_labels, Classifier
-import common.vision.datasets as datasets
-import common.vision.models as models
-from common.vision.transforms import ResizeImage
 from common.loss import KnowledgeDistillationLoss
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.data import ForeverDataIterator, CombineDataset
 
+sys.path.append('.')
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,37 +44,24 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = T.Compose([
-        ResizeImage(256),
-        T.RandomResizedCrop(224),
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        normalize
-    ])
-    val_transform = T.Compose([
-        ResizeImage(256),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.train_resizing, not args.no_hflip, args.color_jitter)
+    val_transform = utils.get_val_transform(args.val_resizing)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
 
-    dataset = datasets.__dict__[args.data]
-    train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate, download=True, transform=train_transform)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
-                              shuffle=True, num_workers=args.workers, drop_last=False)
-    val_dataset = dataset(root=args.root, split='test', sample_rate=100, download=True, transform=val_transform)
+    train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
-    if args.pretrained:
-        print("=> loading pre-trained model from '{}'".format(args.pretrained))
-        pretrained_dict = torch.load(args.pretrained)
-        backbone.load_state_dict(pretrained_dict, strict=False)
-    num_classes = val_dataset.num_classes
-    classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(device)
+    backbone = utils.get_model(args.arch, args.pretrained)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head(), pool_layer=pool_layer,
+                            finetune=args.finetune).to(device)
     kd = KnowledgeDistillationLoss(args.T)
 
     pretrain_labels = collect_pretrain_labels(train_loader, classifier, device)
@@ -91,7 +78,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = utils.validate(val_loader, classifier, args, device)
         print(acc1)
         return
 
@@ -102,7 +89,7 @@ def main(args: argparse.Namespace):
         train(train_iter, classifier, kd, optimizer, epoch, args)
         lr_scheduler.step()
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -142,7 +129,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, kd, optimizer: SGD
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, y_t = model(x)
+        y_s, y_t = model(x, training=True)
         tgt_loss = F.cross_entropy(y_t, label_t)
         src_loss = kd(y_s, label_s)
         loss = tgt_loss + args.trade_off * src_loss
@@ -166,73 +153,29 @@ def train(train_iter: ForeverDataIterator, model: Classifier, kd, optimizer: SGD
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1, top5],
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            _, output = model(images)
-            loss = F.cross_entropy(output, target)
-
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-
-    return top1.avg
-
-
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
     parser = argparse.ArgumentParser(description='LWF (Learning without Forgetting) for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA',
-                        help='dataset: ' + ' | '.join(dataset_names))
+    parser.add_argument('-d', '--data', metavar='DATA')
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
+    parser.add_argument('-ss', '--sample-size', default=None, type=int)
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
+    parser.add_argument('--color-jitter', action='store_true')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
+    parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--trade-off', default=4, type=float,
                         metavar='P', help='weight of pretrained loss')
     parser.add_argument("-T", type=float, default=3,

@@ -35,17 +35,18 @@ class Classifier(ClassifierBase):
         - hn: (minibatch, `features_dim`)
 
     """
-    def __init__(self, backbone: nn.Module, num_classes: int, projection_dim=128, finetune=True):
+    def __init__(self, backbone: nn.Module, num_classes: int, projection_dim=128, finetune=True, pool_layer=None):
         head = nn.Linear(backbone.out_features, num_classes)
         head.weight.data.normal_(0, 0.01)
         head.bias.data.fill_(0.0)
-        super(Classifier, self).__init__(backbone, num_classes=num_classes, head=head, finetune=finetune)
+        super(Classifier, self).__init__(backbone, num_classes=num_classes, head=head, finetune=finetune, pool_layer=pool_layer)
         self.projector = nn.Linear(backbone.out_features, projection_dim)
         self.projection_dim = projection_dim
 
     def forward(self, x: torch.Tensor):
         batch_size = x.shape[0]
         h = self.backbone(x)
+        h = self.pool_layer(h)
         h = self.bottleneck(h)
         y = self.head(h)
         z = normalize(self.projector(h), dim=1)

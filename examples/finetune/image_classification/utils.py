@@ -38,9 +38,11 @@ def get_model(model_name, pretrained_checkpoint=None):
         try:
             backbone.out_features = backbone.get_classifier().in_features
             backbone.reset_classifier(0, '')
+            backbone.copy_head = backbone.get_classifier
         except:
             backbone.out_features = backbone.head.in_features
             backbone.head = nn.Identity()
+            backbone.copy_head = lambda x: x.head
     if pretrained_checkpoint:
         print("=> loading pre-trained model from '{}'".format(pretrained_checkpoint))
         pretrained_dict = torch.load(pretrained_checkpoint)
@@ -145,7 +147,7 @@ def validate(val_loader, model, args, device) -> float:
             target = target.to(device)
 
             # compute output
-            output, _ = model(images)
+            output = model(images)
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
@@ -165,13 +167,6 @@ def validate(val_loader, model, args, device) -> float:
               .format(top1=top1, top5=top5))
 
     return top1.avg
-
-
-# def gray_to_rgb(x: torch.Tensor):
-#     if x.shape[0] == 1:
-#         return torch.cat([x, x, x], 0)
-#     else:
-#         return x
 
 
 def get_train_transform(resizing='default', random_horizontal_flip=True, random_color_jitter=False):
