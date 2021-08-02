@@ -28,6 +28,8 @@ Supported datasets include:
 - camelyon17 (WILDS)
 - fmow (WILDS)
 
+Above datasets can be downloaded from the Internet automatically.
+
 ## Supported Methods
 
 Supported methods include:
@@ -52,6 +54,8 @@ For example, if you want to train DANN on Office31, use the following script
 # or you are glad to download the datasets automatically from the Internet to this path
 CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W
 ```
+
+For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
 ## TODO
 Support methods: ADDA, BSP, AdaBN/TransNorm, CycleGAN, CyCADA
