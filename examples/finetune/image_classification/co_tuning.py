@@ -80,7 +80,8 @@ def main(args: argparse.Namespace):
         return
 
     # build relationship between source classes and target classes
-    relationship = Relationship(determin_train_loader, classifier, device, os.path.join(logger.root, args.relationship))
+    source_classifier = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.head_source)
+    relationship = Relationship(determin_train_loader, source_classifier, device, os.path.join(logger.root, args.relationship))
     co_tuning_loss = CoTuningLoss()
 
     # start training
@@ -129,7 +130,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, y_t = model(x, training=True)
+        y_s, y_t = model(x)
         tgt_loss = F.cross_entropy(y_t, label_t)
         src_loss = co_tuning_loss(y_s, label_s)
         loss = tgt_loss + args.trade_off * src_loss
@@ -176,7 +177,7 @@ if __name__ == '__main__':
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--trade-off', default=2.3, type=float,
-                        metavar='P', help='weight of pretrained loss')
+                        metavar='P', help='the trade-off hyper-parameter for co-tuning loss')
     parser.add_argument("--relationship", type=str, default='relationship.npy',
                         help="Where to save relationship file.")
     parser.add_argument('--pretrained', default=None,

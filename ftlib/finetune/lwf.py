@@ -12,7 +12,7 @@ def collect_pretrain_labels(data_loader, classifier, device):
     with torch.no_grad():
         for i, (x, label) in enumerate(tqdm.tqdm(data_loader)):
             x = x.to(device)
-            y_s, _ = classifier(x, training=True)
+            y_s = classifier(x)
             source_predictions.append(y_s.detach().cpu())
     return torch.cat(source_predictions, dim=0)
 
@@ -75,14 +75,13 @@ class Classifier(nn.Module):
         """The dimension of features before the final `head` layer"""
         return self._features_dim
 
-    def forward(self, x: torch.Tensor, training=False):
+    def forward(self, x: torch.Tensor):
         """"""
         f = self.backbone(x)
         f = self.pool_layer(f)
-        f = self.bottleneck(f)
         y_s = self.head_source(f)
-        y_t = self.head_target(f)
-        if training:
+        y_t = self.head_target(self.bottleneck(f))
+        if self.training:
             return y_s, y_t
         else:
             return y_t

@@ -64,7 +64,8 @@ def main(args: argparse.Namespace):
                             finetune=args.finetune).to(device)
     kd = KnowledgeDistillationLoss(args.T)
 
-    pretrain_labels = collect_pretrain_labels(train_loader, classifier, device)
+    source_classifier = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.head_source)
+    pretrain_labels = collect_pretrain_labels(train_loader, source_classifier, device)
     train_dataset = CombineDataset([train_dataset, TensorDataset(pretrain_labels)])
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -129,7 +130,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, kd, optimizer: SGD
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, y_t = model(x, training=True)
+        y_s, y_t = model(x)
         tgt_loss = F.cross_entropy(y_t, label_t)
         src_loss = kd(y_s, label_s)
         loss = tgt_loss + args.trade_off * src_loss
