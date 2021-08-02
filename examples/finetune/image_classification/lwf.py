@@ -51,8 +51,8 @@ def main(args: argparse.Namespace):
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
                                                                 val_transform, args.sample_rate, args.sample_size)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False,
+                              num_workers=args.workers, drop_last=False)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
 

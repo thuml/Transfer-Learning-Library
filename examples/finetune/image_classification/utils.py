@@ -1,11 +1,11 @@
 import sys
 import time
-import timm
 from PIL import Image
 import os
 import os.path as osp
 import tqdm
 
+import timm
 import tensorflow_datasets as tfds
 import torch
 import torch.nn as nn
@@ -170,6 +170,16 @@ def validate(val_loader, model, args, device) -> float:
 
 
 def get_train_transform(resizing='default', random_horizontal_flip=True, random_color_jitter=False):
+    """
+    resizing mode:
+        - default: take a random resized crop of size 224 with scale in [0.2, 1.];
+        - res: resize the image to 224;
+        - res.|crop: resize the image to 256 and take a random crop of size 224;
+        - res.sma|crop: resize the image keeping its aspect ratio such that the
+            smaller side is 256, then take a random crop of size 224;
+        – inc.crop: “inception crop” from (Szegedy et al., 2015);
+        – cif.crop: resize the image to 224, zero-pad it by 28 on each side, then take a random crop of size 224.
+    """
     if resizing == 'default':
         transform = T.RandomResizedCrop(224, scale=(0.2, 1.))
     elif resizing == 'res.':
@@ -207,6 +217,13 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
 
 
 def get_val_transform(resizing='default'):
+    """
+    resizing mode:
+        - default: resize the image to 256 and take the center crop of size 224;
+        – res.: resize the image to 224
+        – res.|crop: resize the image such that the smaller side is of size 256 and
+            then take a central crop of size 224.
+    """
     if resizing == 'default':
         transform = T.Compose([
             T.Resize(256),
