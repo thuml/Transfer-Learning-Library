@@ -1,15 +1,16 @@
-import copy
 import sys
 import time
 import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as T
 import wilds
 
 sys.path.append('../../..')
 import common.vision.datasets as datasets
 import common.vision.models as models
+from common.vision.transforms import ResizeImage
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
 
@@ -76,7 +77,7 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
             test_dataset = val_dataset
         num_classes = train_source_dataset.num_classes
     else:
-        # load datasets from common.vision.datasets
+        # load datasets from wilds
         dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
         num_classes = dataset.n_classes
         train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_source_transform))
@@ -109,7 +110,7 @@ def validate(val_loader, model, args, device) -> float:
             target = target.to(device)
 
             # compute output
-            output, _ = model(images)
+            output = model(images)
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
@@ -132,3 +133,87 @@ def validate(val_loader, model, args, device) -> float:
 
     return top1.avg
 
+
+def get_train_transform(resizing='default', random_horizontal_flip=True, random_color_jitter=False):
+    """
+    resizing mode:
+        - default: resize the image to 256 and take a random resized crop of size 224;
+        - cen.crop: resize the image to 256 and take the center crop of size 224;
+        - res: resize the image to 224;
+        - res.|crop: resize the image to 256 and take a random crop of size 224;
+        - res.sma|crop: resize the image keeping its aspect ratio such that the
+            smaller side is 256, then take a random crop of size 224;
+        – inc.crop: “inception crop” from (Szegedy et al., 2015);
+        – cif.crop: resize the image to 224, zero-pad it by 28 on each side, then take a random crop of size 224.
+    """
+    if resizing == 'default':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.RandomResizedCrop(224)
+        ])
+    elif resizing == 'cen.crop':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.CenterCrop(224)
+        ])
+    elif resizing == 'res.':
+        transform = T.Resize(224)
+    elif resizing == 'res.|crop':
+        transform = T.Compose([
+            T.Resize((256, 256)),
+            T.RandomCrop(224)
+        ])
+    elif resizing == "res.sma|crop":
+        transform = T.Compose([
+            T.Resize(256),
+            T.RandomCrop(224)
+        ])
+    elif resizing == 'inc.crop':
+        transform = T.RandomResizedCrop(224)
+    elif resizing == 'cif.crop':
+        transform = T.Compose([
+            T.Resize((224, 224)),
+            T.Pad(28),
+            T.RandomCrop(224),
+        ])
+    else:
+        raise NotImplementedError(resizing)
+    transforms = [transform]
+    if random_horizontal_flip:
+        transforms.append(T.RandomHorizontalFlip())
+    if random_color_jitter:
+        transforms.append(T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5))
+    transforms.extend([
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    return T.Compose(transforms)
+
+
+def get_val_transform(resizing='default'):
+    """
+    resizing mode:
+        - default: resize the image to 256 and take the center crop of size 224;
+        – res.: resize the image to 224
+        – res.|crop: resize the image such that the smaller side is of size 256 and
+            then take a central crop of size 224.
+    """
+    if resizing == 'default':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.CenterCrop(224),
+        ])
+    elif resizing == 'res.':
+        transform = T.Resize((224, 224))
+    elif resizing == 'res.|crop':
+        transform = T.Compose([
+            T.Resize((256, 256)),
+            T.CenterCrop(224),
+        ])
+    else:
+        raise NotImplementedError(resizing)
+    return T.Compose([
+        transform,
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])

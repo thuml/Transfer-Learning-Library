@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=0 python cdan.py data/office-home -d OfficeHome -s Rw -t Pr
     
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
-    --epochs 30 --seed 0 --per-class-eval --center-crop --log logs/cdan/VisDA2017
+    --epochs 30 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/cdan/VisDA2017
 
 # DomainNet
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2i

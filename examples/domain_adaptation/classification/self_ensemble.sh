@@ -25,7 +25,7 @@ CUDA_VISIBLE_DEVICES=0 python self_ensemble.py data/office-home -d OfficeHome -s
 CUDA_VISIBLE_DEVICES=0 python self_ensemble.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
     --bottleneck-dim 512 --epochs 20 --seed 0 --per-class-eval --log logs/self_ensemble/VisDA2017
 
-CUDA_VISIBLE_DEVICES=6 python self_ensemble.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
+CUDA_VISIBLE_DEVICES=0 python self_ensemble.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
     --epochs 20 --seed 0 --per-class-eval --log logs/self_ensemble/VisDA2017 --lr-gamma 0.0002 -b 32
 
 # Wilds Dataset

@@ -23,7 +23,7 @@ CUDA_VISIBLE_DEVICES=0 python mcc.py data/office-home -d OfficeHome -s Rw -t Pr 
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python mcc.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
-    --epochs 30 --seed 0 --lr 0.002 --per-class-eval --temperature 3.0 --center-crop --log logs/mcc/VisDA2017
+    --epochs 30 --seed 0 --lr 0.002 --per-class-eval --temperature 3.0 --train-resizing cen.crop --log logs/mcc/VisDA2017
     
 # Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python mcc.py data/wilds -d iwildcam -a resnet50 --bottleneck-dim 2048 --epochs 30 -i 1000 --seed 0 --log logs/mcc/iwildcam

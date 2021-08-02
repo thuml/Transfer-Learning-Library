@@ -25,7 +25,7 @@ CUDA_VISIBLE_DEVICES=0 python mcd.py data/office-home -d OfficeHome -s Rw -t Pr 
 
 # VisDA2017
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
-    --epochs 20 --center-crop --seed 0 -i 500 --per-class-eval --log logs/mcd/VisDA2017
+    --epochs 20 --center-crop --seed 0 -i 500 --per-class-eval --train-resizing cen.crop --log logs/mcd/VisDA2017
 
 # Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --trade-off 30.0 --log logs/mcd/iwildcam

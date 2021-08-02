@@ -12,12 +12,10 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
 from common.modules.classifier import Classifier
-from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -47,29 +45,10 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    if args.center_crop:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.CenterCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    else:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.RandomResizedCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    val_transform = T.Compose([
-        ResizeImage(256),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
+    val_transform = utils.get_val_transform(args.val_resizing)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
 
     train_source_dataset, _, val_dataset, test_dataset, num_classes = \
         utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
@@ -201,8 +180,8 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
-    parser.add_argument('--center-crop', default=False, action='store_true',
-                        help='whether use center crop during training')
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
