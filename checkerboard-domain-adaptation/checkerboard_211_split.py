@@ -151,13 +151,17 @@ def main(args: argparse.Namespace):
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
-    num_backprop = args.iters_per_epoch * args.epochs
-    if args.grl == 'warm':
-        gl = WarmStartGradientLayer(alpha=args.alpha, lo=1., hi=1. - args.lambda_trade_off, max_iters=num_backprop, auto_step=True)
-    elif args.grl == 'cool':
-        gl = WarmStartGradientLayer(alpha=args.alpha, lo=0., hi=1. - args.lambda_trade_off, max_iters=num_backprop, auto_step=True)
+    if args.max_iters:
+        num_backprop = args.max_iters
     else:
-        gl = GradientLayer(coeff=1. - args.lambda_trade_off)
+        num_backprop = args.iters_per_epoch * args.epochs
+    # TODO: allow custom trade-off value for the gl
+    if args.gl == 'warm':
+        gl = WarmStartGradientLayer(alpha=args.alpha, lo=1., hi=args.lambda_c, max_iters=num_backprop, auto_step=True)
+    elif args.gl == 'cool':
+        gl = WarmStartGradientLayer(alpha=args.alpha, lo=0., hi=args.lambda_c, max_iters=num_backprop, auto_step=True)
+    else:
+        gl = GradientLayer(coeff=args.lambda_c)
     
     classifier = ImageClassifier(backbone,
                                  len(datasets.classes()),
@@ -168,9 +172,13 @@ def main(args: argparse.Namespace):
         in_feature=classifier.features_dim,
         hidden_size=1024,
         num_domains=len(datasets.domains())).to(device)
+    
+    backbone_mul = 1.
+    if args.finetune:
+        backbone_mul = 0.1
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters() +
+    optimizer = SGD(classifier.get_parameters(backbone_lr=backbone_mul) +
                     multidomain_discri.get_parameters(),
                     args.lr,
                     momentum=args.momentum,
@@ -183,11 +191,11 @@ def main(args: argparse.Namespace):
     
     # select the grl for the domain discriminator architecture
     if args.grl == 'warm':
-        grl = WarmStartGradientReverseLayer(alpha=args.alpha, lo=0., hi=args.lambda_trade_off, max_iters=num_backprop, auto_step=True)
+        grl = WarmStartGradientReverseLayer(alpha=args.alpha, lo=0., hi=args.lambda_d, max_iters=num_backprop, auto_step=True)
     elif args.grl == 'cool':
-        grl = WarmStartGradientReverseLayer(alpha=args.alpha, lo=1., hi=args.lambda_trade_off, max_iters=num_backprop, auto_step=True)
+        grl = WarmStartGradientReverseLayer(alpha=args.alpha, lo=1., hi=args.lambda_d, max_iters=num_backprop, auto_step=True)
     else:
-        grl = GradientReverseLayer(coeff=1 - args.lambda_trade_off)
+        grl = GradientReverseLayer(coeff=args.lambda_d)
     multidomain_adv = MultidomainAdversarialLoss(multidomain_discri, grl=grl).to(device)
 
     # resume from the best or latest checkpoint
@@ -350,8 +358,8 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
     
-def get_grad_list(backbone: nn.Module):
-    return [param.grad.detach().clone() for name, param in backbone.named_parameters() if param.grad != None]
+# def get_grad_list(backbone: nn.Module):
+#     return [param.grad.detach().clone() for name, param in backbone.named_parameters() if param.grad != None]
 
 def train(train_iter: ForeverDataIterator, 
           model: ImageClassifier,
@@ -436,7 +444,7 @@ def train(train_iter: ForeverDataIterator,
     log.update({
         "Category Classification Loss (Training Set)": cls_losses.avg,
         'Style Discrimination Loss (Training Set)': transfer_losses.avg,
-        'Total Loss (Training Set)': total_losses.sum,
+        # 'Total Loss (Training Set)': total_losses.sum,
         'Category Classification Accuracy (Training Set)': cls_accs.avg,
         'Style Discrimination Accuracy (Training Set)': domain_accs.avg,
         'Classification Logits': y_tr,
@@ -779,14 +787,22 @@ if __name__ == '__main__':
                         default=1.,
                         type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('--lambda-trade-off',
+    # parser.add_argument('--lambda-trade-off',
+    #                     default=0.5,
+    #                     type=float,
+    #                     help='the trade-off hyper-parameter between the classification loss and transfer loss')
+    parser.add_argument('--lambda-c',
                         default=0.5,
                         type=float,
-                        help='the trade-off hyper-parameter between the classification loss and transfer loss')
-    parser.add_argument('--alpha',
-                        default=10,
+                        help='the trade-off hyper-parameter for classification head gl')
+    parser.add_argument('--lambda-d',
+                        default=0.5,
                         type=float,
-                        help='the alpha parameter in the Warm Start GRL scheduler for the trade off')
+                        help='the trade-off hyper-parameter for the domain discriminator head grl')
+    parser.add_argument('--alpha',
+                        default=1.,
+                        type=float,
+                        help='the alpha parameter in the warm and cool gradient layer')
     # training parameters
     parser.add_argument('-b',
                         '--batch-size',
@@ -837,6 +853,11 @@ if __name__ == '__main__':
                         default=1000,
                         type=int,
                         help='Number of iterations per epoch')
+    parser.add_argument('--max-iters',
+                        '--warm-grl-max-iters',
+                        default=None,
+                        type=int,
+                        help='Number of iterations for the warm grl/gl to reach max value')
     parser.add_argument('-p',
                         '--print-freq',
                         default=100,
@@ -914,20 +935,28 @@ if __name__ == '__main__':
         action='store_false',
         help='''If true, load the best model when testing and analyzing.
         If false, load the latest model when testing and analyzing.''')
+    # parser.add_argument(
+    #     '--largrange-multiplier',
+    #     dest="use_lagrange_multiplier",
+    #     default=False,
+    #     action='store_true',
+    #     help='''If true, make updates to lambda_trade_off based on the difference between 
+    #     the loss for the domain discriminator and when the domain discriminator
+    #     makes random guesses.''')
+    # parser.add_argument(
+    #     '--no-lagrange-multiplier',
+    #     dest="use_best_model",
+    #     default=False,
+    #     action='store_false',
+    #     help='''If false, make no updates to the lambda_trade_off.''')
     parser.add_argument(
-        '--largrange-multiplier',
-        dest="use_lagrange_multiplier",
-        default=False,
-        action='store_true',
-        help='''If true, make updates to lambda_trade_off based on the difference between 
-        the loss for the domain discriminator and when the domain discriminator
-        makes random guesses.''')
-    parser.add_argument(
-        '--no-lagrange-multiplier',
-        dest="use_best_model",
-        default=False,
-        action='store_false',
-        help='''If false, make no updates to the lambda_trade_off.''')
+        "--gl",
+        type=str,
+        default='warm',
+        choices=['warm', 'cool', 'constant'],
+        help="When gl is 'warm', the trade-off slowly increases from 0 to lambda."
+        "When gl is 'cold', the trade-off slowly decreases from 1 to lambda."
+        "When gl is 'constant', the trade-off is constant.")
     parser.add_argument(
         "--grl",
         type=str,

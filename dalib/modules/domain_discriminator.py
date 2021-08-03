@@ -47,6 +47,6 @@ class DomainDiscriminator(nn.Sequential):
             )
 
     def get_parameters(self, base_lr: Optional[float] = 1.) -> List[Dict]:
-        return [{"params": self.parameters(), "lr": base_lr}]
+        return [{"params": self.parameters(), "lr": base_lr}] 
 
 

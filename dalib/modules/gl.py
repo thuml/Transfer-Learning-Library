@@ -26,6 +26,17 @@ class GradientLayer(nn.Module):
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         """"""
         return GradientFunction.apply(input, self.coeff)
+    
+
+class GradientAdaptiveLayer(nn.Module):
+    
+    def __init__(self, coeff: Optional[float] = 0.):
+        self.coeff = coeff
+        super(GradientAdaptiveLayer, self).__init__()
+        
+    def forward(self, input: torch.Tensor, coeff_update: Optional[float] = 0.) -> torch.Tensor:
+        self.coeff += coeff_update
+        return GradientFunction.apply(input, self.coeff)
 
 
 class WarmStartGradientLayer(nn.Module):

@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import torch.nn as nn
 
 __all__ = ['MultidomainDiscriminator']
@@ -43,5 +43,5 @@ class MultidomainDiscriminator(nn.Sequential):
                                  nn.Linear(hidden_size, num_domains))
                                 #  ,nn.Sigmoid())
 
-    def get_parameters(self) -> List[Dict]:
-        return [{"params": self.parameters(), "lr": 1.}]
+    def get_parameters(self, base_lr: Optional[int] = 1.) -> List[Dict]:
+        return [{"params": self.parameters(), "lr": base_lr}]

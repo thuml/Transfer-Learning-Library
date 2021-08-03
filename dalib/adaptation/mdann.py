@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -67,8 +67,11 @@ class MultidomainAdversarialLoss(nn.Module):
         self.domain_discriminator_accuracy = None
 
     def forward(self, f: torch.Tensor, d_labels: torch.Tensor, 
-                w: Optional[torch.Tensor] = None) -> torch.Tensor:
-        f = self.grl(f)
+                w: Optional[torch.Tensor] = None, grl_input: Optional[Any] = None) -> torch.Tensor:
+        if grl_input:
+            f = self.grl(f, grl_input)
+        else:
+            f = self.grl(f)
         self.domain_pred = self.multidomain_discriminator(f)
         self.domain_discriminator_accuracy = accuracy(self.domain_pred, d_labels)[0]
         if w is None:
