@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Office31
+# ResNet50, Office31, Single Source
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s D -t A -a resnet50 --epochs 20 --seed 0 --log logs/jan/Office31_D2A
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s W -t A -a resnet50 --epochs 20 --seed 0 --log logs/jan/Office31_W2A
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 0 --log logs/jan/Office31_A2W
@@ -7,8 +7,7 @@ CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s A -t D -a resn
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s D -t W -a resnet50 --epochs 20 --seed 0 --log logs/jan/Office31_D2W
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office31 -d Office31 -s W -t D -a resnet50 --epochs 20 --seed 0 --log logs/jan/Office31_W2D
 
-
-# Office-Home
+# ResNet50, Office-Home, Single Source
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --epochs 20 --seed 0 --log logs/jan/OfficeHome_Ar2Cl
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --epochs 20 --seed 0 --log logs/jan/OfficeHome_Ar2Pr
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --epochs 20 --seed 0 --log logs/jan/OfficeHome_Ar2Rw
@@ -22,11 +21,11 @@ CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Rw -t Ar 
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 20 --seed 0 --log logs/jan/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 20 --seed 0 --log logs/jan/OfficeHome_Rw2Pr
 
-# VisDA-2017
+# ResNet101, VisDA-2017, Single Source
 CUDA_VISIBLE_DEVICES=0 python jan.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
     --epochs 20 -i 500 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/jan/VisDA2017
 
-# DomainNet
+# ResNet101, DomainNet, Single Source
 CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/DomainNet_c2i
 CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/DomainNet_c2p
 CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/DomainNet_c2r
@@ -48,11 +47,17 @@ CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s s -t i -a re
 CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python jan.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/DomainNet_s2r
 
-# Wilds Dataset
+# ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python jan.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/jan/iwildcam
 CUDA_VISIBLE_DEVICES=0 python jan.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/jan/fmow
 
-# Office-Home on Vision Transformer
+# ResNet50, ImageNet200 -> ImageNetR
+CUDA_VISIBLE_DEVICES=0 python jan.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/jan/ImageNet_IN2INR
+
+# ig_resnext101_32x8d, ImageNet -> ImageNetSketch
+CUDA_VISIBLE_DEVICES=0 python jan.py data/imagenet-sketch -d ImageNetSketch -s IN -t sketch -a ig_resnext101_32x8d --epochs 30 -i 2500 -p 500 --log logs/jan_ig_resnext101_32x8d/ImageNet_IN2sketch
+
+# Vision Transformer, Office-Home, Single Source
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Cl -a vit_base_patch16_224 --no-pool --epochs 30 --seed 0 -b 24 --log logs/jan_vit/OfficeHome_Ar2Cl
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Pr -a vit_base_patch16_224 --no-pool --epochs 30 --seed 0 -b 24 --log logs/jan_vit/OfficeHome_Ar2Pr
 CUDA_VISIBLE_DEVICES=0 python jan.py data/office-home -d OfficeHome -s Ar -t Rw -a vit_base_patch16_224 --no-pool --epochs 30 --seed 0 -b 24 --log logs/jan_vit/OfficeHome_Ar2Rw

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Office31
+# ResNet50, Office31, Single Source
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 5 --seed 0 --log logs/src_only/Office31_A2W
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s D -t W -a resnet50 --epochs 5 --seed 0 --log logs/src_only/Office31_D2W
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s W -t D -a resnet50 --epochs 5 --seed 0 --log logs/src_only/Office31_W2D
@@ -7,7 +7,7 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s A -t D
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s D -t A -a resnet50 --epochs 5 --seed 0 --log logs/src_only/Office31_D2A
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office31 -d Office31 -s W -t A -a resnet50 --epochs 5 --seed 0 --log logs/src_only/Office31_W2A
 
-# Office-Home
+# ResNet50, Office-Home, Single Source
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --epochs 5 -i 500 --seed 0 --log logs/src_only/OfficeHome_Ar2Cl
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --epochs 5 -i 500 --seed 0 --log logs/src_only/OfficeHome_Ar2Pr
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --epochs 5 -i 500 --seed 0 --log logs/src_only/OfficeHome_Ar2Rw
@@ -21,11 +21,19 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s R
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 5 -i 500 --seed 0 --log logs/src_only/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 5 -i 500 --seed 0 --log logs/src_only/OfficeHome_Rw2Pr
 
-# VisDA-2017
+# ResNet101, VisDA-2017, Single Source
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
     --epochs 20 -i 1000 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/src_only/VisDA2017
 
-# DomainNet
+# ResNet101, DomainNet, Oracle
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_c
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_i
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_p
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s q -t q -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_q
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_r
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_s
+
+# ResNet101, DomainNet, Single Source
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2i
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2r
@@ -47,34 +55,18 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2r
 
-# DomainNet Oracle
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_c
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_i
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_p
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s q -t q -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_q
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_r
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 > benchmarks/da/unsupervised/oracle/DomainNet_s
-
-# Office-Caltech
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s A -t C -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_A2C
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s A -t D -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_A2D
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s A -t W -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_A2W
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s C -t A -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_C2A
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s C -t D -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_C2D
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s C -t W -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_C2W
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s D -t A -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_D2A
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s D -t W -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_D2W
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s D -t C -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_D2C
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s W -t A -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_W2A
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s W -t C -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_W2C
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-caltech -d OfficeCaltech -s W -t D -a resnet50 --epochs 5 --log logs/src_only/OfficeCaltech_W2D
-
-# Wilds Dataset
+# ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d iwildcam -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/iwildcam --lr 0.01
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d camelyon17 -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/camelyon17 --lr 0.01
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d fmow -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/fmow --lr 0.01
 
-# Office-Home on Vision Transformer
+# ResNet50, ImageNet200 -> ImageNetR
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 20 -i 2500 --seed 0 --log logs/src_only/ImageNet_IN2INR
+
+# ig_resnext101_32x8d, ImageNet -> ImageNetSketch
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/imagenet-sketch -d ImageNetSketch -s IN -t sketch -a ig_resnext101_32x8d --epochs 20 -i 2500 --seed 0 --log logs/src_only_ig_resnext101_32x8d/ImageNet_IN2sketch
+
+# Vision Transformer, Office-Home, Single Source
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Cl -a vit_base_patch16_224 --no-pool --epochs 20 -i 1000 -b 24 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Cl
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Pr -a vit_base_patch16_224 --no-pool --epochs 20 -i 1000 -b 24 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Pr
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar -t Rw -a vit_base_patch16_224 --no-pool --epochs 20 -i 1000 -b 24 --seed 0 --log logs/src_only_vit/OfficeHome_Ar2Rw
@@ -88,4 +80,16 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s R
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Cl -a vit_base_patch16_224 --no-pool --epochs 20 -i 1000 -b 24 --seed 0 --log logs/src_only_vit/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Pr -a vit_base_patch16_224 --no-pool --epochs 20 -i 1000 -b 24 --seed 0 --log logs/src_only_vit/OfficeHome_Rw2Pr
 
+# ResNet50, Office-Home, Multi Source
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Cl Pr Rw -t Ar -a resnet50 --epochs 10 -i 1000 --seed 0 --log logs/src_only/OfficeHome_:2Ar
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar Pr Rw -t Cl -a resnet50 --epochs 10 -i 1000 --seed 0 --log logs/src_only/OfficeHome_:2Cl
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar Cl Rw -t Pr -a resnet50 --epochs 10 -i 1000 --seed 0 --log logs/src_only/OfficeHome_:2Pr
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Ar Cl Pr -t Rw -a resnet50 --epochs 10 -i 1000 --seed 0 --log logs/src_only/OfficeHome_:2Rw
 
+# ResNet101, DomainNet, Multi Source
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i p q r s -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2c
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c p q r s -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2i
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i q r s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2p
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2q
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2r
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2s

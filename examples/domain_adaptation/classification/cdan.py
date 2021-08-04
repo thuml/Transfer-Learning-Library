@@ -201,7 +201,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CDAN for Unsupervised Domain Adaptation')
     # dataset parameters
@@ -210,8 +209,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
                         help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)')
-    parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
+    parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters

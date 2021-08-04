@@ -298,8 +298,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
                         help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)')
-    parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
+    parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),

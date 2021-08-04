@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
+from torch.utils.data import ConcatDataset
 import wilds
 
 sys.path.append('../../..')
@@ -67,15 +68,18 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
     if dataset_name in datasets.__dict__:
         # load datasets from common.vision.datasets
         dataset = datasets.__dict__[dataset_name]
-        train_source_dataset = dataset(root=root, task=source, download=True, transform=train_source_transform)
-        train_target_dataset = dataset(root=root, task=target, download=True, transform=train_target_transform)
-        val_dataset = dataset(root=root, task=target, download=True, transform=val_transform)
+
+        def concat_dataset(tasks, **kwargs):
+            return ConcatDataset([dataset(task=task, **kwargs) for task in tasks])
+
+        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform)
+        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform)
+        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform)
         if dataset_name == 'DomainNet':
-            test_dataset = dataset(root=root, task=target, split='test', download=True,
-                                   transform=val_transform)
+            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform)
         else:
             test_dataset = val_dataset
-        num_classes = train_source_dataset.num_classes
+        num_classes = train_source_dataset.datasets[0].num_classes
     else:
         # load datasets from wilds
         dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
@@ -207,7 +211,7 @@ def get_val_transform(resizing='default'):
         transform = T.Resize((224, 224))
     elif resizing == 'res.|crop':
         transform = T.Compose([
-            T.Resize((256, 256)),
+            T.Resize(256),
             T.CenterCrop(224),
         ])
     else:

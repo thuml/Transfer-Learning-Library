@@ -17,7 +17,7 @@ pip install timm
 
 ## Dataset
 
-Supported datasets include:
+Following datasets can be downloaded automatically:
 
 - Office31
 - OfficeCaltech
@@ -27,6 +27,13 @@ Supported datasets include:
 - iwildcam (WILDS)
 - camelyon17 (WILDS)
 - fmow (WILDS)
+
+You need to prepare following datasets manually if you want to use them:
+- ImageNet
+- [ImageNetR](https://github.com/hendrycks/imagenet-r)
+- [ImageNet-Sketch](https://github.com/HaohanWang/ImageNet-Sketch)
+
+and prepare them following ``common.vision.datasets.imagenet_r.py`` and ``common.vision.datasets.imagenet_sketch.py``.
 
 ## Supported Methods
 
