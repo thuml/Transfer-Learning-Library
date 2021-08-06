@@ -47,16 +47,18 @@ model_index = 0
 
 def main(args: argparse.Namespace):
     global model_index
-    
     model_index += 1
     wandb.init()
     args.log = f'{args.global_log}/{wandb.run.project}/{wandb.run.name}'
+    
     # update the log with the sweep configurations
     if wandb.run:
         wandb.config.update({k: v for k, v in vars(args).items() if k not in wandb.config.as_dict()})
-        args = argparse.Namespace(**wandb.config.as_dict())       
-    print(args)
+        args = argparse.Namespace(**wandb.config.as_dict())  
+    
     logger = CompleteLogger(args.log, args.phase)
+    # display the args     
+    print(args)
     
     if args.seed is not None:
         random.seed(args.seed)
@@ -131,8 +133,6 @@ def main(args: argparse.Namespace):
 
     if not args.use_forever_iter:
         args.iters_per_epoch = len(train_loader)
-    # wandb.login()
-    # wandb.init(project=args.wandb_name, config=args)
 
     train_iter = ForeverDataIterator(train_loader)
 
@@ -511,9 +511,6 @@ def validate(val_loader: DataLoader,
             domain_y_true.append(domain_labels)
             domain_preds.append(y_tr_pred_domain)
 
-            # record total loss on meter
-            # losses.update(loss.item(), images.size(0))
-
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -755,7 +752,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='DANN for Checkerboard Domain Adapation on the Office-Home Dataset')
     # dataset parameters
-    parser.add_argument('root', 
+    parser.add_argument('--root', 
                         default="checkerboard-domain-adaptation/data/office-home",
                         metavar='DIR', 
                         help='root path of dataset')
@@ -865,12 +862,8 @@ if __name__ == '__main__':
     parser.add_argument(
         "--global-log",
         type=str,
-        default='dann',
+        default='/checkerboard-domain-adaptation/logs/',
         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--wandb-name",
-                        type=str,
-                        default='checkerboard-task',
-                        help="Name that will appear in the wandb dashboard.")
     parser.add_argument(
         "--phase",
         type=str,
@@ -954,11 +947,10 @@ if __name__ == '__main__':
     
     ####### START THE SWEEP #######
     wandb.login()
-    #wandb.init(project=args.wandb_name)
     with open('checkerboard-domain-adaptation/checkerboard_sweep.yaml', 'r') as stream:
         sweep_config = yaml.safe_load(stream)
-    sweep_id = wandb.sweep(sweep_config) #, project=args.wandb_name)
+    sweep_id = wandb.sweep(sweep_config)
 
-    wandb.agent(sweep_id, function=lambda: main(args), count=args.num_trials) # project=args.wandb_name, 
+    wandb.agent(sweep_id, function=lambda: main(args), count=args.num_trials)
     wandb.finish()
     

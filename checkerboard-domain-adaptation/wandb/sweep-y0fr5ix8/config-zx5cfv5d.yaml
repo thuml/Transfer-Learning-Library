@@ -1,0 +1,28 @@
+wandb_version: 1
+
+alpha:
+  value: 100
+batch_size:
+  value: 16
+bottleneck_dim:
+  value: 1024
+epochs:
+  value: 1
+finetune:
+  value: true
+gl:
+  value: constant
+grl:
+  value: warm
+lambda_c:
+  value: 1
+lambda_d:
+  value: 2
+lr:
+  value: 0.001
+lr_decay:
+  value: 0.9358088233758545
+max_iters:
+  value: 8597
+weight_decay:
+  value: 0.01
