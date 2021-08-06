@@ -64,7 +64,7 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes = \
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target,
                               train_transform, val_transform, MultipleApply([train_transform, val_transform]))
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,

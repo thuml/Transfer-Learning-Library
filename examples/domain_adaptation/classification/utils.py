@@ -79,15 +79,17 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
             test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform)
         else:
             test_dataset = val_dataset
-        num_classes = train_source_dataset.datasets[0].num_classes
+        class_names = train_source_dataset.datasets[0].classes
+        num_classes = len(class_names)
     else:
         # load datasets from wilds
         dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
         num_classes = dataset.n_classes
+        class_names = None
         train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_source_transform))
         train_target_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=train_target_transform))
         val_dataset = test_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=val_transform))
-    return train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes
+    return train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, class_names
 
 
 def validate(val_loader, model, args, device) -> float:
@@ -102,10 +104,9 @@ def validate(val_loader, model, args, device) -> float:
     # switch to evaluate mode
     model.eval()
     if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
+        confmat = ConfusionMatrix(len(args.class_names))
     else:
-        classes = confmat = None
+        confmat = None
 
     with torch.no_grad():
         end = time.time()
@@ -133,7 +134,7 @@ def validate(val_loader, model, args, device) -> float:
 
         print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
         if confmat:
-            print(confmat.format(classes))
+            print(confmat.format(args.class_names))
 
     return top1.avg
 

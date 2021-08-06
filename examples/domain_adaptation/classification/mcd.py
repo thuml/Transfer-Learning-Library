@@ -51,7 +51,7 @@ def main(args: argparse.Namespace):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes = \
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -252,8 +252,7 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
     F2.eval()
 
     if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
+        confmat = ConfusionMatrix(len(args.class_names))
     else:
         confmat = None
 
@@ -285,7 +284,7 @@ def validate(val_loader: DataLoader, G: nn.Module, F1: ImageClassifierHead,
         print(' * Acc1 {top1_1.avg:.3f} Acc2 {top1_2.avg:.3f}'
               .format(top1_1=top1_1, top1_2=top1_2))
         if confmat:
-            print(confmat.format(classes))
+            print(confmat.format(args.class_names))
 
     return top1_1.avg, top1_2.avg
 
