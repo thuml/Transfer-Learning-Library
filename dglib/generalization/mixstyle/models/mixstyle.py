@@ -4,14 +4,26 @@ import torch.nn as nn
 
 
 class MixStyle(nn.Module):
-    """MixStyle.
+    r"""MixStyle module from `DOMAIN GENERALIZATION WITH MIXSTYLE (ICLR 2021) <https://arxiv.org/pdf/2104.02008v1.pdf>`_.
+    Given input :math:`x`, we first compute mean :math:`\mu(x)` and standard deviation :math:`\sigma(x)` across spatial
+    dimension. Then we permute :math:`x` and get :math:`\tilde{x}`, corresponding mean :math:`\mu(\tilde{x})` and
+    standard deviation :math:`\sigma(\tilde{x})`. `MixUp` is performed using mean and standard deviation
+
+    .. math::
+        \gamma_{mix} = \lambda\sigma(x) + (1-\lambda)\sigma(\tilde{x})
+
+    .. math::
+        \beta_{mix} = \lambda\mu(x) + (1-\lambda)\mu(\tilde{x})
+
+    where :math:`\lambda` is instance-wise weight sampled from `Beta distribution`. MixStyle is then
+
+    .. math::
+        MixStyle(x) = \gamma_{mix}\frac{x-\mu(x)}{\sigma(x)} + \beta_{mix}
+
     Args:
           p (float): probability of using MixStyle.
-          alpha (float): parameter of the Beta distribution.
+          alpha (float): parameter of the `Beta distribution`.
           eps (float): scaling parameter to avoid numerical issues.
-
-    References:
-      Zhou et al. Domain Generalization with MixStyle. ICLR 2021.
     """
 
     def __init__(self, p=0.5, alpha=0.1, eps=1e-6):

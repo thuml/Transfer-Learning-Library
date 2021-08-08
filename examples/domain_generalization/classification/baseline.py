@@ -6,24 +6,22 @@ import argparse
 import shutil
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import torch.nn.functional as F
-
-from get_dataset import get_dataset
 
 sys.path.append('../../..')
 from dglib.modules.classifier import ImageClassifier as Classifier
-import common.vision.datasets as datasets
-import common.vision.models as models
-from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+
+sys.path.append('.')
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -45,31 +43,22 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = T.Compose([
-        T.RandomResizedCrop(224, scale=(0.7, 1.0)),
-        T.RandomHorizontalFlip(),
-        T.ColorJitter(0.3, 0.3, 0.3, 0.3),
-        T.RandomGrayscale(),
-        T.ToTensor(),
-        normalize
-    ])
-    val_transform = T.Compose([
-        ResizeImage(224),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True,
+                                                random_color_jitter=True, random_gray_scale=True)
+    val_transform = utils.get_val_transform(args.val_resizing)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
 
-    train_dataset, num_classes = get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
-                                             split='train', download=True, transform=train_transform,
-                                             seed=args.seed)
+    train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
+                                                   split='train', download=True, transform=train_transform,
+                                                   seed=args.seed)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size,
                               shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset, _ = get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
-                                 download=True, transform=val_transform, seed=args.seed)
+    val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
+                                       download=True, transform=val_transform, seed=args.seed)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_dataset, _ = get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
-                                  download=True, transform=val_transform, seed=args.seed)
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
+                                        download=True, transform=val_transform, seed=args.seed)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     print("Source Train:", len(train_dataset))
@@ -79,9 +68,10 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
+    backbone = utils.get_model(args.arch)
+    pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
-                            finetune=args.finetune).to(device)
+                            finetune=args.finetune, pool_layer=pool_layer).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
@@ -91,7 +81,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = utils.validate(test_loader, classifier, args, device)
         print(acc1)
         return
 
@@ -105,7 +95,7 @@ def main(args: argparse.Namespace):
 
         # evaluate on validation set
         print("Validation on source domain...")
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -115,11 +105,11 @@ def main(args: argparse.Namespace):
 
         # evaluate on test set
         print("Test on target domain...")
-        best_test_acc1 = max(best_test_acc1, validate(test_loader, classifier, args))
+        best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
+    acc1 = utils.validate(test_loader, classifier, args, device)
     print("test acc on target = {}".format(acc1))
     print("oracle acc on target = {}".format(best_test_acc1))
     logger.close()
@@ -172,85 +162,27 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer,
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace) -> float:
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1, top5],
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-    if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
-    else:
-        confmat = None
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            output, _ = model(images)
-            loss = F.cross_entropy(output, target)
-
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            if confmat:
-                confmat.update(target, output.argmax(1))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-        if confmat:
-            print(confmat.format(classes))
-
-    return top1.avg
-
-
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='Baseline for Domain Generalization')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='PACS',
-                        help='dataset: ' + ' | '.join(dataset_names) +
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: PACS)')
     parser.add_argument('-s', '--sources', nargs='+', default=None,
                         help='source domain(s)')
     parser.add_argument('-t', '--targets', nargs='+', default=None,
                         help='target domain(s)')
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
+    parser.add_argument('--no-pool', action='store_true', help='no pool layer after the feature extractor.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--freeze-bn', action='store_true', help='whether freeze all bn layers')
     parser.add_argument('--dropout-p', type=float, default=0.1, help='only activated when freeze-bn is True')
