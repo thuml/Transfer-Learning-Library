@@ -7,19 +7,22 @@ __all__ = ['resnet18', 'resnet34', 'resnet50', 'resnet101']
 
 def _resnet_with_mix_style(arch, block, layers, pretrained, progress, mix_layers=None, mix_p=0.5, mix_alpha=0.1,
                            resnet_class=ResNet, **kwargs):
-    r"""Construct resnet with MixStyle modules
+    """Construct `ResNet` with MixStyle modules. Given any resnet architecture **resnet_class** that contains conv1,
+    bn1, relu, maxpool, layer1-4, this function define a new class that inherits from **resnet_class** and inserts
+    MixStyle module during forward pass. Although MixStyle Module can be inserted anywhere, origin paper finds it
+    better to place MixStyle after layer1-3. Our implementation follow this idea, but you are free to modify this
+    function to try other possibilities.
 
     Args:
-        arch (str): resnet architecture (eg resnet50)
+        arch (str): resnet architecture (resnet50 for example)
         block (class): class of resnet block
         layers (list): depth list of each block
         pretrained (bool): if True, load imagenet pre-trained model parameters
         progress (bool): whether or not to display a progress bar to stderr
-        mix_layers (list): layers to insert MixStyle module after, valid choices: ['layer1', 'layer2', 'layer3']
-        mix_p (float): probability to apply MixStyle during forward pass
+        mix_layers (list): layers to insert MixStyle module after
+        mix_p (float): probability to activate MixStyle during forward pass
         mix_alpha (float): parameter alpha for beta distribution
-        resnet_class (class): base resnet class to inherit from, for image classification task, this can be 'ResNet'
-                            for reid task, this can be 'ReidResNet'
+        resnet_class (class): base resnet class to inherit from
     """
 
     if mix_layers is None:
@@ -70,8 +73,7 @@ def _resnet_with_mix_style(arch, block, layers, pretrained, progress, mix_layers
 
 
 def resnet18(pretrained=False, progress=True, **kwargs):
-    r"""ResNet-18 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    """Constructs a ResNet-18 model with MixStyle.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -82,8 +84,7 @@ def resnet18(pretrained=False, progress=True, **kwargs):
 
 
 def resnet34(pretrained=False, progress=True, **kwargs):
-    r"""ResNet-34 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    """Constructs a ResNet-34 model with MixStyle.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -94,8 +95,7 @@ def resnet34(pretrained=False, progress=True, **kwargs):
 
 
 def resnet50(pretrained=False, progress=True, **kwargs):
-    r"""ResNet-50 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    """Constructs a ResNet-50 model with MixStyle.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -106,8 +106,7 @@ def resnet50(pretrained=False, progress=True, **kwargs):
 
 
 def resnet101(pretrained=False, progress=True, **kwargs):
-    r"""ResNet-101 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    """Constructs a ResNet-101 model with MixStyle.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet

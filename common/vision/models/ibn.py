@@ -19,8 +19,15 @@ model_urls = {
 
 class IBN(nn.Module):
     r"""Instance-Batch Normalization layer from
-    `"Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net"
-    <https://arxiv.org/pdf/1807.09441.pdf>`
+    `Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (ECCV 2018)
+    <https://arxiv.org/pdf/1807.09441.pdf>`_.
+
+    Given input feature map :math:`f\_input` of dimension :math:`(C,H,W)`, we first split :math:`f\_input` into
+    two parts along `channel` dimension. They are denoted as :math:`f_1` of dimension :math:`(C_1,H,W)` and
+    :math:`f_2` of dimension :math:`(C_2,H,W)`, where :math:`C_1+C_2=C`. Then we pass :math:`f_1` and :math:`f_2`
+    through IN and BN layer, respectively, to get :math:`IN(f_1)` and :math:`BN(f_2)`. Last, we concat them along
+    `channel` dimension to create :math:`f\_output=concat(IN(f_1), BN(f_2))`.
+
     Args:
         planes (int): Number of channels for the input tensor
         ratio (float): Ratio of instance normalization in the IBN layer
@@ -125,11 +132,11 @@ class Bottleneck_IBN(nn.Module):
 
 
 class ResNet_IBN(nn.Module):
+    r"""
+    ResNets-IBN without fully connected layer
+    """
 
-    def __init__(self,
-                 block,
-                 layers,
-                 ibn_cfg=('a', 'a', 'a', None)):
+    def __init__(self, block, layers, ibn_cfg=('a', 'a', 'a', None)):
         self.inplanes = 64
         super(ResNet_IBN, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -175,6 +182,7 @@ class ResNet_IBN(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        """"""
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -195,6 +203,7 @@ class ResNet_IBN(nn.Module):
 
 def resnet18_ibn_a(pretrained=False):
     """Constructs a ResNet-18-IBN-a model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -208,6 +217,7 @@ def resnet18_ibn_a(pretrained=False):
 
 def resnet34_ibn_a(pretrained=False):
     """Constructs a ResNet-34-IBN-a model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -221,6 +231,7 @@ def resnet34_ibn_a(pretrained=False):
 
 def resnet50_ibn_a(pretrained=False):
     """Constructs a ResNet-50-IBN-a model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -234,6 +245,7 @@ def resnet50_ibn_a(pretrained=False):
 
 def resnet101_ibn_a(pretrained=False):
     """Constructs a ResNet-101-IBN-a model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -247,6 +259,7 @@ def resnet101_ibn_a(pretrained=False):
 
 def resnet18_ibn_b(pretrained=False):
     """Constructs a ResNet-18-IBN-b model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -260,6 +273,7 @@ def resnet18_ibn_b(pretrained=False):
 
 def resnet34_ibn_b(pretrained=False):
     """Constructs a ResNet-34-IBN-b model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -273,6 +287,7 @@ def resnet34_ibn_b(pretrained=False):
 
 def resnet50_ibn_b(pretrained=False):
     """Constructs a ResNet-50-IBN-b model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
@@ -286,6 +301,7 @@ def resnet50_ibn_b(pretrained=False):
 
 def resnet101_ibn_b(pretrained=False):
     """Constructs a ResNet-101-IBN-b model.
+
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """

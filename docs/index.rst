@@ -21,5 +21,6 @@ Welcome to Transfer Learning Library
 
     dalib/index
     ftlib/index
+    dglib/index
     common/index
 

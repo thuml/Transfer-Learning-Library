@@ -5,6 +5,20 @@ import torch.autograd as autograd
 
 
 class InvariancePenaltyLoss(nn.Module):
+    r"""Invariance Penalty Loss from `Invariant Risk Minimization <https://arxiv.org/pdf/1907.02893.pdf>`_.
+    We adopt implementation from `DomainBed <https://github.com/facebookresearch/DomainBed>`_. Given classifier
+    output :math:`y` and ground truth :math:`labels`, we split :math:`y` into two parts :math:`y_1, y_2`, corresponding
+    labels are :math:`labels_1, labels_2`. Next we calculate cross entropy loss with respect to a dummy classifier
+    :math:`w`, resulting in :math:`grad_1, grad_2` . Invariance penalty is then :math:`grad_1*grad_2`.
+
+    Inputs:
+        - y: predictions from model
+        - labels: ground truth
+
+    Shape:
+        - y: :math:`(N, C)` where C means the number of classes.
+        - labels: :math:`(N, )` where N mean mini-batch size
+    """
 
     def __init__(self):
         super(InvariancePenaltyLoss, self).__init__()

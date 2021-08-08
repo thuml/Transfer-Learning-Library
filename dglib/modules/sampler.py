@@ -5,11 +5,12 @@ from torch.utils.data.sampler import Sampler
 
 
 class DefaultSampler(Sampler):
-    """Traverse all N domains, for each domain random select K samples to form a mini-batch of size N*K
+    """Traverse all :math:`N` domains, randomly select :math:`K` samples in each domain to form a mini-batch of size
+    :math:`N*K`.
 
     Args:
         data_source (ConcatDataset): dataset that contains data from multiple domains
-        batch_size (int): mini-batch size (N*K here)
+        batch_size (int): mini-batch size (:math:`N*K` here)
     """
 
     def __init__(self, data_source: ConcatDataset, batch_size: int):
