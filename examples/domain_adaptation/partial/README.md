@@ -19,7 +19,7 @@ Following datasets can be downloaded automatically:
 You need to prepare following datasets manually if you want to use them:
 - ImageNet
 
-and prepare them following ``common.vision.datasets.partial.imagenet_caltech.py`` and ``common.vision.datasets.partial.caltech_imagenet.py``.
+and prepare them following [Documentation for ImageNetCaltech](/common/vision/datasets/partial/imagenet_caltech.py) and [CaltechImageNet](/common/vision/datasets/partial/caltech_imagenet.py).
 
 ## Supported Methods
 
