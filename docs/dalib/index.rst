@@ -32,6 +32,7 @@ Domain Adaptation Library
     adaptation/osbp
     adaptation/advent
     adaptation/regda
+    adaptation/rsd
     translation/cyclegan
     translation/cycada
     translation/fda

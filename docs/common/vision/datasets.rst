@@ -1,6 +1,8 @@
 Vision Datasets
 =============================
 
+.. toctree::
+   datasets
 
 Unsupervised DA for Classification
 ---------------------------------------------------------
@@ -222,6 +224,29 @@ Human3.6M Dataset
 .. autoclass:: common.vision.datasets.keypoint_detection.human36m.Human36M
    :members:
 
+Unsupervised DA for ReID
+------------------------------------------------------
+
+---------------------------------------
+Market1501
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.market1501.Market1501
+   :members:
+
+---------------------------------------
+DukeMTMC-reID
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.dukemtmc.DukeMTMC
+   :members:
+
+---------------------------------------
+MSMT17
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.msmt17.MSMT17
+   :members:
 
 Finetune for Classification
 ---------------------------------------------------------

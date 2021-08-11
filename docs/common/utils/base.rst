@@ -31,6 +31,8 @@ Data
 
 .. autofunction:: common.utils.data.send_to_device
 
+.. autofunction:: common.utils.data.concatenate
+
 Logger
 -----------
 
