@@ -12,7 +12,7 @@ Following datasets can be downloaded automatically:
 You need to prepare following datasets manually if you want to use them:
 - [Human3.6M Dataset](http://vision.imar.ro/human3.6m/description.php)
 
-and prepare them following ``common.vision.datasets.keypoint_detection.human36m.py``.
+and prepare them following [Documentations for Human3.6M Dataset](/common/vision/datasets/keypoint_detection/human36m.py).
 
 ## Supported Methods
 
