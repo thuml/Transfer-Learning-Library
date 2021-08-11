@@ -13,10 +13,8 @@ pip install timm
 Following datasets can be downloaded automatically:
 
 - Office31
-- OfficeCaltech
 - OfficeHome
 - VisDA2017
-- DomainNet
 
 You need to prepare following datasets manually if you want to use them:
 - ImageNet
@@ -45,3 +43,36 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+
+
+## Citation
+If you use these methods in your research, please consider citing.
+
+```
+@InProceedings{PADA,
+    author    = {Zhangjie Cao and
+               Lijia Ma and
+               Mingsheng Long and
+               Jianmin Wang},
+    title     = {Partial Adversarial Domain Adaptation},
+    booktitle = {ECCV},
+    year = {2018}
+}
+
+@InProceedings{IWAN,
+    author    = {Jing Zhang and
+               Zewei Ding and
+               Wanqing Li and
+               Philip Ogunbona},
+    title     = {Importance Weighted Adversarial Nets for Partial Domain Adaptation},
+    booktitle = {CVPR},
+    year = {2018}
+}
+
+@InProceedings{AFN,
+    author = {Xu, Ruijia and Li, Guanbin and Yang, Jihan and Lin, Liang},
+    title = {Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised Domain Adaptation},
+    booktitle = {ICCV},
+    year = {2019}
+}
+```
