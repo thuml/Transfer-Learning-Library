@@ -27,6 +27,9 @@ from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
 
+sys.path.append('.')
+import utils
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -47,55 +50,31 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    if args.center_crop:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.CenterCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    else:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.RandomCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    val_transform = T.Compose([
-        ResizeImage(256),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True,
+                                                random_color_jitter=False)
+    val_transform = utils.get_val_transform(args.val_resizing)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
 
-    dataset = datasets.__dict__[args.data]
-    partial_dataset = partial(dataset)
-    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    if args.data == 'DomainNet':
-        test_dataset = partial_dataset(root=args.root, task=args.target, split='test', download=True,
-                                       transform=val_transform)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    else:
-        test_loader = val_loader
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch)
+    pool_layer = nn.Identity() if args.no_pool else None
     backbone = models.__dict__[args.arch](pretrained=True)
     classifier = ImageClassifier(backbone, train_source_dataset.num_classes, args.num_blocks,
-                                 bottleneck_dim=args.bottleneck_dim, dropout_p=args.dropout_p).to(device)
+                                 bottleneck_dim=args.bottleneck_dim, dropout_p=args.dropout_p, pool_layer=pool_layer).to(device)
     adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
 
     # define optimizer
@@ -123,7 +102,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = validate(test_loader, classifier, args)
+        acc1 = utils.validate(test_loader, classifier, args, device)
         print(acc1)
         return
 
@@ -134,7 +113,7 @@ def main(args: argparse.Namespace):
         train(train_source_iter, train_target_iter, classifier, adaptive_feature_norm, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, classifier, args)
+        acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -146,7 +125,7 @@ def main(args: argparse.Namespace):
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = validate(test_loader, classifier, args)
+    acc1 = utils.validate(test_loader, classifier, args, device)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
@@ -225,86 +204,26 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: ImageClassifier, args: argparse.Namespace) -> float:
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1, top5],
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-
-    if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
-    else:
-        confmat = None
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            output, _ = model(images)
-            loss = F.cross_entropy(output, target)
-
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            if confmat:
-                confmat.update(target, output.argmax(1))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-        if confmat:
-            print(confmat.format(classes))
-
-    return top1.avg
-
-
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='AFN for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)')
-    parser.add_argument('-t', '--target', help='target domain(s)')
-    parser.add_argument('--center-crop', default=False, action='store_true',
-                        help='whether use center crop during training')
+    parser.add_argument('-s', '--source', help='source domain')
+    parser.add_argument('-t', '--target', help='target domain')
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     parser.add_argument('-n', '--num-blocks', default=1, type=int, help='Number of basic blocks for classifier')
     parser.add_argument('--bottleneck-dim', default=1000, type=int, help='Dimension of bottleneck')
     parser.add_argument('--dropout-p', default=0.5, type=float,
@@ -337,7 +256,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='dann',
+    parser.add_argument("--log", type=str, default='afn',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

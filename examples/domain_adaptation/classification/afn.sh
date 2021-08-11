@@ -23,7 +23,7 @@ CUDA_VISIBLE_DEVICES=0 python afn.py data/office-home -d OfficeHome -s Rw -t Pr 
 
 # ResNet101, VisDA-2017, Single Source
 CUDA_VISIBLE_DEVICES=0 python afn.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 -r 0.3 -b 36 \
-    --epochs 10 -i 1000 --seed 0 --per-class-eval --center-crop --log logs/afn/VisDA2017
+    --epochs 10 -i 1000 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/afn/VisDA2017
 
 # ResNet101, DomainNet, Single Source
 CUDA_VISIBLE_DEVICES=0 python afn.py data/domainnet -d DomainNet -s c -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --trade-off-norm 0.01 --lr 0.002 --log logs/afn/DomainNet_c2p

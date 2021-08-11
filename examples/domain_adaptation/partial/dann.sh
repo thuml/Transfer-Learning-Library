@@ -23,7 +23,7 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office-home -d OfficeHome -s Rw -t Pr
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python dann.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 \
-    --epochs 5 --seed 0 --center-crop --per-class-eval --log logs/dann/VisDA2017_S2R
+    --epochs 5 --seed 0 --train-resizing cen.crop --per-class-eval --log logs/dann/VisDA2017_S2R
 
 # ImageNet-Caltech
 CUDA_VISIBLE_DEVICES=0 python dann.py data/ImageNetCaltech -d ImageNetCaltech -s I -t C -a resnet50 \
