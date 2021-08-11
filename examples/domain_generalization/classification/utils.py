@@ -117,11 +117,6 @@ def validate(val_loader, model, args, device) -> float:
 
     # switch to evaluate mode
     model.eval()
-    if args.per_class_eval:
-        classes = val_loader.dataset.classes
-        confmat = ConfusionMatrix(len(classes))
-    else:
-        confmat = None
 
     with torch.no_grad():
         end = time.time()
@@ -135,8 +130,6 @@ def validate(val_loader, model, args, device) -> float:
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            if confmat:
-                confmat.update(target, output.argmax(1))
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
             top5.update(acc5.item(), images.size(0))
@@ -150,8 +143,6 @@ def validate(val_loader, model, args, device) -> float:
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
-        if confmat:
-            print(confmat.format(classes))
 
     return top1.avg
 
