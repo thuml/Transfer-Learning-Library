@@ -90,7 +90,7 @@ If you use this toolbox or benchmark in your research, please cite this project.
 
 ```latex
 @misc{dalib,
-  author = {Junguang Jiang, Bo Fu, Mingsheng Long},
+  author = {Junguang Jiang, Baixu Chen, Bo Fu, Mingsheng Long},
   title = {Transfer-Learning-library},
   year = {2020},
   publisher = {GitHub},
