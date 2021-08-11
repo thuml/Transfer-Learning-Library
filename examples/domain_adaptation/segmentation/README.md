@@ -7,7 +7,7 @@ You need to prepare following datasets manually if you want to use them:
 - [GTA5](https://download.visinf.tu-darmstadt.de/data/from_games/)
 - [Synthia](https://synthia-dataset.net/)
 
-and prepare them following [documentations](/common/vision/datasets#unsupervised-da-for-segmentation)
+and prepare them following [Documentations for Cityscapes](/common/vision/datasets/segmentation/cityscapes.py), [GTA5](/common/vision/datasets/segmentation/gta5.py) and [Synthia](/common/vision/datasets/segmentation/synthia.py), 
 
 ## Supported Methods
 
