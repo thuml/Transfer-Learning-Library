@@ -40,8 +40,6 @@ CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t c -a r
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2r
 
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan2/DomainNet_c2p
-
 # ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/cdan/iwildcam
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/cdan/fmow
