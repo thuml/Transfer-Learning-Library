@@ -21,8 +21,22 @@ CUDA_VISIBLE_DEVICES=0 python mcc.py data/office-home -d OfficeHome -s Rw -t Ar 
 CUDA_VISIBLE_DEVICES=0 python mcc.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 30 --seed 0 --bottleneck-dim 2048 --log logs/mcc/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python mcc.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 30 --seed 0 --bottleneck-dim 2048 --log logs/mcc/OfficeHome_Rw2Pr
 
+# ResNet101, DomainNet, Single Source
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_c2p
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_c2r
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_c2s
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_p2c
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_p2r
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_p2s
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s r -t c -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_r2c
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s r -t p -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_r2p
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s r -t s -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_r2s
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_s2c
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_s2p
+CUDA_VISIBLE_DEVICES=0 python mcc.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -b 32 -i 2500 -p 500 --temperature 2.0 --lr 0.005 --bottleneck-dim 2048 --trade-off 10.0 --seed 0 --log logs/mcc/DomainNet_s2r
+
 # ResNet101, VisDA-2017, Single Source
-CUDA_VISIBLE_DEVICES=0 python mcc.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
+CUDA_VISIBLE_DEVICES=5 python mcc.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
     --epochs 30 --seed 0 --lr 0.002 --per-class-eval --temperature 3.0 --train-resizing cen.crop --log logs/mcc/VisDA2017
     
 # ResNet50, Wilds Dataset

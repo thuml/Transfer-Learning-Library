@@ -223,7 +223,7 @@ if __name__ == '__main__':
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
-    parser.add_argument('-r', '--randomized', default=False, type=bool,
+    parser.add_argument('-r', '--randomized', action='store_true',
                         help='using randomized multi-linear-map (default: False)')
     parser.add_argument('-rd', '--randomized-dim', default=1024, type=int,
                         help='randomized dimension when using randomized multi-linear-map (default: 1024)')
