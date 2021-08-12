@@ -33,7 +33,7 @@ You need to prepare following datasets manually if you want to use them:
 - [ImageNetR](https://github.com/hendrycks/imagenet-r)
 - [ImageNet-Sketch](https://github.com/HaohanWang/ImageNet-Sketch)
 
-and prepare them following ``common.vision.datasets.imagenet_r.py`` and ``common.vision.datasets.imagenet_sketch.py``.
+and prepare them following [Documentation for ImageNetR](/common/vision/datasets/imagenet_r.py) and [ImageNet-Sketch](/common/vision/datasets/imagenet_sketch.py).
 
 ## Supported Methods
 
