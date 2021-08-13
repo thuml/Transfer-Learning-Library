@@ -2,6 +2,7 @@ from typing import Optional, Any
 import os.path as osp
 from torchvision.datasets.folder import ImageFolder
 from torchvision.datasets.utils import download_and_extract_archive
+import random
 
 
 class KITTIDist(ImageFolder):
@@ -21,6 +22,7 @@ class KITTIDist(ImageFolder):
                                          osp.join(root, "train"), filename='no_vehicle.zip')
 
         super(KITTIDist, self).__init__(osp.join(root, split), **kwargs)
+        random.shuffle(self.samples)
 
     @property
     def num_classes(self) -> int:

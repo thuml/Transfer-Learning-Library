@@ -10,13 +10,12 @@ import torch.nn.functional as F
 from torch.utils.data import Subset
 import torchvision.transforms as T
 
-import common.vision.datasets as datasets
+import common.vision.datasets as datasets_finetune
 import common.vision.models as models
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 
-from datasets import TensorFlowDataset, SmallnorbAzimuth, SmallnorblElevation,\
-    DSpritesLocation, DSpritesOrientation, KITTIDist, ClevrCount, ClevrDistance
+import datasets as datasets_vtab
 
 
 def get_model_names():
@@ -49,56 +48,58 @@ def get_model(model_name, pretrained_checkpoint=None):
     return backbone
 
 
-# TODO clevr, kitti, dsprites, resisc45, diabetic_retinopathy_detection, eurosat
+# resisc45, diabetic_retinopathy_detection
 def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, sample_size=None):
-    if dataset_name in datasets.__dict__:
+    if dataset_name in datasets_finetune.__dict__:
         # load datasets from common.vision.datasets
-        dataset = datasets.__dict__[dataset_name]
+        dataset = datasets_finetune.__dict__[dataset_name]
         train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=train_transform)
         test_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
         num_classes = train_dataset.num_classes
     else:
+        dataset = datasets_vtab.__dict__[dataset_name]
+        train_dataset = dataset(root=root, split='train', transform=train_transform)
+        test_dataset = dataset(root=root, split='test', transform=val_transform)
         # load datasets from tensorflow_datasets
-        if dataset_name == "dsprites_loc":
-            train_dataset = DSpritesLocation(root, 'train', transform=train_transform)
-            test_dataset = DSpritesLocation(root, 'val', transform=val_transform)
-        elif dataset_name == "dsprites_orient":
-            train_dataset = DSpritesOrientation(root, 'train', transform=train_transform)
-            test_dataset = DSpritesOrientation(root, 'val', transform=val_transform)
-        elif dataset_name == "kitti_distance":
-            train_dataset = KITTIDist(root, 'train', transform=train_transform)
-            test_dataset = KITTIDist(root, 'val', transform=val_transform)
-        else:
-            os.makedirs(root, exist_ok=True)
-            os.makedirs(osp.join(root, "imagelist"), exist_ok=True)
-            if dataset_name in ['caltech101', 'cifar100', 'dtd', 'oxford_flowers102',
-                                'oxford_iiit_pet', 'patch_camelyon', 'sun397', 'svhn_cropped', 'dmlab']:
-                data, info = tfds.load(dataset_name, with_info=True)
-                dataset = TensorFlowDataset
-            elif dataset_name == 'smallnorb_azimuth':
-                data, info = tfds.load("smallnorb", with_info=True)
-                dataset = SmallnorbAzimuth
-            elif dataset_name == 'smallnorb_elevation':
-                data, info = tfds.load("smallnorb", with_info=True)
-                dataset = SmallnorblElevation
-            elif dataset_name == 'clevr_count':
-                data, info = tfds.load("clevr", with_info=True)
-                dataset = ClevrCount
-            elif dataset_name == 'clevr_distance':
-                data, info = tfds.load("clevr", with_info=True)
-                data['test'] = data['validation']
-                dataset = ClevrDistance
-            elif dataset_name == "eurosat":
-                train_dataset, info = tfds.load(dataset_name, with_info=True, split="train[:{}]".format(sample_size))
-                test_dataset, info = tfds.load(dataset_name, with_info=True, split="train[{}:]".format(sample_size))
-                data = {"train": train_dataset, "test": test_dataset}
-                dataset = TensorFlowDataset
-            else:
-                raise NotImplementedError(dataset_name)
-            train_dataset = dataset(data['train'], info, root, 'train', 'imagelist/train.txt',
-                                              transform=train_transform)
-            test_dataset = dataset(data['test'], info, root, 'test', 'imagelist/test.txt',
-                                             transform=val_transform)
+        # if dataset_name == "dsprites_loc":
+        #     train_dataset = DSpritesLocation(root, 'train', transform=train_transform)
+        #     test_dataset = DSpritesLocation(root, 'val', transform=val_transform)
+        # elif dataset_name == "dsprites_orient":
+        #     train_dataset = DSpritesOrientation(root, 'train', transform=train_transform)
+        #     test_dataset = DSpritesOrientation(root, 'val', transform=val_transform)
+        # elif dataset_name == "kitti_distance":
+        #     train_dataset = KITTIDist(root, 'train', transform=train_transform)
+        #     test_dataset = KITTIDist(root, 'val', transform=val_transform)
+        # else:
+        #     os.makedirs(root, exist_ok=True)
+        #     os.makedirs(osp.join(root, "imagelist"), exist_ok=True)
+        #     if dataset_name in ['caltech101', 'cifar100', 'dtd', 'oxford_flowers102',
+        #                         'oxford_iiit_pet', 'patch_camelyon', 'sun397', 'svhn_cropped', 'dmlab']:
+        #         dataset = TensorFlowDataset
+        #     elif dataset_name == 'smallnorb_azimuth':
+        #         data, info = tfds.load("smallnorb", with_info=True)
+        #         dataset = SmallnorbAzimuth
+        #     elif dataset_name == 'smallnorb_elevation':
+        #         data, info = tfds.load("smallnorb", with_info=True)
+        #         dataset = SmallnorblElevation
+        #     elif dataset_name == 'clevr_count':
+        #         data, info = tfds.load("clevr", with_info=True)
+        #         dataset = ClevrCount
+        #     elif dataset_name == 'clevr_distance':
+        #         data, info = tfds.load("clevr", with_info=True)
+        #         data['test'] = data['validation']
+        #         dataset = ClevrDistance
+        #     elif dataset_name == "eurosat":
+        #         train_dataset, info = tfds.load(dataset_name, with_info=True, split="train[:{}]".format(sample_size))
+        #         test_dataset, info = tfds.load(dataset_name, with_info=True, split="train[{}:]".format(sample_size))
+        #         data = {"train": train_dataset, "test": test_dataset}
+        #         dataset = TensorFlowDataset
+        #     else:
+        #         raise NotImplementedError(dataset_name)
+        #     train_dataset = dataset(data['train'], info, root, 'train', 'imagelist/train.txt',
+        #                                       transform=train_transform)
+        #     test_dataset = dataset(data['test'], info, root, 'test', 'imagelist/test.txt',
+        #                                      transform=val_transform)
         num_classes = train_dataset.num_classes
         train_dataset = Subset(train_dataset, list(range(sample_size)))
     return train_dataset, test_dataset, num_classes
