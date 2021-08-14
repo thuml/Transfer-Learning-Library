@@ -34,24 +34,16 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/oracle/DomainNet_s
 
 # ResNet101, DomainNet, Single Source
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2i
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2r
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_c2s
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_i2c
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_i2p
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_i2r
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s i -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_i2s
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_p2c
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_p2i
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_p2r
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_p2s
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_r2c
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_r2i
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_r2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s r -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_r2s
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2c
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2i
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2r
 

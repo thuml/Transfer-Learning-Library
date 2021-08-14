@@ -1,5 +1,4 @@
 import itertools
-import torch
 import random
 from collections import defaultdict
 import numpy as np
@@ -123,11 +122,11 @@ class RandomMultipleGallerySampler(Sampler):
 
         return iter(ret)
 
+
 class CombineDataset(Dataset[T_co]):
     r"""Dataset as a combination of multiple datasets.
-
     The element of each dataset must be a list, and the i-th element of the combined dataset
-     is a list splicing of the i-th element of each sub dataset.
+    is a list splicing of the i-th element of each sub dataset.
     The length of the combined dataset is the minimum of the lengths of all sub datasets.
 
     Arguments:
@@ -147,6 +146,9 @@ class CombineDataset(Dataset[T_co]):
 
 
 def concatenate(tensors):
+    """concatenate multiple batches into one batch.
+    ``tensors`` can be :class:`torch.Tensor`, List or Dict, but they must be the same data format.
+    """
     if isinstance(tensors[0], torch.Tensor):
         return torch.cat(tensors, dim=0)
     elif isinstance(tensors[0], List):

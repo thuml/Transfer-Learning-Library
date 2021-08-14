@@ -21,7 +21,6 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s R
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --epochs 30 --seed 0 --log logs/source_only/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --epochs 30 --seed 0 --log logs/source_only/OfficeHome_Rw2Pr
 
-
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 \
-    --epochs 30 -i 500 --seed 0 --center-crop --per-class-eval --log logs/source_only/VisDA2017_S2R
+    --epochs 30 -i 500 --seed 0 --train-resizing cen.crop --per-class-eval --log logs/source_only/VisDA2017_S2R

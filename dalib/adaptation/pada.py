@@ -143,11 +143,13 @@ def collect_classification_results(data_loader: DataLoader, classifier: nn.Modul
     Returns:
         Classification results in shape (len(data_loader), :math:`|\mathcal{C}|`).
     """
+    training = classifier.training
     classifier.eval()
     all_outputs = []
     with torch.no_grad():
         for i, (images, target) in enumerate(data_loader):
             images = images.to(device)
-            output, _ = classifier(images)
+            output = classifier(images)
             all_outputs.append(output)
+    classifier.train(training)
     return torch.cat(all_outputs, dim=0)

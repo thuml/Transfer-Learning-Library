@@ -4,7 +4,6 @@ import warnings
 import sys
 import argparse
 import shutil
-from typing import Tuple
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -16,12 +15,14 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from common.modules.regressor import Regressor
-from common.modules.instance_normalization import convert_model
 import common.vision.datasets.regression as datasets
 import common.vision.models as models
 from common.utils.data import ForeverDataIterator
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+
+sys.path.append('.')
+from utils import convert_model, validate
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -45,12 +46,12 @@ def main(args: argparse.Namespace):
     # Data loading code
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = T.Compose([
-        T.Resize(128),
+        T.Resize(args.resize_size),
         T.ToTensor(),
         normalize
     ])
     val_transform = T.Compose([
-        T.Resize(128),
+        T.Resize(args.resize_size),
         T.ToTensor(),
         normalize
     ])
@@ -82,7 +83,7 @@ def main(args: argparse.Namespace):
 
     if args.phase == 'test':
         regressor.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-        mae = validate(val_loader, regressor, args, train_source_dataset.factors)
+        mae = validate(val_loader, regressor, args, train_source_dataset.factors, device)
         print(mae)
         return
 
@@ -95,7 +96,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        mae = validate(val_loader, regressor, args, train_source_dataset.factors)
+        mae = validate(val_loader, regressor, args, train_source_dataset.factors, device)
 
         # remember best mae and save checkpoint
         torch.save(regressor.state_dict(), logger.get_checkpoint_path('latest'))
@@ -166,42 +167,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: Regressor, args: argparse.Namespace, factors) -> Tuple[float, float]:
-    batch_time = AverageMeter('Time', ':6.3f')
-    mae_losses = [AverageMeter('mae {}'.format(factor), ':6.3f') for factor in factors]
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time] + mae_losses,
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            output, _ = model(images)
-            for j in range(len(factors)):
-                mae_loss = F.l1_loss(output[:, j], target[:, j])
-                mae_losses[j].update(mae_loss.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        for i, factor in enumerate(factors):
-            print("{} MAE {mae.avg:6.3f}".format(factor, mae=mae_losses[i]))
-        mean_mae = sum(l.avg for l in mae_losses) / len(factors)
-    return mean_mae
-
-
 if __name__ == '__main__':
     architecture_names = sorted(
         name for name in models.__dict__
@@ -222,6 +187,7 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)')
     parser.add_argument('-t', '--target', help='target domain(s)')
+    parser.add_argument('--resize-size', type=int, default=128)
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=architecture_names,

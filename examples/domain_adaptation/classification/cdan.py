@@ -51,7 +51,7 @@ def main(args: argparse.Namespace):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes = \
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -223,7 +223,7 @@ if __name__ == '__main__':
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
-    parser.add_argument('-r', '--randomized', default=False, type=bool,
+    parser.add_argument('-r', '--randomized', action='store_true',
                         help='using randomized multi-linear-map (default: False)')
     parser.add_argument('-rd', '--randomized-dim', default=1024, type=int,
                         help='randomized dimension when using randomized multi-linear-map (default: 1024)')

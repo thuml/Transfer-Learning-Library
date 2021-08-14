@@ -26,26 +26,19 @@ CUDA_VISIBLE_DEVICES=0 python cdan.py data/visda-2017 -d VisDA2017 -s Synthetic 
     --epochs 30 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/cdan/VisDA2017
 
 # ResNet101, DomainNet, Single Source
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2i
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2p
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2r
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2s
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_i2c
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_i2p
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_i2r
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_i2s
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2c
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2i
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2r
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2s
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2c
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2i
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2p
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t s -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2s
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t c -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2c
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t i -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2i
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2p
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2r
+# Use randomized multi-linear-map to decrease GPU memory usage
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2p
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t r -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2r
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c -t s -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_c2s
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t c -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2c
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t r -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2r
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s p -t s -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_p2s
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t c -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2c
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2p
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s r -t s -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_r2s
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t c -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2c
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2p
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/cdan/DomainNet_s2r
 
 # ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/cdan/iwildcam
@@ -78,9 +71,9 @@ CUDA_VISIBLE_DEVICES=0 python cdan.py data/office-home -d OfficeHome -s Ar Cl Rw
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/office-home -d OfficeHome -s Ar Cl Pr -t Rw -a resnet50 --epochs 30 --seed 0 --log logs/cdan/OfficeHome_:2Rw
 
 # ResNet101, DomainNet, Multi Source
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i p q r s -t c -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2c
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c p q r s -t i -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2i
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i q r s -t p -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2p
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2q
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2r
-CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2s
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s i p q r s -t c -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2c
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c p q r s -t i -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2i
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i q r s -t p -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2p
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2q
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2r
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2s

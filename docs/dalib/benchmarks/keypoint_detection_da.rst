@@ -1,7 +1,7 @@
 Keypoint Detection Domain Adaptation
 ==========================================
 
-We provide benchmarks of different segmentation domain adaptation algorithms on  as follows.
+We provide benchmarks of different keypoint detection domain adaptation algorithms on  as follows.
 Those domain adaptation algorithms includes:
 
 -  :ref:`RegDA`

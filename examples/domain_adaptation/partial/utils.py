@@ -5,11 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
-from torch.utils.data import ConcatDataset
-import wilds
 
 sys.path.append('../../..')
-import common.vision.datasets as datasets
+import common.vision.datasets.partial as datasets
+from common.vision.datasets.partial import default_partial as partial
 import common.vision.models as models
 from common.vision.transforms import ResizeImage
 from common.utils.metric import accuracy, ConfusionMatrix
@@ -34,61 +33,37 @@ def get_model(model_name):
         try:
             backbone.out_features = backbone.get_classifier().in_features
             backbone.reset_classifier(0, '')
+            backbone.copy_head = backbone.get_classifier
         except:
             backbone.out_features = backbone.head.in_features
             backbone.head = nn.Identity()
+            backbone.copy_head = lambda x: x.head
     return backbone
-
-
-def convert_from_wilds_dataset(wild_dataset):
-    class Dataset:
-        def __init__(self):
-            self.dataset = wild_dataset
-
-        def __getitem__(self, idx):
-            x, y, metadata = self.dataset[idx]
-            return x, y
-
-        def __len__(self):
-            return len(self.dataset)
-
-    return Dataset()
 
 
 def get_dataset_names():
     return sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
-    ) + wilds.supported_datasets
+    )
 
 
 def get_dataset(dataset_name, root, source, target, train_source_transform, val_transform, train_target_transform=None):
     if train_target_transform is None:
         train_target_transform = train_source_transform
-    if dataset_name in datasets.__dict__:
-        # load datasets from common.vision.datasets
-        dataset = datasets.__dict__[dataset_name]
+    # load datasets from common.vision.datasets
+    dataset = datasets.__dict__[dataset_name]
+    partial_dataset = partial(dataset)
 
-        def concat_dataset(tasks, **kwargs):
-            return ConcatDataset([dataset(task=task, **kwargs) for task in tasks])
-
-        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform)
-        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform)
-        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform)
-        if dataset_name == 'DomainNet':
-            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform)
-        else:
-            test_dataset = val_dataset
-        class_names = train_source_dataset.datasets[0].classes
-        num_classes = len(class_names)
+    train_source_dataset = dataset(root=root, task=source, download=True, transform=train_source_transform)
+    train_target_dataset = partial_dataset(root=root, task=target, download=True, transform=train_target_transform)
+    val_dataset = partial_dataset(root=root, task=target, download=True, transform=val_transform)
+    if dataset_name == 'DomainNet':
+        test_dataset = partial_dataset(root=root, task=target, split='test', download=True, transform=val_transform)
     else:
-        # load datasets from wilds
-        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
-        num_classes = dataset.n_classes
-        class_names = None
-        train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_source_transform))
-        train_target_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=train_target_transform))
-        val_dataset = test_dataset = convert_from_wilds_dataset(dataset.get_subset('val', transform=val_transform))
+        test_dataset = val_dataset
+    class_names = train_source_dataset.classes
+    num_classes = len(class_names)
     return train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, class_names
 
 

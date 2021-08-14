@@ -12,20 +12,18 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dalib.adaptation.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
-import common.vision.datasets.openset as datasets
-from common.vision.datasets.openset import default_open_set as open_set
-import common.vision.models as models
-from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
+
+sys.path.append('.')
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,54 +45,30 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    if args.center_crop:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.CenterCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    else:
-        train_transform = T.Compose([
-            ResizeImage(256),
-            T.RandomResizedCrop(224),
-            T.RandomHorizontalFlip(),
-            T.ToTensor(),
-            normalize
-        ])
-    val_transform = T.Compose([
-        ResizeImage(256),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        normalize
-    ])
-    dataset = datasets.__dict__[args.data]
-    source_dataset = open_set(dataset, source=True)
-    target_dataset = open_set(dataset, source=False)
-    train_source_dataset = source_dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True,
+                                                random_color_jitter=False)
+    val_transform = utils.get_val_transform(args.val_resizing)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = target_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    val_dataset = target_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    if args.data == 'DomainNet':
-        test_dataset = target_dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    else:
-        test_loader = val_loader
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
-    num_classes = train_source_dataset.num_classes
-    classifier = Classifier(backbone, num_classes, args.bottleneck_dim).to(device)
+    backbone = utils.get_model(args.arch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier = Classifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
+    print(classifier)
     unknown_bce = UnknownClassBinaryCrossEntropy(t=0.5)
 
     # define optimizer and lr scheduler
@@ -226,7 +200,7 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
             target = target.to(device)
 
             # compute output
-            output, _ = model(images)
+            output = model(images)
 
             # measure accuracy and record loss
             confmat.update(target, output.argmax(1))
@@ -252,33 +226,25 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
 
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31',
-                        help='dataset: ' + ' | '.join(dataset_names) +
+    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)')
-    parser.add_argument('-t', '--target', help='target domain(s)')
-    parser.add_argument('--center-crop', default=False, action='store_true',
-                        help='whether use center crop during training')
+    parser.add_argument('-s', '--source', help='source domain')
+    parser.add_argument('-t', '--target', help='target domain')
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     # training parameters

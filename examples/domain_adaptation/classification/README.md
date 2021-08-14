@@ -33,7 +33,7 @@ You need to prepare following datasets manually if you want to use them:
 - [ImageNetR](https://github.com/hendrycks/imagenet-r)
 - [ImageNet-Sketch](https://github.com/HaohanWang/ImageNet-Sketch)
 
-and prepare them following ``common.vision.datasets.imagenet_r.py`` and ``common.vision.datasets.imagenet_sketch.py``.
+and prepare them following [Documentation for ImageNetR](/common/vision/datasets/imagenet_r.py) and [ImageNet-Sketch](/common/vision/datasets/imagenet_sketch.py).
 
 ## Supported Methods
 
@@ -64,3 +64,74 @@ For more information please refer to [Get Started](/docs/get_started/quickstart.
 
 ## TODO
 Support methods: ADDA, BSP, AdaBN/TransNorm, CycleGAN, CyCADA
+
+## Citation
+If you use these methods in your research, please consider citing.
+
+```
+@inproceedings{DANN,
+	Author = {Ganin, Yaroslav and Lempitsky, Victor},
+	Booktitle = {ICML},
+	Title = {Unsupervised domain adaptation by backpropagation},
+	Year = {2015}
+}
+
+@inproceedings{DAN,
+	author    = {Mingsheng Long and
+	Yue Cao and
+	Jianmin Wang and
+	Michael I. Jordan},
+	title     = {Learning Transferable Features with Deep Adaptation Networks},
+	booktitle = {ICML},
+	year      = {2015},
+}
+
+@inproceedings{JAN,
+    title={Deep transfer learning with joint adaptation networks},
+    author={Long, Mingsheng and Zhu, Han and Wang, Jianmin and Jordan, Michael I},
+    booktitle={ICML},
+    year={2017},
+}
+
+@inproceedings{CDAN,
+  author    = {Mingsheng Long and
+               Zhangjie Cao and
+               Jianmin Wang and
+               Michael I. Jordan},
+  title     = {Conditional Adversarial Domain Adaptation},
+  booktitle = {NeurIPS},
+  year      = {2018}
+}
+
+@inproceedings{MCD,
+    title={Maximum classifier discrepancy for unsupervised domain adaptation},
+    author={Saito, Kuniaki and Watanabe, Kohei and Ushiku, Yoshitaka and Harada, Tatsuya},
+    booktitle={CVPR},
+    year={2018}
+}
+
+@InProceedings{AFN,
+    author = {Xu, Ruijia and Li, Guanbin and Yang, Jihan and Lin, Liang},
+    title = {Larger Norm More Transferable: An Adaptive Feature Norm Approach for Unsupervised Domain Adaptation},
+    booktitle = {ICCV},
+    year = {2019}
+}
+
+@inproceedings{MDD,
+    title={Bridging theory and algorithm for domain adaptation},
+    author={Zhang, Yuchen and Liu, Tianle and Long, Mingsheng and Jordan, Michael},
+    booktitle={ICML},
+    year={2019},
+}
+
+@inproceedings{MCC,
+  author    = {Ying Jin and
+               Ximei Wang and
+               Mingsheng Long and
+               Jianmin Wang},
+  title     = {Less Confusion More Transferable: Minimum Class Confusion for Versatile
+               Domain Adaptation},
+  year={2020},
+  booktitle={ECCV},
+}
+```

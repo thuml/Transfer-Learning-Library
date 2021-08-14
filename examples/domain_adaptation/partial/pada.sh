@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=0 python pada.py data/office-home -d OfficeHome -s Rw -t Pr
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python pada.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 \
-    --epochs 20 --seed 0 -u 500 -i 500 --center-crop --trade-off 0.4 --per-class-eval --log logs/pada/VisDA2017_S2R
+    --epochs 20 --seed 0 -u 500 -i 500 --train-resizing cen.crop --trade-off 0.4 --per-class-eval --log logs/pada/VisDA2017_S2R
 
 # ImageNet-Caltech
 CUDA_VISIBLE_DEVICES=0 python pada.py data/ImageNetCaltech -d ImageNetCaltech -s I -t C -a resnet50 \

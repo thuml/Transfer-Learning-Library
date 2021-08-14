@@ -67,13 +67,13 @@ class ImportanceWeightModule(object):
         if is_partial.sum() > 0:
             partial_classes_weight = (weights * is_partial).sum() / is_partial.sum()
         else:
-            partial_classes_weight = 0
+            partial_classes_weight = torch.tensor(0)
 
         not_partial = 1. - is_partial
         if not_partial.sum() > 0:
             not_partial_classes_weight = (weights * not_partial).sum() / not_partial.sum()
         else:
-            not_partial_classes_weight = 0
+            not_partial_classes_weight = torch.tensor(0)
         return partial_classes_weight, not_partial_classes_weight
 
 
@@ -83,8 +83,6 @@ class ImageClassifier(ClassifierBase):
 
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU()
