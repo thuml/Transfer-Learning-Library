@@ -89,7 +89,7 @@ def main(args: argparse.Namespace):
     # analysis the model
     if args.phase == 'analysis':
         # extract features from both domains
-        feature_extractor = G.to(device)
+        feature_extractor = nn.Sequential(G, nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten()).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE

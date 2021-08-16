@@ -75,7 +75,7 @@ def main(args: argparse.Namespace):
         # using shuffled val loader
         val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
         # extract features from both domains
-        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(val_loader, feature_extractor, device)
         # plot t-SNE
