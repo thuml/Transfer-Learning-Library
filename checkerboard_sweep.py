@@ -42,22 +42,10 @@ import wandb
 sys.path.append('../../..')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_index = 0
 #TODO: define function for grl, compare ensemble of domain discriminator heads with classifier head post-hoc to baseline
 
-def main(args: argparse.Namespace):
-    global model_index
-    model_index += 1
-    wandb.init()
-    args.log = f'{args.global_log}/{wandb.run.project}/{wandb.run.name}'
-    
-    # update the log with the sweep configurations
-    if wandb.run:
-        wandb.config.update({k: v for k, v in vars(args).items() if k not in wandb.config.as_dict()})
-        args = argparse.Namespace(**wandb.config.as_dict())  
-    
-    logger = CompleteLogger(args.log, args.phase)
-    # display the args     
+def main(args: argparse.Namespace): 
+    logger = CompleteLogger(args.log, args.phase)   
     print(args)
     
     if args.seed is not None:
@@ -337,8 +325,6 @@ def main(args: argparse.Namespace):
     eval_log.update(novel_log.copy())
     eval_log.update(full_analysis(classifier))
     wandb.log(eval_log)
-    if model_index == args.num_trials:
-        logger.close()
 
 def train(train_iter: ForeverDataIterator, 
           model: ImageClassifier,
@@ -946,11 +932,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     ####### START THE SWEEP #######
-    wandb.login()
-    with open('checkerboard-domain-adaptation/checkerboard_sweep.yaml', 'r') as stream:
-        sweep_config = yaml.safe_load(stream)
-    sweep_id = wandb.sweep(sweep_config)
+    # wandb.login()
+    # # with open('checkerboard-domain-adaptation/checkerboard_sweep.yaml', 'r') as stream:
+    # #     sweep_config = yaml.safe_load(stream)
+    # # sweep_id = wandb.sweep(sweep_config)
 
-    wandb.agent(sweep_id, function=lambda: main(args), count=args.num_trials)
-    wandb.finish()
+    # # wandb.agent(sweep_id, function=lambda: main(args), count=args.num_trials)
+    # main(args)
+    
+    wandb.login()
+    wandb.init()
+    args = parser.parse_args()
+    args.log = f'{args.global_log}/{wandb.run.project}/{wandb.run.name}'
+    # update the log with the sweep configurations
+    if wandb.run:
+        wandb.config.update({k: v for k, v in vars(args).items() if k not in wandb.config.as_dict()})
+        args = argparse.Namespace(**wandb.config.as_dict()) 
+    main(args)
     

@@ -1,0 +1,39 @@
+# checkerboard_sweep.yaml
+program: checkerboard_sweep.py
+method: bayes # random
+metric:
+  name: Category Classification Accuracy (Novel Set)
+  goal: maximize
+parameters:
+  bottleneck-dim:
+    values: [128, 256, 512, 1024]
+  lambda-c:
+    values: [1]
+  lambda-d:
+    values: [0]
+  alpha:
+    values: [0.1]
+  batch-size:
+    values: [8, 16, 32, 64, 128]
+  lr:
+    values: [0.01, 0.001] # [0.01, 0.001, 0.0001]
+  lr-decay:
+    distribution: uniform
+    min: 0
+    max: 1
+  weight-decay:
+    values: [0.1, 0.01, 0.001]
+  epochs:
+    values: [20, 30, 40, 50, 60]
+  max-iters:
+    values: [1]
+  gl:
+    values: ['constant']
+  grl:
+    values: ['constant']
+  # finetune:
+  #   values: [True, False]
+early_terminate:
+  type: hyperband
+  min_iter: 10
+  eta: 2

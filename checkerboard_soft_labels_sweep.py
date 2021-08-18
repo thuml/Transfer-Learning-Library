@@ -164,8 +164,6 @@ def main(args: argparse.Namespace):
 
     # the extra output node is for the fake domain label
     num_styles_to_predict = len(datasets.domains())
-    if args.use_ood_style:
-        num_styles_to_predict += 1
         
     multidomain_discri = MultidomainDiscriminator(
         in_feature=classifier.features_dim,
@@ -355,6 +353,10 @@ def main(args: argparse.Namespace):
 
     # if model_index == args.num_trials:
     #     logger.close()
+    
+def softlabel_crossentropy(predicted_logits: torch.Tensor, num_domains: Optional[int]=4):
+    predicted_probs = F.softmax(predicted_logits, dim=1)
+    return -((1/num_domains) * torch.log(predicted_probs)).sum(dim=1).mean()
 
 def train(train_iter: ForeverDataIterator, 
           model: ImageClassifier,
@@ -364,7 +366,7 @@ def train(train_iter: ForeverDataIterator,
           discr_optimizer: SGD,
           epoch: int, 
           args: argparse.Namespace,
-          num_styles_to_predict: Optional[int] = 5):
+          num_styles_to_predict: Optional[int] = 4):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     cls_losses = AverageMeter('Cls Loss', ':6.2f')
@@ -382,9 +384,9 @@ def train(train_iter: ForeverDataIterator,
     # switch to train mode
     model.train()
     multidomain_adv.train()
-    targe_domain_loss = np.log(num_styles_to_predict)
-    dfeature_trade_off = 0
-    prev_discr_loss = None
+    # targe_domain_loss = np.log(num_styles_to_predict)
+    # dfeature_trade_off = 0
+    # prev_discr_loss = None
 
     end = time.time()
     for i in range(args.iters_per_epoch):
@@ -412,12 +414,13 @@ def train(train_iter: ForeverDataIterator,
             ####################################################
             f_tr = model.featurizer_forward(x_tr)
             feature_optimizer.zero_grad()
-            if args.gl_d == 'adaptive':
-                # TODO
-                dfeature_trade_off = 0.001 * (targe_domain_loss - discr_loss.item())
-                feature_loss = multidomain_adv(f_tr, fake_domain_labels_tr, grl_input=dfeature_trade_off)
-            else:
-                feature_loss = multidomain_adv(f_tr, fake_domain_labels_tr)
+            # if args.gl_d == 'adaptive':
+            #     # TODO
+            #     dfeature_trade_off = 0.001 * (targe_domain_loss - discr_loss.item())
+            #     feature_loss = multidomain_adv(f_tr, fake_domain_labels_tr, grl_input=dfeature_trade_off)
+            # else:
+            #     
+            feature_loss = multidomain_adv(f_tr, domain_labels_tr, custom_loss=softlabel_crossentropy)
             feature_acc = multidomain_adv.domain_discriminator_accuracy
             feature_loss.backward()
             feature_optimizer.step()
@@ -455,8 +458,6 @@ def train(train_iter: ForeverDataIterator,
         if i % args.print_freq == 0:
             progress.display(i)
 
-    
-        
     log.update({
         "Category Classification Loss (Training Set)": cls_losses.avg,
         'Style Discrimination Loss (Training Set)': discr_losses.avg,
@@ -955,11 +956,6 @@ if __name__ == '__main__':
         '--per-class-eval',
         action='store_true',
         help='whether output per-class accuracy during evaluation')
-    # parser.add_argument(
-    #     "--log",
-    #     type=str,
-    #     default='dann',
-    #     help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument(
         "--global-log",
         type=str,
@@ -967,7 +963,7 @@ if __name__ == '__main__':
         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--wandb-name",
                         type=str,
-                        default='checkerboard-task',
+                        default=None,
                         help="Name that will appear in the wandb dashboard.")
     parser.add_argument(
         "--phase",
@@ -1048,25 +1044,16 @@ if __name__ == '__main__':
         default=True,
         action='store_false',
         help='''If false, set the learning rate of backbone to 1.0 of learning rate.''')
-    parser.add_argument(
-        '--ood-style',
-        dest="use_ood_style",
-        default=True,
-        action='store_true',
-        help='''If true, use the out of distribution style for feature extractor updates.''')
-    parser.add_argument(
-        '--no-ood-style',
-        dest="use_ood_style",
-        default=True,
-        action='store_false',
-        help='''If false, use the last style for feature extractor updates.''')
     parser.add_argument('--d-steps-per-g',
                         default=0,
                         type=int,
                         help='Number times the domain discriminator learns before the classifier starts learning.')
     wandb.login()
-    wandb.init()
     args = parser.parse_args()
+    if args.wandb_name:
+        wandb.init(project=args.wandb_name)
+    else:
+        wandb.init()
     args.log = f'{args.global_log}/{wandb.run.project}/{wandb.run.name}'
     # update the log with the sweep configurations
     if wandb.run:
