@@ -29,7 +29,7 @@ Unsupervised Domain Adaptation (AFN, ICCV 2019)
 - ADVENT: Adversarial Entropy Minimization for Domain Adaptation in Semantic Segmentation (CVPR 2019)
 - FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020)
 
-##### Domain Adaptation for Keypoint Detection
+##### [Domain Adaptation for Keypoint Detection](/examples/domain_adaptation/keypoint_detection)
 - Regressive Domain Adaptation for Unsupervised Keypoint Detection (RegDA, CVPR 2021)
 
 ##### Finetune for Classification
