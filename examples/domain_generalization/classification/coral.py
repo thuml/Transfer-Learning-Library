@@ -15,7 +15,7 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dglib.generalization.coral import CorrelationAlignmentLoss
-from dglib.modules.sampler import DefaultSampler
+from dglib.modules.sampler import RandomDomainSampler
 from dglib.modules.classifier import ImageClassifier as Classifier
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
@@ -54,18 +54,18 @@ def main(args: argparse.Namespace):
     train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
                                                    split='train', download=True, transform=train_transform,
                                                    seed=args.seed)
-    sampler = DefaultSampler(train_dataset, args.batch_size)
+    sampler = RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=args.n_domains_per_batch)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
                               sampler=sampler, drop_last=True)
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
                                        download=True, transform=val_transform, seed=args.seed)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='test',
                                         download=True, transform=val_transform, seed=args.seed)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    print("Source Train:", len(train_dataset))
-    print('Source Val:', len(val_dataset))
-    print("Target:", len(test_dataset))
+    print("train_dataset_size: ", len(train_dataset))
+    print('val_dataset_size: ', len(val_dataset))
+    print("test_dataset_size: ", len(test_dataset))
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -74,7 +74,6 @@ def main(args: argparse.Namespace):
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
                             finetune=args.finetune, pool_layer=pool_layer).to(device)
-    num_domains = len(args.sources)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
@@ -98,10 +97,11 @@ def main(args: argparse.Namespace):
 
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, lr_scheduler, correlation_alignment_loss, num_domains, epoch, args)
+        train(train_iter, classifier, optimizer, lr_scheduler, correlation_alignment_loss, args.n_domains_per_batch,
+              epoch, args)
 
         # evaluate on validation set
-        print("Validation on source domain...")
+        print("Evaluate on validation set...")
         acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
@@ -111,19 +111,20 @@ def main(args: argparse.Namespace):
         best_val_acc1 = max(acc1, best_val_acc1)
 
         # evaluate on test set
-        print("Test on target domain...")
+        print("Evaluate on test set...")
         best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
     acc1 = utils.validate(test_loader, classifier, args, device)
-    print("test acc on target = {}".format(acc1))
-    print("oracle acc on target = {}".format(best_test_acc1))
+    print("test acc on test set = {}".format(acc1))
+    print("oracle acc on test set = {}".format(best_test_acc1))
     logger.close()
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR,
-          correlation_alignment_loss: CorrelationAlignmentLoss, num_domains: int, epoch: int, args: argparse.Namespace):
+          correlation_alignment_loss: CorrelationAlignmentLoss, n_domains_per_batch: int, epoch: int,
+          args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -141,7 +142,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_all, labels_all = next(train_iter)
+        x_all, labels_all, _ = next(train_iter)
         x_all = x_all.to(device)
         labels_all = labels_all.to(device)
 
@@ -152,28 +153,28 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
         data_time.update(time.time() - end)
 
         # separate into different domains
-        y_all = y_all.chunk(num_domains, dim=0)
-        f_all = f_all.chunk(num_domains, dim=0)
-        labels_all = labels_all.chunk(num_domains, dim=0)
+        y_all = y_all.chunk(n_domains_per_batch, dim=0)
+        f_all = f_all.chunk(n_domains_per_batch, dim=0)
+        labels_all = labels_all.chunk(n_domains_per_batch, dim=0)
 
         loss_ce = 0
         loss_penalty = 0
         cls_acc = 0
-        for domain_i in range(num_domains):
+        for domain_i in range(n_domains_per_batch):
             # cls loss
             y_i, labels_i = y_all[domain_i], labels_all[domain_i]
             loss_ce += F.cross_entropy(y_i, labels_i)
             # update acc
-            cls_acc += accuracy(y_i, labels_i)[0] / num_domains
+            cls_acc += accuracy(y_i, labels_i)[0] / n_domains_per_batch
             # correlation alignment loss
-            for domain_j in range(domain_i + 1, num_domains):
+            for domain_j in range(domain_i + 1, n_domains_per_batch):
                 f_i = f_all[domain_i]
                 f_j = f_all[domain_j]
                 loss_penalty += correlation_alignment_loss(f_i, f_j)
 
         # normalize loss
-        loss_ce /= num_domains
-        loss_penalty /= num_domains * (num_domains - 1) / 2
+        loss_ce /= n_domains_per_batch
+        loss_penalty /= n_domains_per_batch * (n_domains_per_batch - 1) / 2
 
         loss = loss_ce + loss_penalty * args.trade_off
 
@@ -197,7 +198,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Baseline for Domain Generalization')
+    parser = argparse.ArgumentParser(description='CORAL for Domain Generalization')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -226,6 +227,8 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 36)')
+    parser.add_argument('--n-domains-per-batch', default=3, type=int,
+                        help='number of domains in each mini-batch')
     parser.add_argument('--lr', '--learning-rate', default=5e-4, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',

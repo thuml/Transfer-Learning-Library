@@ -57,13 +57,13 @@ def main(args: argparse.Namespace):
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
                                        download=True, transform=val_transform, seed=args.seed)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='test',
                                         download=True, transform=val_transform, seed=args.seed)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
-    print("Source Train:", len(train_dataset))
-    print('Source Val:', len(val_dataset))
-    print("Target:", len(test_dataset))
+    print("train_dataset_size: ", len(train_dataset))
+    print('val_dataset_size: ', len(val_dataset))
+    print("test_dataset_size: ", len(test_dataset))
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -94,7 +94,7 @@ def main(args: argparse.Namespace):
         train(train_iter, classifier, optimizer, lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        print("Validation on source domain...")
+        print("Evaluate on validation set...")
         acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
@@ -104,14 +104,14 @@ def main(args: argparse.Namespace):
         best_val_acc1 = max(acc1, best_val_acc1)
 
         # evaluate on test set
-        print("Test on target domain...")
+        print("Evaluate on test set...")
         best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
     acc1 = utils.validate(test_loader, classifier, args, device)
-    print("test acc on target = {}".format(acc1))
-    print("oracle acc on target = {}".format(best_test_acc1))
+    print("test acc on test set = {}".format(acc1))
+    print("oracle acc on test set = {}".format(best_test_acc1))
     logger.close()
 
 
@@ -132,7 +132,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer,
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x, labels = next(train_iter)
+        x, labels, _ = next(train_iter)
         x = x.to(device)
         labels = labels.to(device)
 
@@ -187,9 +187,9 @@ if __name__ == '__main__':
     parser.add_argument('--freeze-bn', action='store_true', help='whether freeze all bn layers')
     parser.add_argument('--dropout-p', type=float, default=0.1, help='only activated when freeze-bn is True')
     # training parameters
-    parser.add_argument('-b', '--batch-size', default=32, type=int,
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 32)')
+                        help='mini-batch size (default: 36)')
     parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
