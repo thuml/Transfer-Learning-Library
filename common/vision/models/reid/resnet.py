@@ -1,9 +1,14 @@
 from common.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
 
-__all__ = ['reid_resnet50']
+__all__ = ['reid_resnet18', 'reid_resnet34', 'reid_resnet50', 'reid_resnet101']
 
 
 class ReidResNet(ResNet):
+    r"""Modified `ResNet` architecture for ReID from `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised
+    Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_. We change stride
+    of :math:`layer4\_group1\_conv2, layer4\_group1\_downsample1` to 1. During forward pass, we will not activate
+    `self.relu`. Please refer to source code for details.
+    """
 
     def __init__(self, *args, **kwargs):
         super(ReidResNet, self).__init__(*args, **kwargs)
@@ -13,6 +18,7 @@ class ReidResNet(ResNet):
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
+        # x = self.relu(x)
         x = self.maxpool(x)
 
         x = self.layer1(x)
@@ -35,13 +41,45 @@ def _reid_resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
+def reid_resnet18(pretrained=False, progress=True, **kwargs):
+    r"""Constructs a Reid-ResNet-18 model.
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _reid_resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+                        **kwargs)
+
+
+def reid_resnet34(pretrained=False, progress=True, **kwargs):
+    r"""Constructs a Reid-ResNet-34 model.
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _reid_resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
+                        **kwargs)
+
+
 def reid_resnet50(pretrained=False, progress=True, **kwargs):
-    r"""ResNet-50 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+    r"""Constructs a Reid-ResNet-50 model.
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _reid_resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
+                        **kwargs)
+
+
+def reid_resnet101(pretrained=False, progress=True, **kwargs):
+    r"""Constructs a Reid-ResNet-101 model.
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _reid_resnet('resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
                         **kwargs)

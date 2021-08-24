@@ -5,13 +5,25 @@ from torch.nn import init
 
 
 class ReIdentifier(nn.Module):
+    r"""Person reIdentifier from `Bag of Tricks and A Strong Baseline for Deep Person Re-identification (CVPR 2019)
+    <https://arxiv.org/pdf/1903.07071.pdf>`_.
+    Given 2-d features :math:`f` from backbone network, the authors pass :math:`f` through another `BatchNorm1d` layer
+    and get :math:`bn\_f`, which will then pass through a `Linear` layer to output predictions. During training, we
+    use :math:`f` to compute triplet loss. While during testing, :math:`bn\_f` is used as feature. This may be a little
+    confusing. The figures in the origin paper will help you understand better.
+    """
+
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, finetune=True):
+                 bottleneck_dim: Optional[int] = -1, finetune=True, pool_layer=None):
         super(ReIdentifier, self).__init__()
+        if pool_layer is None:
+            pool_layer = nn.Sequential(
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten()
+            )
         self.backbone = nn.Sequential(
             backbone,
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten()
+            pool_layer
         )
         self.num_classes = num_classes
         if bottleneck is None:
@@ -41,6 +53,7 @@ class ReIdentifier(nn.Module):
         return self._features_dim
 
     def forward(self, x: torch.Tensor):
+        """"""
         f = self.backbone(x)
         bn_f = self.bottleneck(f)
         if not self.training:
