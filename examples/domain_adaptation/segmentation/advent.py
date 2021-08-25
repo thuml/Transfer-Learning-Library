@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from dalib.adaptation.segmentation.advent import Discriminator, DomainAdversarialEntropyLoss
+from dalib.adaptation.advent import Discriminator, DomainAdversarialEntropyLoss
 import common.vision.models.segmentation as models
 import common.vision.datasets.segmentation as datasets
 import common.vision.transforms.segmentation as T

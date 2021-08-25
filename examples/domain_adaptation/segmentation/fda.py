@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
 from dalib.translation.fourier_transform import FourierTransform
-from dalib.adaptation.segmentation.fda import robust_entropy
+from dalib.adaptation.fda import robust_entropy
 import common.vision.models.segmentation as models
 import common.vision.datasets.segmentation as datasets
 import common.vision.transforms.segmentation as T

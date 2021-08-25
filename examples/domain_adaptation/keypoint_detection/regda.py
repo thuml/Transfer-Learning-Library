@@ -13,8 +13,8 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToPILImage
 
 sys.path.append('../../..')
-from dalib.adaptation.keypoint_detection.regda import PoseResNet as RegDAPoseResNet, \
-    PseudoLabelGenerator, RegressionDisparity
+from dalib.adaptation.regda import PoseResNet2d as RegDAPoseResNet, \
+    PseudoLabelGenerator2d, RegressionDisparity
 import common.vision.models as models
 from common.vision.models.keypoint_detection.pose_resnet import Upsampling, PoseResNet
 from common.vision.models.keypoint_detection.loss import JointsKLLoss
@@ -95,7 +95,7 @@ def main(args: argparse.Namespace):
     model = RegDAPoseResNet(backbone, upsampling, 256, num_keypoints, num_head_layers=args.num_head_layers, finetune=True).to(device)
     # define loss function
     criterion = JointsKLLoss()
-    pseudo_label_generator = PseudoLabelGenerator(num_keypoints, args.heatmap_size, args.heatmap_size)
+    pseudo_label_generator = PseudoLabelGenerator2d(num_keypoints, args.heatmap_size, args.heatmap_size)
     regression_disparity = RegressionDisparity(pseudo_label_generator, JointsKLLoss(epsilon=1e-7))
 
     # define optimizer and lr scheduler
