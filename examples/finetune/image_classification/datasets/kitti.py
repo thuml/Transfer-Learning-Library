@@ -8,6 +8,8 @@ import random
 class KITTIDist(ImageFolder):
     def __init__(self, root: str, split: str = 'train', download: Optional[bool] = True, **kwargs: Any):
         self.root = root
+        if split == 'test':
+            split = 'val'
         assert split in ("train", "val")
         if download and not osp.exists(osp.join(root, 'val')):
             download_and_extract_archive("https://cloud.tsinghua.edu.cn/f/b2386ad0a0b442569c58/?dl=1", root, root,
@@ -22,6 +24,7 @@ class KITTIDist(ImageFolder):
                                          osp.join(root, "train"), filename='no_vehicle.zip')
 
         super(KITTIDist, self).__init__(osp.join(root, split), **kwargs)
+        random.seed(0)
         random.shuffle(self.samples)
 
     @property

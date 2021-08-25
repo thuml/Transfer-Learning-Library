@@ -21,8 +21,8 @@ def _convert_from_tensorflow_datasets(dataset_name, root, split, suffix='jpg',
     else:
         os.makedirs(root, exist_ok=True)
         os.makedirs(osp.join(root, "imagelist"), exist_ok=True)
-        # dataset = tfds.builder(dataset_name, data_dir='/data/tensorflow_datasets')
-        dataset = tfds.builder(dataset_name)
+        dataset = tfds.builder(dataset_name, data_dir='/data/tensorflow_datasets')
+        # dataset = tfds.builder(dataset_name)
         data_dir = split
         dataset.download_and_prepare()
         print("convert from {} to ImageList".format(dataset.info.name))

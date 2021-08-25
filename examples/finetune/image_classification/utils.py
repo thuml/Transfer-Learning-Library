@@ -1,9 +1,8 @@
 import time
-import os
-import os.path as osp
-
+from PIL import Image
 import timm
-import tensorflow_datasets as tfds
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,6 +13,7 @@ import common.vision.datasets as datasets_finetune
 import common.vision.models as models
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
+from common.vision.transforms import Denormalize
 
 import datasets as datasets_vtab
 
@@ -60,59 +60,18 @@ def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=
         dataset = datasets_vtab.__dict__[dataset_name]
         train_dataset = dataset(root=root, split='train', transform=train_transform)
         test_dataset = dataset(root=root, split='test', transform=val_transform)
-        # load datasets from tensorflow_datasets
-        # if dataset_name == "dsprites_loc":
-        #     train_dataset = DSpritesLocation(root, 'train', transform=train_transform)
-        #     test_dataset = DSpritesLocation(root, 'val', transform=val_transform)
-        # elif dataset_name == "dsprites_orient":
-        #     train_dataset = DSpritesOrientation(root, 'train', transform=train_transform)
-        #     test_dataset = DSpritesOrientation(root, 'val', transform=val_transform)
-        # elif dataset_name == "kitti_distance":
-        #     train_dataset = KITTIDist(root, 'train', transform=train_transform)
-        #     test_dataset = KITTIDist(root, 'val', transform=val_transform)
-        # else:
-        #     os.makedirs(root, exist_ok=True)
-        #     os.makedirs(osp.join(root, "imagelist"), exist_ok=True)
-        #     if dataset_name in ['caltech101', 'cifar100', 'dtd', 'oxford_flowers102',
-        #                         'oxford_iiit_pet', 'patch_camelyon', 'sun397', 'svhn_cropped', 'dmlab']:
-        #         dataset = TensorFlowDataset
-        #     elif dataset_name == 'smallnorb_azimuth':
-        #         data, info = tfds.load("smallnorb", with_info=True)
-        #         dataset = SmallnorbAzimuth
-        #     elif dataset_name == 'smallnorb_elevation':
-        #         data, info = tfds.load("smallnorb", with_info=True)
-        #         dataset = SmallnorblElevation
-        #     elif dataset_name == 'clevr_count':
-        #         data, info = tfds.load("clevr", with_info=True)
-        #         dataset = ClevrCount
-        #     elif dataset_name == 'clevr_distance':
-        #         data, info = tfds.load("clevr", with_info=True)
-        #         data['test'] = data['validation']
-        #         dataset = ClevrDistance
-        #     elif dataset_name == "eurosat":
-        #         train_dataset, info = tfds.load(dataset_name, with_info=True, split="train[:{}]".format(sample_size))
-        #         test_dataset, info = tfds.load(dataset_name, with_info=True, split="train[{}:]".format(sample_size))
-        #         data = {"train": train_dataset, "test": test_dataset}
-        #         dataset = TensorFlowDataset
-        #     else:
-        #         raise NotImplementedError(dataset_name)
-        #     train_dataset = dataset(data['train'], info, root, 'train', 'imagelist/train.txt',
-        #                                       transform=train_transform)
-        #     test_dataset = dataset(data['test'], info, root, 'test', 'imagelist/test.txt',
-        #                                      transform=val_transform)
         num_classes = train_dataset.num_classes
         train_dataset = Subset(train_dataset, list(range(sample_size)))
     return train_dataset, test_dataset, num_classes
 
 
-def validate(val_loader, model, args, device) -> float:
+def validate(val_loader, model, args, device, visualize=None) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, top5],
+        [batch_time, losses, top1],
         prefix='Test: ')
 
     # switch to evaluate mode
@@ -129,10 +88,9 @@ def validate(val_loader, model, args, device) -> float:
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1, = accuracy(output, target, topk=(1, ))
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -140,9 +98,10 @@ def validate(val_loader, model, args, device) -> float:
 
             if i % args.print_freq == 0:
                 progress.display(i)
+                if visualize is not None:
+                    visualize(images[0], "val_{}".format(i))
 
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
+        print(' * Acc@1 {top1.avg:.3f}'.format(top1=top1))
 
     return top1.avg
 
@@ -161,7 +120,7 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
     if resizing == 'default':
         transform = T.RandomResizedCrop(224, scale=(0.2, 1.))
     elif resizing == 'res.':
-        transform = T.Resize(224)
+        transform = T.Resize((224, 224))
     elif resizing == 'res.|crop':
         transform = T.Compose([
             T.Resize((256, 256)),
@@ -222,3 +181,14 @@ def get_val_transform(resizing='default'):
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
+
+def visualize(image, filename):
+    """
+    Args:
+        image (tensor): 3 x H x W
+        filename: filename of the saving image
+    """
+    image = image.detach().cpu()
+    image = Denormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(image)
+    image = image.numpy().transpose((1, 2, 0)) * 255
+    Image.fromarray(np.uint8(image)).save(filename)
