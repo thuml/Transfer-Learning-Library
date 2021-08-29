@@ -1,3 +1,6 @@
+# ------------------------------------------------------------------------------
+# Modified from https://github.com/yxgeee/MMT
+# ------------------------------------------------------------------------------
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

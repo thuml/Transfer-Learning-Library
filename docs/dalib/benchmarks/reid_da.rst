@@ -31,7 +31,7 @@ Cross dataset mAP on ResNet-50
 ================= ============= ============= ============= ============= =========== ===========
 Methods            Market2Duke   Duke2Market   Market2MSMT   MSMT2Market   Duke2MSMT   MSMT2Duke
 Baseline              32.4          31.4           8.2          36.7         11.0        43.1
-IBN                   35.2          36.5
-Baseline_Cluster
-MMT                   63.0
+IBN                   35.2          36.5           11.3         38.7         14.1        44.3
+Baseline_Cluster      52.8          59.5
+MMT                   63.7          72.5
 ================= ============= ============= ============= ============= =========== ===========

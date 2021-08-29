@@ -63,10 +63,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python mmt.py data -t Market1501 -a reid_resnet50 \
 # step1: pretrain
 CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t DukeMTMC -a reid_resnet50 \
 --iters-per-epoch 800 --print-freq 80 --finetune --seed 0 --log logs/baseline/MSMT2DukeSeed0
-CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t Market1501 -a reid_resnet50 \
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t DukeMTMC -a reid_resnet50 \
 --iters-per-epoch 800 --print-freq 80 --finetune --seed 1 --log logs/baseline/MSMT2DukeSeed1
 # step2: train mmt
-CUDA_VISIBLE_DEVICES=0,1,2,3 python mmt.py data -t Market1501 -a reid_resnet50 \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python mmt.py data -t DukeMTMC -a reid_resnet50 \
 --pretrained-model-1-path logs/baseline/MSMT2DukeSeed0/checkpoints/best.pth \
 --pretrained-model-2-path logs/baseline/MSMT2DukeSeed1/checkpoints/best.pth \
 --finetune --seed 0 --log logs/mmt/MSMT2Duke

@@ -51,7 +51,8 @@ class MSMT17(BaseImageDataset):
         for image_path in image_list:
             pid, camid, _ = image_path.split('_')
             pid = int(pid)
-            camid = int(camid[1:])
+            # camera id of MSMT starts from 1, so we subtract 1 here
+            camid = int(camid[1:]) - 1
             full_image_path = osp.join(dir_path, image_path)
             dataset.append((full_image_path, pid, camid))
             pid_container.add(pid)

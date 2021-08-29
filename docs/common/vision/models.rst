@@ -50,3 +50,7 @@ ReID Models
 ReID Loss
 -----------------------------------
 .. autoclass:: common.vision.models.reid.loss.TripletLoss
+
+ReID Sampler
+-----------------------------------
+.. autoclass:: common.utils.data.RandomMultipleGallerySampler

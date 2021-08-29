@@ -1,4 +1,7 @@
 # TODO: add documentation
+# ------------------------------------------------------------------------------
+# Modified from https://github.com/yxgeee/MMT
+# ------------------------------------------------------------------------------
 from collections import defaultdict
 import time
 import numpy as np

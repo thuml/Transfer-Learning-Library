@@ -95,14 +95,13 @@ iWildCam-Wilds accuracy on ResNet-50
 
 ======== ======
 Methods   acc1
-ERM
-IBN
-MixStyle
-MLDG
-IRM
-VREx
-GroupDRO
-CORAL
+ERM       75.4
+IBN       77.3
+MixStyle  71.0
+IRM       75.5
+VREx      71.5
+GroupDRO  28.0
+CORAL     71.0
 ======== ======
 
 .. _Camelyon17-Wilds:
@@ -113,14 +112,14 @@ Camelyon17-Wilds accuracy on ResNet-50
 
 ======== ======
 Methods   acc1
-ERM
-IBN
-MixStyle
-MLDG
-IRM
-VREx
-GroupDRO
-CORAL
+ERM       94.6
+IBN       96.1
+MixStyle  94.2
+MLDG      91.2
+IRM       94.9
+VREx      88.2
+GroupDRO  93.1
+CORAL     90.6
 ======== ======
 
 .. _FMoW-Wilds:
@@ -131,12 +130,10 @@ FMoW-Wilds accuracy on DenseNet-121
 
 ======== ======
 Methods   acc1
-ERM
-IBN
-MixStyle
-MLDG
-IRM
-VREx
-GroupDRO
-CORAL
+ERM       53.0
+MLDG      47.4
+IRM       48.1
+VREx      50.4
+GroupDRO  47.5
+CORAL     50.0
 ======== ======

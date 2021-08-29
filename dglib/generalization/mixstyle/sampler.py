@@ -5,14 +5,14 @@ from torch.utils.data.sampler import Sampler
 
 
 class RandomDomainMultiInstanceSampler(Sampler):
-    """Randomly sample :math:`N` domains, then randomly select :math:`P` instances in each domain, for each instance,
-    randomly select :math:`K` images to form a mini-batch of size :math:`N*P*K`.
+    r"""Randomly sample :math:`N` domains, then randomly select :math:`P` instances in each domain, for each instance,
+    randomly select :math:`K` images to form a mini-batch of size :math:`N\times P\times K`.
 
     Args:
         dataset (ConcatDataset): dataset that contains data from multiple domains
-        batch_size (int): mini-batch size (:math:`N*P*K` here)
+        batch_size (int): mini-batch size (:math:`N\times P\times K` here)
         n_domains_per_batch (int): number of domains to select in a single mini-batch (:math:`N` here)
-        num_instances (int): number of instances to select in each domain (:math:`P` here)
+        num_instances (int): number of instances to select in each domain (:math:`K` here)
     """
 
     def __init__(self, dataset, batch_size, n_domains_per_batch, num_instances):

@@ -12,3 +12,5 @@ Sampler
 .. autoclass:: dglib.modules.sampler.DefaultSampler
 
 .. autoclass:: dglib.modules.sampler.RandomDomainSampler
+
+.. autoclass:: dglib.generalization.mixstyle.sampler.RandomDomainMultiInstanceSampler
