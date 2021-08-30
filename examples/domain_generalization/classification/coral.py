@@ -4,6 +4,7 @@ import warnings
 import sys
 import argparse
 import shutil
+import os.path as osp
 
 import torch
 import torch.nn as nn
@@ -21,6 +22,7 @@ from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+from common.utils.analysis import tsne, a_distance
 
 sys.path.append('.')
 import utils
@@ -83,9 +85,28 @@ def main(args: argparse.Namespace):
     # define loss function
     correlation_alignment_loss = CorrelationAlignmentLoss().to(device)
 
-    if args.phase == 'test':
+    # resume from the best checkpoint
+    if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         classifier.load_state_dict(checkpoint)
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
+        source_feature = utils.collect_feature(val_loader, feature_extractor, device, max_num_features=100)
+        target_feature = utils.collect_feature(test_loader, feature_extractor, device, max_num_features=100)
+        print(len(source_feature), len(target_feature))
+        # plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        # calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == 'test':
         acc1 = utils.validate(test_loader, classifier, args, device)
         print(acc1)
         return

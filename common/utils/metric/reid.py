@@ -2,6 +2,10 @@
 # ------------------------------------------------------------------------------
 # Modified from https://github.com/yxgeee/MMT
 # ------------------------------------------------------------------------------
+import cv2
+import os
+import os.path as osp
+import errno
 from collections import defaultdict
 import time
 import numpy as np
@@ -268,3 +272,95 @@ def validate(val_loader, model, query, gallery, device, criterion='cosine', cmc_
     dist_mat_gallery = pairwise_distance(feature_dict, gallery, gallery)
     dist_mat = re_ranking(dist_mat, dist_mat_query, dist_mat_gallery)
     return evaluate_all(dist_mat, query=query, gallery=gallery, cmc_flag=cmc_flag)
+
+
+# location parameters for visualization
+GRID_SPACING = 10
+QUERY_EXTRA_SPACING = 90
+# border width
+BW = 5
+GREEN = (0, 255, 0)
+RED = (0, 0, 255)
+
+
+def visualize_ranked_results(data_loader, model, query, gallery, device, visualize_dir, criterion='cosine',
+                             rerank=False, width=128, height=256, topk=10):
+    """Visualize ranker results. We first compute pair-wise distance between query images and gallery images. Then for
+    every query image, `topk` gallery images with least distance between given query image are selected. We plot the
+    query image and selected gallery images together. A green border denotes a match, and a red one denotes a mis-match.
+    """
+    assert criterion in ['cosine', 'euclidean']
+    normalize = (criterion == 'cosine')
+
+    # compute pairwise distance matrix
+    feature_dict = extract_reid_feature(data_loader, model, device, normalize)
+    dist_mat = pairwise_distance(feature_dict, query, gallery)
+
+    if rerank:
+        dist_mat_query = pairwise_distance(feature_dict, query, query)
+        dist_mat_gallery = pairwise_distance(feature_dict, gallery, gallery)
+        dist_mat = re_ranking(dist_mat, dist_mat_query, dist_mat_gallery)
+
+    # make dir if not exists
+    if not osp.exists(visualize_dir):
+        try:
+            os.makedirs(visualize_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+    dist_mat = dist_mat.numpy()
+    num_q, num_g = dist_mat.shape
+    print('query images: {}'.format(num_q))
+    print('gallery images: {}'.format(num_g))
+
+    assert num_q == len(query)
+    assert num_g == len(gallery)
+
+    # start visualizing
+    sorted_idxes = np.argsort(dist_mat, axis=1)
+    for q_idx in range(num_q):
+        q_img_path, q_pid, q_cid = query[q_idx]
+
+        q_img = cv2.imread(q_img_path)
+        q_img = cv2.resize(q_img, (width, height))
+        # use black border to denote query image
+        q_img = cv2.copyMakeBorder(
+            q_img, BW, BW, BW, BW, cv2.BORDER_CONSTANT, value=(0, 0, 0)
+        )
+        q_img = cv2.resize(q_img, (width, height))
+        num_cols = topk + 1
+        grid_img = 255 * np.ones(
+            (height, num_cols * width + topk * GRID_SPACING + QUERY_EXTRA_SPACING, 3), dtype=np.uint8
+        )
+        grid_img[:, :width, :] = q_img
+
+        # collect top-k gallery images with smallest distance
+        rank_idx = 1
+        for g_idx in sorted_idxes[q_idx, :]:
+            g_img_path, g_pid, g_cid = gallery[g_idx]
+            invalid = (q_pid == g_pid) & (q_cid == g_cid)
+            if not invalid:
+                matched = (g_pid == q_pid)
+                border_color = GREEN if matched else RED
+                g_img = cv2.imread(g_img_path)
+                g_img = cv2.resize(g_img, (width, height))
+                g_img = cv2.copyMakeBorder(
+                    g_img, BW, BW, BW, BW, cv2.BORDER_CONSTANT, value=border_color
+                )
+                g_img = cv2.resize(g_img, (width, height))
+                start = rank_idx * width + rank_idx * GRID_SPACING + QUERY_EXTRA_SPACING
+                end = (rank_idx + 1) * width + rank_idx * GRID_SPACING + QUERY_EXTRA_SPACING
+                grid_img[:, start:end, :] = g_img
+
+                rank_idx += 1
+                if rank_idx > topk:
+                    break
+
+        save_path = osp.basename(osp.splitext(q_img_path)[0])
+        cv2.imwrite(osp.join(visualize_dir, save_path + '.jpg'), grid_img)
+
+        if (q_idx + 1) % 100 == 0:
+            print('Visualize {}/{}'.format(q_idx + 1, num_q))
+
+    print('Visualization process is done, ranked results are saved to {}'.format(visualize_dir))

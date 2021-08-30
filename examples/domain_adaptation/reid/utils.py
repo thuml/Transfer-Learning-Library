@@ -1,15 +1,21 @@
 import sys
 import timm
+import torch
 import torch.nn as nn
 from torch.nn import Parameter
 import torchvision.transforms as T
 
 sys.path.append('../../..')
+from common.utils.metric.reid import extract_reid_feature
+from common.utils.analysis import tsne
 from common.vision.transforms import RandomErasing
 import common.vision.models.reid as models
 
 
 def copy_state_dict(model, state_dict, strip=None):
+    """Copy state dict into the passed in ReID model. As we are using classification loss, which means we need to output
+    different number of classes(identities) for different datasets, we will not copy the parameters of last `fc` layer.
+    """
     tgt_state = model.state_dict()
     copied_names = set()
     for name, param in state_dict.items():
@@ -96,3 +102,21 @@ def get_val_transform(height, width):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+
+
+def visualize_tsne(source_loader, target_loader, model, filename, device, n_data_points_per_domain=3000):
+    """Visualize features from different domains using t-SNE. As we can have very large number of samples in each
+    domain, only `n_data_points_per_domain` number of samples are randomly selected in each domain.
+    """
+    source_feature_dict = extract_reid_feature(source_loader, model, device, normalize=True)
+    source_feature = torch.stack(list(source_feature_dict.values())).cpu()
+    source_feature = source_feature[torch.randperm(len(source_feature))]
+    source_feature = source_feature[:n_data_points_per_domain]
+
+    target_feature_dict = extract_reid_feature(target_loader, model, device, normalize=True)
+    target_feature = torch.stack(list(target_feature_dict.values())).cpu()
+    target_feature = target_feature[torch.randperm(len(target_feature))]
+    target_feature = target_feature[:n_data_points_per_domain]
+
+    tsne.visualize(source_feature, target_feature, filename, source_color='cornflowerblue', target_color='darkorange')
+    print('T-SNE process is done, figure is saved to {}'.format(filename))

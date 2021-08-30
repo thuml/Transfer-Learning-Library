@@ -15,7 +15,7 @@ def convert_to_pytorch_dataset(dataset, root=None, transform=None):
             return len(self.dataset)
 
         def __getitem__(self, index):
-            fname, pid, camid = self.dataset[index]
+            fname, pid, cid = self.dataset[index]
             fpath = fname
             if self.root is not None:
                 fpath = osp.join(self.root, fname)
@@ -25,6 +25,6 @@ def convert_to_pytorch_dataset(dataset, root=None, transform=None):
             if self.transform is not None:
                 img = self.transform(img)
 
-            return img, fname, pid, camid
+            return img, fname, pid, cid
 
     return ReidDataset(dataset, root, transform)

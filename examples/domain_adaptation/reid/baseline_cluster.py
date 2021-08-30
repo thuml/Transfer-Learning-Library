@@ -21,7 +21,7 @@ import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from common.vision.models.reid.identifier import ReIdentifier
 from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
-from common.utils.metric.reid import extract_reid_feature, validate
+from common.utils.metric.reid import extract_reid_feature, validate, visualize_ranked_results
 from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -83,9 +83,30 @@ def main(args: argparse.Namespace):
     pretrained_model = torch.load(args.pretrained_model_path)
     utils.copy_state_dict(model, pretrained_model)
 
-    if args.phase == 'test':
+    # resume from the best checkpoint
+    if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         model.load_state_dict(checkpoint)
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # plot t-SNE
+        assert args.source is not None
+        source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
+        source_loader = DataLoader(
+            convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
+                                       root=source_dataset.images_dir,
+                                       transform=val_transform),
+            batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
+        utils.visualize_tsne(source_loader=source_loader, target_loader=test_loader, model=model,
+                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
+        # visualize ranked results
+        visualize_ranked_results(test_loader, model, target_dataset.query, target_dataset.gallery, device,
+                                 visualize_dir=logger.visualize_directory, width=args.width, height=args.height,
+                                 rerank=args.rerank)
+        return
+
+    if args.phase == 'test':
         print("Test on target domain:")
         validate(test_loader, model, target_dataset.query, target_dataset.gallery, device, cmc_flag=True,
                  rerank=args.rerank)
@@ -229,6 +250,8 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
+    parser.add_argument('-s', '--source', type=str, default=None,
+                        help='source domain, this method only uses source domain when phase is analysis')
     parser.add_argument('-t', '--target', type=str, help='target domain')
     parser.add_argument('--train-resizing', type=str, default='default')
     # model parameters
@@ -266,7 +289,8 @@ if __name__ == '__main__':
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
-                        help="When phase is 'test', only test the model.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
+                        help="When phase is 'test', only test the model."
+                             "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
