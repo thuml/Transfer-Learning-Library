@@ -1,3 +1,7 @@
+# TODO: add documentation
+# ------------------------------------------------------------------------------
+# Modified from https://github.com/yxgeee/MMT
+# ------------------------------------------------------------------------------
 from collections import defaultdict
 import time
 import numpy as np
@@ -8,6 +12,7 @@ from common.utils.meter import AverageMeter, ProgressMeter
 
 
 def unique_sample(ids_dict, num):
+    """Randomly choose one instance for each person id, these instances will not be selected again"""
     mask = np.zeros(num, dtype=np.bool)
     for _, indices in ids_dict.items():
         i = np.random.choice(indices)
@@ -17,9 +22,9 @@ def unique_sample(ids_dict, num):
 
 def cmc(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams, topk=100, separate_camera_set=False,
         single_gallery_shot=False, first_match_break=False):
+    """Compute Cumulative Matching Characteristics (CMC)"""
     dist_mat = dist_mat.cpu().numpy()
     m, n = dist_mat.shape
-    # Ensure numpy array
     query_ids = np.asarray(query_ids)
     gallery_ids = np.asarray(gallery_ids)
     query_cams = np.asarray(query_cams)
@@ -68,9 +73,9 @@ def cmc(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams, topk=100, se
 
 
 def mean_ap(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams):
+    """Compute mean average precision (mAP)"""
     dist_mat = dist_mat.cpu().numpy()
     m, n = dist_mat.shape
-    # Ensure numpy array
     query_ids = np.asarray(query_ids)
     gallery_ids = np.asarray(gallery_ids)
     query_cams = np.asarray(query_cams)
@@ -94,10 +99,9 @@ def mean_ap(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams):
 
 
 def re_ranking(q_g_dist, q_q_dist, g_g_dist, k1=20, k2=6, lambda_value=0.3):
-    # The following naming, e.g. gallery_num, is different from outer scope.
-    # Don't care about it.
-
-    # convert to numpy nd-array
+    """Perform re-ranking with distance matrix between query and gallery images `q_g_dist`, distance matrix between
+    query and query images `q_q_dist` and distance matrix between gallery and gallery images `g_g_dist`.
+    """
     q_g_dist = q_g_dist.cpu().numpy()
     q_q_dist = q_q_dist.cpu().numpy()
     g_g_dist = g_g_dist.cpu().numpy()
@@ -168,6 +172,9 @@ def re_ranking(q_g_dist, q_q_dist, g_g_dist, k1=20, k2=6, lambda_value=0.3):
 
 
 def extract_reid_feature(data_loader, model, device, normalize, print_freq=200):
+    """Extract feature for person ReID. If `normalize` is True, `cosine` distance will be employed as distance
+    metric, otherwise `euclidean` distance.
+    """
     batch_time = AverageMeter('Time', ':6.3f')
     progress = ProgressMeter(
         len(data_loader),
@@ -201,9 +208,13 @@ def extract_reid_feature(data_loader, model, device, normalize, print_freq=200):
 
 
 def pairwise_distance(feature_dict, query, gallery):
-    # concat
-    x = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in query], dim=0)
-    y = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in gallery], dim=0)
+    """Compute pairwise distance between two sets of features"""
+
+    # concat features and convert to pytorch tensor
+    # we compute pairwise distance metric on cpu because it may require a large amount of GPU memory, if you are using
+    # gpu with a larger capacity, it's faster to calculate on gpu
+    x = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in query], dim=0).cpu()
+    y = torch.cat([feature_dict[f].unsqueeze(0) for f, _, _ in gallery], dim=0).cpu()
     m, n = x.size(0), y.size(0)
     # flatten
     x = x.view(m, -1)
@@ -216,10 +227,11 @@ def pairwise_distance(feature_dict, query, gallery):
 
 
 def evaluate_all(dist_mat, query, gallery, cmc_topk=(1, 5, 10), cmc_flag=False):
+    """Compute CMC score, mAP and return"""
     query_ids = [pid for _, pid, _ in query]
     gallery_ids = [pid for _, pid, _ in gallery]
-    query_cams = [camid for _, _, camid in query]
-    gallery_cams = [camid for _, _, camid in gallery]
+    query_cams = [cid for _, _, cid in query]
+    gallery_cams = [cid for _, _, cid in gallery]
 
     # Compute mean AP
     mAP = mean_ap(dist_mat, query_ids, gallery_ids, query_cams, gallery_cams)
@@ -250,6 +262,7 @@ def validate(val_loader, model, query, gallery, device, criterion='cosine', cmc_
     results = evaluate_all(dist_mat, query=query, gallery=gallery, cmc_flag=cmc_flag)
     if not rerank:
         return results
+    # apply person re-ranking
     print('Applying person re-ranking')
     dist_mat_query = pairwise_distance(feature_dict, query, query)
     dist_mat_gallery = pairwise_distance(feature_dict, gallery, gallery)

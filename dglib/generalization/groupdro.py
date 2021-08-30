@@ -30,20 +30,32 @@ class AutomaticUpdateDomainWeightModule(object):
         self.domain_weight = torch.ones(num_domains).to(device) / num_domains
         self.eta = eta
 
-    def get_domain_weight(self):
-        """
-        Outputs: domain weight for calculating final objective
+    def get_domain_weight(self, sampled_domain_idxes):
+        """Get domain weight to calculate final objective.
 
-        Shape: :math:`(N, )` where N means the number of domains
-        """
-        return self.domain_weight
-
-    def update(self, loss_distribution: torch.Tensor):
-        """
         Inputs:
-            - loss_distribution (tensor): loss distribution among domains
+            - sampled_domain_idxes (list): sampled domain indexes in current mini-batch
+
         Shape:
-            - loss_distribution: :math:`(N, )` where N means the number of domains
+            - sampled_domain_idxes: :math:`(D, )` where D means the number of sampled domains in current mini-batch
+            - Outputs: :math:`(D, )`
         """
-        self.domain_weight *= (self.eta * loss_distribution.detach()).exp()
-        self.domain_weight /= (self.domain_weight.sum())
+        domain_weight = self.domain_weight[sampled_domain_idxes]
+        domain_weight = domain_weight / domain_weight.sum()
+        return domain_weight
+
+    def update(self, sampled_domain_losses: torch.Tensor, sampled_domain_idxes):
+        """Update domain weight using loss of current mini-batch.
+
+        Inputs:
+            - sampled_domain_losses (tensor): loss of among sampled domains in current mini-batch
+            - sampled_domain_idxes (list): sampled domain indexes in current mini-batch
+
+        Shape:
+            - sampled_domain_losses: :math:`(D, )` where D means the number of sampled domains in current mini-batch
+            - sampled_domain_idxes: :math:`(D, )`
+        """
+        sampled_domain_losses = sampled_domain_losses.detach()
+
+        for loss, idx in zip(sampled_domain_losses, sampled_domain_idxes):
+            self.domain_weight[idx] *= (self.eta * loss).exp()

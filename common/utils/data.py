@@ -1,13 +1,11 @@
 import itertools
 import random
-from collections import defaultdict
 import numpy as np
 
 import torch
 from torch.utils.data import Sampler
 from torch.utils.data import DataLoader, Dataset
 from typing import TypeVar, Iterable, Dict, List
-
 
 T_co = TypeVar('T_co', covariant=True)
 T = TypeVar('T')
@@ -37,6 +35,7 @@ def send_to_device(tensor, device):
 
 class ForeverDataIterator:
     r"""A data iterator that will never stop producing data"""
+
     def __init__(self, data_loader: DataLoader, device=None):
         self.data_loader = data_loader
         self.iter = iter(self.data_loader)
@@ -58,69 +57,81 @@ class ForeverDataIterator:
         return len(self.data_loader)
 
 
-def no_index(a, b):
-    assert isinstance(a, list)
-    return [i for i, j in enumerate(a) if j != b]
-
-
 class RandomMultipleGallerySampler(Sampler):
-    def __init__(self, data_source, num_instances=4):
-        super(RandomMultipleGallerySampler, self).__init__(data_source)
-        self.data_source = data_source
-        self.index_pid = defaultdict(int)
-        self.pid_cam = defaultdict(list)
-        self.pid_index = defaultdict(list)
+    r"""Sampler from `In defense of the Triplet Loss for Person Re-Identification
+    (ICCV 2017) <https://arxiv.org/pdf/1703.07737v2.pdf>`_. Assume there are :math:`N` identities in the dataset, this
+    implementation simply samples :math:`K` images for every identity to form an iter of size :math:`N\times K`. During
+    training, we will call ``__iter__`` method of pytorch dataloader once we reach a ``StopIteration``, this guarantees
+    every image in the dataset will eventually be selected and we are not wasting any training data.
+
+    Args:
+        dataset(list): each element of this list is a tuple (image_path, person_id, camera_id)
+        num_instances(int, optional): number of images to sample for every identity (:math:`K` here)
+    """
+
+    def __init__(self, dataset, num_instances=4):
+        super(RandomMultipleGallerySampler, self).__init__(dataset)
+        self.dataset = dataset
         self.num_instances = num_instances
 
-        for index, (_, pid, cam) in enumerate(data_source):
-            self.index_pid[index] = pid
-            self.pid_cam[pid].append(cam)
-            self.pid_index[pid].append(index)
+        self.idx_to_pid = {}
+        self.cid_list_per_pid = {}
+        self.idx_list_per_pid = {}
 
-        self.pids = list(self.pid_index.keys())
-        self.num_samples = len(self.pids)
+        for idx, (_, pid, cid) in enumerate(dataset):
+            if pid not in self.cid_list_per_pid:
+                self.cid_list_per_pid[pid] = []
+                self.idx_list_per_pid[pid] = []
+
+            self.idx_to_pid[idx] = pid
+            self.cid_list_per_pid[pid].append(cid)
+            self.idx_list_per_pid[pid].append(idx)
+
+        self.pid_list = list(self.idx_list_per_pid.keys())
+        self.num_samples = len(self.pid_list)
 
     def __len__(self):
         return self.num_samples * self.num_instances
 
     def __iter__(self):
-        indices = torch.randperm(len(self.pids)).tolist()
-        ret = []
+        def select_idxes(element_list, target_element):
+            assert isinstance(element_list, list)
+            return [i for i, element in enumerate(element_list) if element != target_element]
 
-        for kid in indices:
-            i = random.choice(self.pid_index[self.pids[kid]])
+        pid_idxes = torch.randperm(len(self.pid_list)).tolist()
+        final_idxes = []
 
-            _, i_pid, i_cam = self.data_source[i]
+        for perm_id in pid_idxes:
+            i = random.choice(self.idx_list_per_pid[self.pid_list[perm_id]])
+            _, _, cid = self.dataset[i]
 
-            ret.append(i)
+            final_idxes.append(i)
 
-            pid_i = self.index_pid[i]
-            cams = self.pid_cam[pid_i]
-            index = self.pid_index[pid_i]
-            select_cams = no_index(cams, i_cam)
+            pid_i = self.idx_to_pid[i]
+            cid_list = self.cid_list_per_pid[pid_i]
+            idx_list = self.idx_list_per_pid[pid_i]
+            selected_cid_list = select_idxes(cid_list, cid)
 
-            if select_cams:
-
-                if len(select_cams) >= self.num_instances:
-                    cam_indexes = np.random.choice(select_cams, size=self.num_instances - 1, replace=False)
+            if selected_cid_list:
+                if len(selected_cid_list) >= self.num_instances:
+                    cid_idxes = np.random.choice(selected_cid_list, size=self.num_instances - 1, replace=False)
                 else:
-                    cam_indexes = np.random.choice(select_cams, size=self.num_instances - 1, replace=True)
-
-                for kk in cam_indexes:
-                    ret.append(index[kk])
-
+                    cid_idxes = np.random.choice(selected_cid_list, size=self.num_instances - 1, replace=True)
+                for cid_idx in cid_idxes:
+                    final_idxes.append(idx_list[cid_idx])
             else:
-                select_indexes = no_index(index, i)
-                if not select_indexes: continue
-                if len(select_indexes) >= self.num_instances:
-                    ind_indexes = np.random.choice(select_indexes, size=self.num_instances - 1, replace=False)
+                selected_idxes = select_idxes(idx_list, i)
+                if not selected_idxes:
+                    continue
+                if len(selected_idxes) >= self.num_instances:
+                    pid_idxes = np.random.choice(selected_idxes, size=self.num_instances - 1, replace=False)
                 else:
-                    ind_indexes = np.random.choice(select_indexes, size=self.num_instances - 1, replace=True)
+                    pid_idxes = np.random.choice(selected_idxes, size=self.num_instances - 1, replace=True)
 
-                for kk in ind_indexes:
-                    ret.append(index[kk])
+                for pid_idx in pid_idxes:
+                    final_idxes.append(idx_list[pid_idx])
 
-        return iter(ret)
+        return iter(final_idxes)
 
 
 class CombineDataset(Dataset[T_co]):
@@ -132,6 +143,7 @@ class CombineDataset(Dataset[T_co]):
     Arguments:
         datasets (sequence): List of datasets to be concatenated
     """
+
     def __init__(self, datasets: Iterable[Dataset]) -> None:
         super(CombineDataset, self).__init__()
         # Cannot verify that datasets is Sized

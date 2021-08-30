@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import higher
 
 sys.path.append('../../..')
-from dglib.generalization.mixstyle.sampler import RandomDomainSampler
+from dglib.modules.sampler import RandomDomainSampler
 from dglib.modules.classifier import ImageClassifier as Classifier
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
@@ -54,19 +54,19 @@ def main(args: argparse.Namespace):
     train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
                                                    split='train', download=True, transform=train_transform,
                                                    seed=args.seed)
-    num_select_domains = args.num_support_domains + args.num_query_domains
-    sampler = RandomDomainSampler(train_dataset, args.batch_size, num_select_domains=num_select_domains)
+    n_domains_per_batch = args.n_support_domains + args.n_query_domains
+    sampler = RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=n_domains_per_batch)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
                               sampler=sampler, drop_last=True)
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
                                        download=True, transform=val_transform, seed=args.seed)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='test',
                                         download=True, transform=val_transform, seed=args.seed)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    print("Source Train:", len(train_dataset))
-    print('Source Val:', len(val_dataset))
-    print("Target:", len(test_dataset))
+    print("train_dataset_size: ", len(train_dataset))
+    print('val_dataset_size: ', len(val_dataset))
+    print("test_dataset_size: ", len(test_dataset))
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -94,10 +94,10 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, lr_scheduler, epoch, num_select_domains, args)
+        train(train_iter, classifier, optimizer, lr_scheduler, epoch, n_domains_per_batch, args)
 
         # evaluate on validation set
-        print("Validation on source domain...")
+        print("Evaluate on validation set...")
         acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
@@ -107,30 +107,31 @@ def main(args: argparse.Namespace):
         best_val_acc1 = max(acc1, best_val_acc1)
 
         # evaluate on test set
-        print("Test on target domain...")
+        print("Evaluate on test set...")
         best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
     acc1 = utils.validate(test_loader, classifier, args, device)
-    print("test acc on target = {}".format(acc1))
-    print("oracle acc on target = {}".format(best_test_acc1))
+    print("test acc on test set = {}".format(acc1))
+    print("oracle acc on test set = {}".format(best_test_acc1))
     logger.close()
 
 
-def random_split(x_list, labels_list, num_select_domains, num_support_domains):
-    assert num_support_domains < num_select_domains
+def random_split(x_list, labels_list, n_domains_per_batch, n_support_domains):
+    assert n_support_domains < n_domains_per_batch
 
-    support_idxes = random.sample(range(num_select_domains), num_support_domains)
-    support_domain_list = [(x_list[idx], labels_list[idx]) for idx in range(num_select_domains) if idx in support_idxes]
-    query_domain_list = [(x_list[idx], labels_list[idx]) for idx in range(num_select_domains) if
-                         idx not in support_idxes]
+    support_domain_idxes = random.sample(range(n_domains_per_batch), n_support_domains)
+    support_domain_list = [(x_list[idx], labels_list[idx]) for idx in range(n_domains_per_batch) if
+                           idx in support_domain_idxes]
+    query_domain_list = [(x_list[idx], labels_list[idx]) for idx in range(n_domains_per_batch) if
+                         idx not in support_domain_idxes]
 
     return support_domain_list, query_domain_list
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR, epoch: int,
-          num_select_domains: int, args: argparse.Namespace):
+          n_domains_per_batch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -146,7 +147,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x, labels = next(train_iter)
+        x, labels, _ = next(train_iter)
         x = x.to(device)
         labels = labels.to(device)
 
@@ -154,10 +155,10 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
         data_time.update(time.time() - end)
 
         # split into support domain and query domain
-        x_list = x.chunk(num_select_domains, dim=0)
-        labels_list = labels.chunk(num_select_domains, dim=0)
-        support_domain_list, query_domain_list = random_split(x_list, labels_list, num_select_domains,
-                                                              args.num_support_domains)
+        x_list = x.chunk(n_domains_per_batch, dim=0)
+        labels_list = labels.chunk(n_domains_per_batch, dim=0)
+        support_domain_list, query_domain_list = random_split(x_list, labels_list, n_domains_per_batch,
+                                                              args.n_support_domains)
         # clear grad
         optimizer.zero_grad()
 
@@ -169,7 +170,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
                 for (x_s, labels_s) in support_domain_list:
                     y_s, _ = inner_model(x_s)
                     # normalize loss by support domain num
-                    loss_inner += F.cross_entropy(y_s, labels_s) / args.num_support_domains
+                    loss_inner += F.cross_entropy(y_s, labels_s) / args.n_support_domains
 
                 inner_optimizer.step(loss_inner)
 
@@ -181,14 +182,14 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
             for (x_s, labels_s) in support_domain_list:
                 y_s, _ = model(x_s)
                 # normalize loss by support domain num
-                loss_outer += F.cross_entropy(y_s, labels_s) / args.num_support_domains
+                loss_outer += F.cross_entropy(y_s, labels_s) / args.n_support_domains
 
             # loss on query domains
             for (x_q, labels_q) in query_domain_list:
                 y_q, _ = inner_model(x_q)
                 # normalize loss by query domain num
-                loss_outer += F.cross_entropy(y_q, labels_q) * args.trade_off / args.num_query_domains
-                cls_acc += accuracy(y_q, labels_q)[0] / args.num_query_domains
+                loss_outer += F.cross_entropy(y_q, labels_q) * args.trade_off / args.n_query_domains
+                cls_acc += accuracy(y_q, labels_q)[0] / args.n_query_domains
 
         # update statistics
         losses.update(loss_outer.item(), args.batch_size)
@@ -232,9 +233,9 @@ if __name__ == '__main__':
     parser.add_argument('--freeze-bn', action='store_true', help='whether freeze all bn layers')
     parser.add_argument('--dropout-p', type=float, default=0.1, help='only activated when freeze-bn is True')
     # training parameters
-    parser.add_argument('--num-support-domains', type=int, default=1,
+    parser.add_argument('--n-support-domains', type=int, default=1,
                         help='Number of support domains sampled in each iteration')
-    parser.add_argument('--num-query-domains', type=int, default=2,
+    parser.add_argument('--n-query-domains', type=int, default=2,
                         help='Number of query domains in each iteration')
     parser.add_argument('--trade-off', type=float, default=1,
                         help='hyper parameter beta')

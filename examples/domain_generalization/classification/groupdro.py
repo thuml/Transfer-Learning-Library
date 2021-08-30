@@ -15,7 +15,7 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dglib.generalization.groupdro import AutomaticUpdateDomainWeightModule
-from dglib.modules.sampler import DefaultSampler
+from dglib.modules.sampler import RandomDomainSampler
 from dglib.modules.classifier import ImageClassifier as Classifier
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
@@ -54,18 +54,18 @@ def main(args: argparse.Namespace):
     train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
                                                    split='train', download=True, transform=train_transform,
                                                    seed=args.seed)
-    sampler = DefaultSampler(train_dataset, args.batch_size)
+    sampler = RandomDomainSampler(train_dataset, args.batch_size, args.n_domains_per_batch)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
                               sampler=sampler, drop_last=True)
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
                                        download=True, transform=val_transform, seed=args.seed)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='all',
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split='test',
                                         download=True, transform=val_transform, seed=args.seed)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
-    print("Source Train:", len(train_dataset))
-    print('Source Val:', len(val_dataset))
-    print("Target:", len(test_dataset))
+    print("train_dataset_size: ", len(train_dataset))
+    print('val_dataset_size: ', len(val_dataset))
+    print("test_dataset_size: ", len(test_dataset))
     train_iter = ForeverDataIterator(train_loader)
 
     # create model
@@ -74,13 +74,13 @@ def main(args: argparse.Namespace):
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
                             finetune=args.finetune, pool_layer=pool_layer).to(device)
-    num_domains = len(args.sources)
+    num_all_domains = len(train_dataset.datasets)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
                     nesterov=True)
     lr_scheduler = CosineAnnealingLR(optimizer, args.epochs * args.iters_per_epoch)
-    domain_weight_module = AutomaticUpdateDomainWeightModule(num_domains, args.eta, device)
+    domain_weight_module = AutomaticUpdateDomainWeightModule(num_all_domains, args.eta, device)
 
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
@@ -95,10 +95,11 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, lr_scheduler, domain_weight_module, num_domains, epoch, args)
+        train(train_iter, classifier, optimizer, lr_scheduler, domain_weight_module, args.n_domains_per_batch, epoch,
+              args)
 
         # evaluate on validation set
-        print("Validation on source domain...")
+        print("Evaluate on validation set...")
         acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
@@ -108,19 +109,19 @@ def main(args: argparse.Namespace):
         best_val_acc1 = max(acc1, best_val_acc1)
 
         # evaluate on test set
-        print("Test on target domain...")
+        print("Evaluate on test set...")
         best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
 
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
     acc1 = utils.validate(test_loader, classifier, args, device)
-    print("test acc on target = {}".format(acc1))
-    print("oracle acc on target = {}".format(best_test_acc1))
+    print("test acc on test set = {}".format(acc1))
+    print("oracle acc on test set = {}".format(best_test_acc1))
     logger.close()
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR,
-          domain_weight_module: AutomaticUpdateDomainWeightModule, num_domains: int, epoch: int,
+          domain_weight_module: AutomaticUpdateDomainWeightModule, n_domains_per_batch: int, epoch: int,
           args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
@@ -137,24 +138,29 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_all, labels_all = next(train_iter)
+        x_all, labels_all, domain_labels = next(train_iter)
         x_all = x_all.to(device)
         labels_all = labels_all.to(device)
+        domain_labels = domain_labels.to(device)
+
+        # get selected domain idxes
+        domain_labels = domain_labels.chunk(n_domains_per_batch, dim=0)
+        sampled_domain_idxes = [domain_labels[i][0].item() for i in range(n_domains_per_batch)]
 
         # measure data loading time
         data_time.update(time.time() - end)
 
-        loss_per_domain = torch.zeros(num_domains).to(device)
+        loss_per_domain = torch.zeros(n_domains_per_batch).to(device)
         cls_acc = 0
         for domain_id, (x_per_domain, labels_per_domain) in enumerate(
-                zip(x_all.chunk(num_domains, dim=0), labels_all.chunk(num_domains, dim=0))):
+                zip(x_all.chunk(n_domains_per_batch, dim=0), labels_all.chunk(n_domains_per_batch, dim=0))):
             y_per_domain, _ = model(x_per_domain)
             loss_per_domain[domain_id] = F.cross_entropy(y_per_domain, labels_per_domain)
-            cls_acc += accuracy(y_per_domain, labels_per_domain)[0] / num_domains
+            cls_acc += accuracy(y_per_domain, labels_per_domain)[0] / n_domains_per_batch
 
         # update domain weight
-        domain_weight_module.update(loss_per_domain)
-        domain_weight = domain_weight_module.get_domain_weight()
+        domain_weight_module.update(loss_per_domain, sampled_domain_idxes)
+        domain_weight = domain_weight_module.get_domain_weight(sampled_domain_idxes)
 
         # weighted cls loss
         loss = (loss_per_domain * domain_weight).sum()
@@ -177,7 +183,7 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_sche
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Baseline for Domain Generalization')
+    parser = argparse.ArgumentParser(description='GroupDRO for Domain Generalization')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -206,6 +212,8 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 36)')
+    parser.add_argument('--n-domains-per-batch', default=3, type=int,
+                        help='number of domains in each mini-batch')
     parser.add_argument('--lr', '--learning-rate', default=5e-4, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',

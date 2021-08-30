@@ -1,4 +1,3 @@
-from typing import Tuple
 import sys
 import time
 import timm
@@ -8,15 +7,14 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 import numpy as np
 from torch.utils.data.dataset import Subset, ConcatDataset
+import wilds
 
 sys.path.append('../../..')
 import common.vision.datasets as datasets
 import common.vision.models as models
 from common.vision.transforms import ResizeImage
-from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
-
-supported_dataset = ['PACS', 'OfficeHome', 'DomainNet']
 
 
 def get_model_names():
@@ -47,48 +45,122 @@ def get_dataset_names():
     return sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
+    ) + wilds.supported_datasets
 
 
-def get_dataset(dataset_name, root, task_list, split='train', download=True, transform=None, seed=0) \
-        -> Tuple[ConcatDataset, int]:
-    assert dataset_name in supported_dataset
-    assert split in ['train', 'val', 'all']
-    dataset = datasets.__dict__[dataset_name]
+class ConcatDatasetWithDomainLabel(ConcatDataset):
+    """ConcatDataset with domain label"""
 
-    train_split_list = []
-    val_split_list = []
-    split_ratio = 0.8
-    num_classes = 0
+    def __init__(self, *args, **kwargs):
+        super(ConcatDatasetWithDomainLabel, self).__init__(*args, **kwargs)
+        self.index_to_domain_id = {}
+        domain_id = 0
+        start = 0
+        for end in self.cumulative_sizes:
+            for idx in range(start, end):
+                self.index_to_domain_id[idx] = domain_id
+            start = end
+            domain_id += 1
 
-    for task in task_list:
-        if dataset_name == 'PACS':
-            domain = dataset(root=root, task=task, split='all', download=download, transform=transform)
-            num_classes = domain.num_classes
-        elif dataset_name == 'OfficeHome':
-            domain = dataset(root=root, task=task, download=download, transform=transform)
-            num_classes = domain.num_classes
-        elif dataset_name == 'DomainNet':
-            train_split = dataset(root=root, task=task, split='train', download=download, transform=transform)
-            test_split = dataset(root=root, task=task, split='test', download=download, transform=transform)
-            num_classes = train_split.num_classes
-            domain = ConcatDataset([train_split, test_split])
+    def __getitem__(self, index):
+        img, target = super(ConcatDatasetWithDomainLabel, self).__getitem__(index)
+        domain_id = self.index_to_domain_id[index]
+        return img, target, domain_id
 
-        train_split, val_split = split_dataset(domain, int(len(domain) * split_ratio), seed)
 
-        train_split_list.append(train_split)
-        val_split_list.append(val_split)
+def convert_from_wilds_dataset(dataset_name, wild_dataset):
+    metadata_array = wild_dataset.metadata_array
+    sample_idxes_per_domain = {}
+    for idx, metadata in enumerate(metadata_array):
+        if dataset_name == 'iwildcam':
+            # In iwildcam dataset, domain id is specified by location
+            domain = metadata[0].item()
+        elif dataset_name == 'camelyon17':
+            # In camelyon17 dataset, domain id is specified by hospital
+            domain = metadata[0].item()
+        elif dataset_name == 'fmow':
+            # In fmow dataset, domain id is specified by (region, year) tuple
+            domain = (metadata[0].item(), metadata[1].item())
 
-    train_dataset = ConcatDataset(train_split_list)
-    val_dataset = ConcatDataset(val_split_list)
-    all_dataset = ConcatDataset([train_dataset, val_dataset])
+        if domain not in sample_idxes_per_domain:
+            sample_idxes_per_domain[domain] = []
+        sample_idxes_per_domain[domain].append(idx)
 
-    dataset_dict = {
-        'train': train_dataset,
-        'val': val_dataset,
-        'all': all_dataset
-    }
-    return dataset_dict[split], num_classes
+    class Dataset:
+        def __init__(self):
+            self.dataset = wild_dataset
+
+        def __getitem__(self, idx):
+            x, y, metadata = self.dataset[idx]
+            return x, y
+
+        def __len__(self):
+            return len(self.dataset)
+
+    dataset = Dataset()
+    concat_dataset = ConcatDatasetWithDomainLabel(
+        [Subset(dataset, sample_idxes_per_domain[domain]) for domain in sample_idxes_per_domain])
+    return concat_dataset
+
+
+def get_dataset(dataset_name, root, task_list, split='train', download=True, transform=None, seed=0):
+    assert split in ['train', 'val', 'test']
+    if dataset_name in datasets.__dict__:
+        # load datasets from common.vision.datasets
+        # currently only PACS, OfficeHome and DomainNet are supported
+        supported_dataset = ['PACS', 'OfficeHome', 'DomainNet']
+        assert dataset_name in supported_dataset
+
+        dataset = datasets.__dict__[dataset_name]
+
+        train_split_list = []
+        val_split_list = []
+        test_split_list = []
+        # we follow DomainBed and split each dataset randomly into two parts, with 80% samples and 20% samples
+        # respectively, the former (larger) will be used as training set, and the latter will be used as validation set.
+        split_ratio = 0.8
+        num_classes = 0
+
+        # under domain generalization setting, we use all samples in target domain as test set
+        for task in task_list:
+            if dataset_name == 'PACS':
+                all_split = dataset(root=root, task=task, split='all', download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == 'OfficeHome':
+                all_split = dataset(root=root, task=task, download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == 'DomainNet':
+                train_split = dataset(root=root, task=task, split='train', download=download, transform=transform)
+                test_split = dataset(root=root, task=task, split='test', download=download, transform=transform)
+                num_classes = train_split.num_classes
+                all_split = ConcatDataset([train_split, test_split])
+
+            train_split, val_split = split_dataset(all_split, int(len(all_split) * split_ratio), seed)
+
+            train_split_list.append(train_split)
+            val_split_list.append(val_split)
+            test_split_list.append(all_split)
+
+        train_dataset = ConcatDatasetWithDomainLabel(train_split_list)
+        val_dataset = ConcatDatasetWithDomainLabel(val_split_list)
+        test_dataset = ConcatDatasetWithDomainLabel(test_split_list)
+
+        dataset_dict = {
+            'train': train_dataset,
+            'val': val_dataset,
+            'test': test_dataset
+        }
+        return dataset_dict[split], num_classes
+    else:
+        # load datasets from wilds
+        # currently only iwildcam, camelyon17 and fmow are supported
+        supported_dataset = ['iwildcam', 'camelyon17', 'fmow']
+        assert dataset_name in supported_dataset
+
+        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
+        num_classes = dataset.n_classes
+        return convert_from_wilds_dataset(dataset_name,
+                                          dataset.get_subset(split=split, transform=transform)), num_classes
 
 
 def split_dataset(dataset, n, seed=0):
@@ -109,10 +181,9 @@ def validate(val_loader, model, args, device) -> float:
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
     progress = ProgressMeter(
         len(val_loader),
-        [batch_time, losses, top1, top5],
+        [batch_time, losses, top1],
         prefix='Test: ')
 
     # switch to evaluate mode
@@ -120,7 +191,7 @@ def validate(val_loader, model, args, device) -> float:
 
     with torch.no_grad():
         end = time.time()
-        for i, (images, target) in enumerate(val_loader):
+        for i, (images, target, _) in enumerate(val_loader):
             images = images.to(device)
             target = target.to(device)
 
@@ -129,10 +200,9 @@ def validate(val_loader, model, args, device) -> float:
             loss = F.cross_entropy(output, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            acc1 = accuracy(output, target)[0]
             losses.update(loss.item(), images.size(0))
             top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -141,8 +211,7 @@ def validate(val_loader, model, args, device) -> float:
             if i % args.print_freq == 0:
                 progress.display(i)
 
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
+        print(' * Acc@1 {top1.avg:.3f} '.format(top1=top1))
 
     return top1.avg
 
@@ -151,9 +220,11 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
                         random_gray_scale=True):
     """
     resizing mode:
-        - default: random resized crop with scale factor(0.7, 1.0) size 224;
-        - cen.crop: resize the image to 256 and take the center crop of size 224;
+        - default: random resized crop with scale factor(0.7, 1.0) and size 224;
+        - cen.crop: take the center crop of 224;
+        - res.|cen.crop: resize the image to 256 and take the center crop of size 224;
         - res: resize the image to 224;
+        - res2x: resize the image to 448;
         - res.|crop: resize the image to 256 and take a random crop of size 224;
         - res.sma|crop: resize the image keeping its aspect ratio such that the
             smaller side is 256, then take a random crop of size 224;
@@ -163,12 +234,16 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
     if resizing == 'default':
         transform = T.RandomResizedCrop(224, scale=(0.7, 1.0))
     elif resizing == 'cen.crop':
+        transform = T.CenterCrop(224)
+    elif resizing == 'res.|cen.crop':
         transform = T.Compose([
             ResizeImage(256),
             T.CenterCrop(224)
         ])
-    elif resizing == 'res.':
-        transform = T.Resize(224)
+    elif resizing == 'res':
+        transform = ResizeImage(224)
+    elif resizing == 'res2x':
+        transform = ResizeImage(448)
     elif resizing == 'res.|crop':
         transform = T.Compose([
             T.Resize((256, 256)),
@@ -207,11 +282,14 @@ def get_val_transform(resizing='default'):
     """
     resizing mode:
         - default: resize the image to 224;
-        - cen.crop: resize the image to 256 and take the center crop of size 224;
+        - res2x: resize the image to 448;
+        - res.|cen.crop: resize the image to 256 and take the center crop of size 224;
     """
     if resizing == 'default':
         transform = ResizeImage(224)
-    elif resizing == 'cen.crop':
+    elif resizing == 'res2x':
+        transform = ResizeImage(448)
+    elif resizing == 'res.|cen.crop':
         transform = T.Compose([
             ResizeImage(256),
             T.CenterCrop(224),

@@ -8,18 +8,17 @@ import os.path as osp
 
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.nn import DataParallel
 import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 
 sys.path.append('../../..')
-from common.vision.models.reid.loss import CrossEntropyLabelSmooth, SoftTripletLoss
+from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
 from common.vision.models.reid.identifier import ReIdentifier
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-import common.vision.models.reid as models
 from common.utils.scheduler import WarmupMultiStepLR
 from common.utils.metric.reid import validate
 from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
@@ -28,6 +27,9 @@ from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+sys.path.append('.')
+import utils
 
 
 def main(args: argparse.Namespace):
@@ -48,20 +50,13 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = T.Compose([
-        T.Resize((args.height, args.width), interpolation=3),
-        T.RandomHorizontalFlip(p=0.5),
-        T.Pad(10),
-        T.RandomCrop((args.height, args.width)),
-        T.ToTensor(),
-        normalize
-    ])
-    val_transform = T.Compose([
-        T.Resize((args.height, args.width), interpolation=3),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.height, args.width, args.train_resizing,
+                                                random_horizontal_flip=True, random_color_jitter=False,
+                                                random_gray_scale=False, random_erasing=False)
+    val_transform = utils.get_val_transform(args.height, args.width)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
     working_dir = osp.dirname(osp.abspath(__file__))
     root = osp.join(working_dir, args.root)
 
@@ -94,15 +89,16 @@ def main(args: argparse.Namespace):
 
     # create model
     num_classes = source_dataset.num_train_pids
-    backbone = models.__dict__[args.arch](pretrained=True)
-    model = ReIdentifier(backbone, num_classes, finetune=args.finetune).to(device)
-
-    optimizer = Adam(model.get_parameters(base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
-    lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
-                                     warmup_iters=args.warmup_step)
-
-    # parallel
+    backbone = utils.get_model(args.arch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = ReIdentifier(backbone, num_classes, finetune=args.finetune, pool_layer=pool_layer).to(device)
     model = DataParallel(model)
+
+    # define optimizer and lr scheduler
+    optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
+                     weight_decay=args.weight_decay)
+    lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
+                                     warmup_steps=args.warmup_steps)
 
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
@@ -116,7 +112,7 @@ def main(args: argparse.Namespace):
         return
 
     # define loss function
-    criterion_ce = CrossEntropyLabelSmooth(num_classes).to(device)
+    criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
     criterion_triplet = SoftTripletLoss(margin=args.margin).to(device)
 
     # start training
@@ -162,8 +158,8 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model,
-          criterion_ce: CrossEntropyLabelSmooth, criterion_triplet: SoftTripletLoss, optimizer: Adam, epoch: int,
-          args: argparse.Namespace):
+          criterion_ce: CrossEntropyLossWithLabelSmooth, criterion_triplet: SoftTripletLoss, optimizer: Adam,
+          epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses_ce = AverageMeter('CeLoss', ':3.2f')
@@ -222,27 +218,24 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
     dataset_names = sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description="Baseline for Domain Adaptation ReID")
+    parser = argparse.ArgumentParser(description="Baseline for Domain Adaptive ReID")
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
+    parser.add_argument('--train-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='reid_resnet50',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: reid_resnet50)')
+    parser.add_argument('--no-pool', action='store_true', help='no pool layer after the feature extractor.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
@@ -262,7 +255,7 @@ if __name__ == '__main__':
                         help="initial learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=80)
-    parser.add_argument('--warmup-step', type=int, default=10)
+    parser.add_argument('--warmup-steps', type=int, default=10, help='number of warm-up steps')
     parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
                         help='milestones for the learning rate decay')
     parser.add_argument('--eval-step', type=int, default=40)
@@ -272,8 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
-                        help="When phase is 'test', only test the model."
-                             "When phase is 'analysis', only analysis the model.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
+                        help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     main(args)

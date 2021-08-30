@@ -12,13 +12,12 @@ from torch.nn import DataParallel
 import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 
 sys.path.append('../../..')
 from dglib.generalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
 import dglib.generalization.mixstyle.models as models
 from common.vision.models.reid.identifier import ReIdentifier
-from common.vision.models.reid.loss import CrossEntropyLabelSmooth, SoftTripletLoss
+from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from common.vision.models.reid.resnet import ReidResNet
@@ -28,6 +27,9 @@ from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+
+sys.path.append('.')
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -50,28 +52,21 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    train_transform = T.Compose([
-        T.Resize((args.height, args.width), interpolation=3),
-        T.RandomHorizontalFlip(p=0.5),
-        T.Pad(10),
-        T.RandomCrop((args.height, args.width)),
-        T.ColorJitter(brightness=0.2, contrast=0.15, saturation=0, hue=0),
-        T.ToTensor(),
-        normalize
-    ])
-    val_transform = T.Compose([
-        T.Resize((args.height, args.width), interpolation=3),
-        T.ToTensor(),
-        normalize
-    ])
+    train_transform = utils.get_train_transform(args.height, args.width, args.train_resizing,
+                                                random_horizontal_flip=True,
+                                                random_color_jitter=False,
+                                                random_gray_scale=False)
+    val_transform = utils.get_val_transform(args.height, args.width)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
     working_dir = osp.dirname(osp.abspath(__file__))
     root = osp.join(working_dir, args.root)
 
     # source dataset
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
     source_train_set = sorted(source_dataset.train)
-    sampler = RandomDomainMultiInstanceSampler(source_train_set, batch_size=args.batch_size, num_select_domains=2,
+    sampler = RandomDomainMultiInstanceSampler(source_train_set, batch_size=args.batch_size, n_domains_per_batch=2,
                                                num_instances=args.num_instances)
     train_loader = DataLoader(
         convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
@@ -96,12 +91,13 @@ def main(args: argparse.Namespace):
     backbone = models.__dict__[args.arch](mix_layers=args.mix_layers, mix_p=args.mix_p, mix_alpha=args.mix_alpha,
                                           resnet_class=ReidResNet, pretrained=True)
     model = ReIdentifier(backbone, num_classes, finetune=args.finetune).to(device)
+    model = DataParallel(model)
 
     # define optimizer and learning rate scheduler
-    optimizer = Adam(model.get_parameters(base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
+    optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
+                     weight_decay=args.weight_decay)
     lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
-                                     warmup_iters=args.warmup_step)
-    model = DataParallel(model)
+                                     warmup_steps=args.warmup_steps)
 
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
@@ -115,7 +111,7 @@ def main(args: argparse.Namespace):
         return
 
     # define loss function
-    criterion_ce = CrossEntropyLabelSmooth(num_classes).to(device)
+    criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
     criterion_triplet = SoftTripletLoss(margin=args.margin).to(device)
 
     # start training
@@ -160,7 +156,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model, criterion_ce: CrossEntropyLabelSmooth,
+def train(train_iter: ForeverDataIterator, model, criterion_ce: CrossEntropyLossWithLabelSmooth,
           criterion_triplet: SoftTripletLoss, optimizer: Adam, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
@@ -231,6 +227,7 @@ if __name__ == '__main__':
                         help='root path of dataset')
     parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
+    parser.add_argument('--train-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=architecture_names,
@@ -259,7 +256,7 @@ if __name__ == '__main__':
                         help="learning rate of new parameters, for pretrained ")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=80)
-    parser.add_argument('--warmup-step', type=int, default=10)
+    parser.add_argument('--warmup-steps', type=int, default=10, help='number of warm-up steps')
     parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
                         help='milestones for the learning rate decay')
     parser.add_argument('--eval-step', type=int, default=40)
@@ -269,8 +266,7 @@ if __name__ == '__main__':
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
-                        help="When phase is 'test', only test the model."
-                             "When phase is 'analysis', only analysis the model.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
+                        help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     main(args)

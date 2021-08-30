@@ -13,14 +13,15 @@ from torch.nn import DataParallel
 import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import normalize as sklearn_normalize
 
 sys.path.append('../../..')
-from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
-from common.vision.models.reid.identifier import ReIdentifier
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-from common.utils.scheduler import WarmupMultiStepLR
-from common.utils.metric.reid import validate
+from common.vision.models.reid.identifier import ReIdentifier
+from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
+from common.utils.metric.reid import extract_reid_feature, validate
 from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -51,9 +52,8 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     train_transform = utils.get_train_transform(args.height, args.width, args.train_resizing,
-                                                random_horizontal_flip=True,
-                                                random_color_jitter=False,
-                                                random_gray_scale=False)
+                                                random_horizontal_flip=True, random_color_jitter=False,
+                                                random_gray_scale=False, random_erasing=True)
     val_transform = utils.get_val_transform(args.height, args.width)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
@@ -61,22 +61,11 @@ def main(args: argparse.Namespace):
     working_dir = osp.dirname(osp.abspath(__file__))
     root = osp.join(working_dir, args.root)
 
-    # source dataset
-    source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
-    sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
-    train_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
-        batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
-    train_iter = ForeverDataIterator(train_loader)
-    val_loader = DataLoader(
-        convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
-                                   root=source_dataset.images_dir,
-                                   transform=val_transform),
-        batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
-
     # target dataset
     target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
+    cluster_loader = DataLoader(
+        convert_to_pytorch_dataset(target_dataset.train, root=target_dataset.images_dir, transform=val_transform),
+        batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
     test_loader = DataLoader(
         convert_to_pytorch_dataset(list(set(target_dataset.query) | set(target_dataset.gallery)),
                                    root=target_dataset.images_dir,
@@ -84,24 +73,19 @@ def main(args: argparse.Namespace):
         batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
     # create model
-    num_classes = source_dataset.num_train_pids
+    num_classes = args.num_clusters
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
     model = ReIdentifier(backbone, num_classes, finetune=args.finetune, pool_layer=pool_layer).to(device)
     model = DataParallel(model)
 
-    # define optimizer and learning rate scheduler
-    optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
-                     weight_decay=args.weight_decay)
-    lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
-                                     warmup_steps=args.warmup_steps)
+    # load pretrained weights
+    pretrained_model = torch.load(args.pretrained_model_path)
+    utils.copy_state_dict(model, pretrained_model)
 
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         model.load_state_dict(checkpoint)
-        print("Test on source domain:")
-        validate(val_loader, model, source_dataset.query, source_dataset.gallery, device, cmc_flag=True,
-                 rerank=args.rerank)
         print("Test on target domain:")
         validate(test_loader, model, target_dataset.query, target_dataset.gallery, device, cmc_flag=True,
                  rerank=args.rerank)
@@ -112,35 +96,30 @@ def main(args: argparse.Namespace):
     criterion_triplet = SoftTripletLoss(margin=args.margin).to(device)
 
     # start training
-    best_val_mAP = 0.
     best_test_mAP = 0.
     for epoch in range(args.epochs):
-        # print learning rate
-        print(lr_scheduler.get_lr())
+        # run cluster algorithm
+        cluster_labels, cluster_centers = run_cluster_algorithm(cluster_loader, model, args)
+
+        # generate pseudo labels
+        train_target_iter = generate_pseudo_labels(target_dataset, cluster_labels, train_transform)
+
+        # reinitialize classifier head and define optimizer
+        model.module.head.weight.data.copy_(cluster_centers)
+        optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
+                         weight_decay=args.weight_decay)
 
         # train for one epoch
-        train(train_iter, model, criterion_ce, criterion_triplet, optimizer, epoch, args)
-
-        # update learning rate
-        lr_scheduler.step()
+        train(train_target_iter, model, optimizer, criterion_ce, criterion_triplet, epoch, args)
 
         if (epoch + 1) % args.eval_step == 0 or (epoch == args.epochs - 1):
-
-            # evaluate on validation set
-            print("Validation on source domain...")
-            _, val_mAP = validate(val_loader, model, source_dataset.query, source_dataset.gallery, device,
-                                  cmc_flag=True)
-
             # remember best mAP and save checkpoint
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
-            if val_mAP > best_val_mAP:
-                shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-            best_val_mAP = max(val_mAP, best_val_mAP)
-
-            # evaluate on test set
             print("Test on target domain...")
             _, test_mAP = validate(test_loader, model, target_dataset.query, target_dataset.gallery, device,
                                    cmc_flag=True, rerank=args.rerank)
+            if test_mAP > best_test_mAP:
+                shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
             best_test_mAP = max(test_mAP, best_test_mAP)
 
     # evaluate on test set
@@ -149,12 +128,44 @@ def main(args: argparse.Namespace):
     _, test_mAP = validate(test_loader, model, target_dataset.query, target_dataset.gallery, device,
                            cmc_flag=True, rerank=args.rerank)
     print("test mAP on target = {}".format(test_mAP))
-    print("oracle mAP on target = {}".format(best_test_mAP))
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model, criterion_ce: CrossEntropyLossWithLabelSmooth,
-          criterion_triplet: SoftTripletLoss, optimizer: Adam, epoch: int, args: argparse.Namespace):
+def run_cluster_algorithm(cluster_loader: DataLoader, model: DataParallel, args: argparse.Namespace):
+    print('Clustering into {} classes'.format(args.num_clusters))
+    feature_dict = extract_reid_feature(cluster_loader, model, device, normalize=True)
+    feature = torch.stack(list(feature_dict.values())).cpu().numpy()
+    km = KMeans(n_clusters=args.num_clusters, random_state=args.seed).fit(feature)
+    cluster_labels = km.labels_
+    cluster_centers = km.cluster_centers_
+    print('Clustering finished')
+
+    # normalize cluster centers and convert to pytorch tensor
+    cluster_centers = torch.from_numpy(sklearn_normalize(cluster_centers, axis=1)).float().to(device)
+
+    return cluster_labels, cluster_centers
+
+
+def generate_pseudo_labels(target_dataset, cluster_labels, train_transform) -> ForeverDataIterator:
+    for i in range(len(target_dataset.train)):
+        target_dataset.train[i] = list(target_dataset.train[i])
+        target_dataset.train[i][1] = int(cluster_labels[i])
+        target_dataset.train[i] = tuple(target_dataset.train[i])
+
+    # get train target iter with pseudo labels
+    target_train_set = sorted(target_dataset.train)
+    sampler = RandomMultipleGallerySampler(target_train_set, args.num_instances)
+    train_target_loader = DataLoader(
+        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
+        batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
+    train_target_iter = ForeverDataIterator(train_target_loader)
+
+    return train_target_iter
+
+
+def train(train_target_iter: ForeverDataIterator, model, optimizer, criterion_ce: CrossEntropyLossWithLabelSmooth,
+          criterion_triplet: SoftTripletLoss, epoch: int, args: argparse.Namespace):
+    # train with pseudo labels
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses_ce = AverageMeter('CeLoss', ':3.2f')
@@ -173,27 +184,28 @@ def train(train_iter: ForeverDataIterator, model, criterion_ce: CrossEntropyLoss
     end = time.time()
 
     for i in range(args.iters_per_epoch):
-        x, _, labels, _ = next(train_iter)
-        x = x.to(device)
-        labels = labels.to(device)
+        x_t, _, labels_t, _ = next(train_target_iter)
+
+        x_t = x_t.to(device)
+        labels_t = labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        y, f = model(x)
+        y_t, f_t = model(x_t)
 
         # cross entropy loss
-        loss_ce = criterion_ce(y, labels)
+        loss_ce = criterion_ce(y_t, labels_t)
         # triplet loss
-        loss_triplet = criterion_triplet(f, f, labels)
+        loss_triplet = criterion_triplet(f_t, f_t, labels_t)
         loss = loss_ce + loss_triplet * args.trade_off
 
-        cls_acc = accuracy(y, labels)[0]
-        losses_ce.update(loss_ce.item(), x.size(0))
-        losses_triplet.update(loss_triplet.item(), x.size(0))
-        losses.update(loss.item(), x.size(0))
-        cls_accs.update(cls_acc.item(), x.size(0))
+        cls_acc = accuracy(y_t, labels_t)[0]
+        losses_ce.update(loss_ce.item(), x_t.size(0))
+        losses_triplet.update(loss_triplet.item(), x_t.size(0))
+        losses.update(loss.item(), x_t.size(0))
+        cls_accs.update(cls_acc.item(), x_t.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -213,11 +225,10 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description="Baseline for Domain Generalization ReID")
+    parser = argparse.ArgumentParser(description="Cluster Baseline for Domain Adaptive ReID")
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
     parser.add_argument('--train-resizing', type=str, default='default')
     # model parameters
@@ -226,15 +237,17 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: reid_resnet50)')
+    parser.add_argument('--num-clusters', type=int, default=500)
     parser.add_argument('--no-pool', action='store_true', help='no pool layer after the feature extractor.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
+    parser.add_argument('--pretrained-model-path', type=str, help='path to pretrained (source-only) model')
     parser.add_argument('--trade-off', type=float, default=1,
                         help='trade-off hyper parameter between cross entropy loss and triplet loss')
     parser.add_argument('--margin', type=float, default=0.0, help='margin for the triplet loss with batch hard')
     parser.add_argument('-j', '--workers', type=int, default=4)
-    parser.add_argument('-b', '--batch-size', type=int, default=16)
+    parser.add_argument('-b', '--batch-size', type=int, default=64)
     parser.add_argument('--height', type=int, default=256, help="input height")
     parser.add_argument('--width', type=int, default=128, help="input width")
     parser.add_argument('--num-instances', type=int, default=4,
@@ -243,13 +256,10 @@ if __name__ == '__main__':
                              "each identity has num_instances instances, "
                              "default: 4")
     parser.add_argument('--lr', type=float, default=0.00035,
-                        help="initial learning rate")
+                        help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
-    parser.add_argument('--epochs', type=int, default=80)
-    parser.add_argument('--warmup-steps', type=int, default=10, help='number of warp-up steps')
-    parser.add_argument('--milestones', nargs='+', type=int, default=[40, 70],
-                        help='milestones for the learning rate decay')
-    parser.add_argument('--eval-step', type=int, default=40)
+    parser.add_argument('--epochs', type=int, default=40)
+    parser.add_argument('--eval-step', type=int, default=1)
     parser.add_argument('--iters-per-epoch', type=int, default=400)
     parser.add_argument('--print-freq', type=int, default=40)
     parser.add_argument('--seed', default=None, type=int, help='seed for initializing training.')

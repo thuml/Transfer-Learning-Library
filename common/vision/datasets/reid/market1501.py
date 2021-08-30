@@ -6,15 +6,17 @@ from common.vision.datasets._util import download
 
 
 class Market1501(BaseImageDataset):
-    """
-    Market1501
-    Reference:
-    Zheng et al. Scalable Person Re-identification: A Benchmark. ICCV 2015.
-    URL: http://www.liangzheng.org/Project/project_reid.html
+    """Market1501 dataset from `Scalable Person Re-identification: A Benchmark (ICCV 2015)
+    <https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7410490>`_.
 
     Dataset statistics:
-    # identities: 1501 (+1 for background)
-    # images: 12936 (train) + 3368 (query) + 15913 (gallery)
+        - identities: 1501 (+1 for background)
+        - images: 12936 (train) + 3368 (query) + 15913 (gallery)
+        - cameras: 6
+
+    Args:
+        root (str): Root directory of dataset
+        verbose (bool, optional): If true, print dataset statistics after loading the dataset. Default: True
     """
     dataset_dir = 'Market-1501-v15.09.15'
     archive_name = 'Market-1501-v15.09.15.tgz'

@@ -37,3 +37,20 @@ Keypoint Detection Loss
 .. autoclass:: common.vision.models.keypoint_detection.loss.JointsKLLoss
 
 
+ReID Models
+-----------------------------------
+.. autoclass:: common.vision.models.reid.resnet.ReidResNet
+
+.. automodule:: common.vision.models.reid.resnet
+    :members:
+
+.. autoclass:: common.vision.models.reid.identifier.ReIdentifier
+    :members:
+
+ReID Loss
+-----------------------------------
+.. autoclass:: common.vision.models.reid.loss.TripletLoss
+
+ReID Sampler
+-----------------------------------
+.. autoclass:: common.utils.data.RandomMultipleGallerySampler

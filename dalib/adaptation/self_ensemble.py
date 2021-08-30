@@ -137,6 +137,10 @@ class EmaTeacher(object):
         self.teacher = copy.deepcopy(model)
         set_requires_grad(self.teacher, False)
 
+    def set_alpha(self, alpha: float):
+        assert alpha >= 0
+        self.alpha = alpha
+
     def update(self):
         for teacher_param, param in zip(self.teacher.parameters(), self.model.parameters()):
             teacher_param.data = self.alpha * teacher_param + (1 - self.alpha) * param
@@ -146,6 +150,19 @@ class EmaTeacher(object):
 
     def train(self, mode: Optional[bool] = True):
         self.teacher.train(mode)
+
+    def eval(self):
+        self.train(False)
+
+    def state_dict(self):
+        return self.teacher.state_dict()
+
+    def load_state_dict(self, state_dict):
+        self.teacher.load_state_dict(state_dict)
+
+    @property
+    def module(self):
+        return self.teacher.module
 
 
 class ImageClassifier(ClassifierBase):

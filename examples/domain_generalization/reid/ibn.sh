@@ -1,15 +1,36 @@
 #!/usr/bin/env bash
 # Market1501 -> Duke
-# ibn_a
-CUDA_VISIBLE_DEVICES=4 python baseline.py data -s Market1501 -t DukeMTMC -a resnet50_ibn_a \
---seed 0 --log logs/baseline/Market2Duke --finetune
-# ibn_b
-CUDA_VISIBLE_DEVICES=4 python baseline.py data -s Market1501 -t DukeMTMC -a resnet50_ibn_b \
---seed 0 --log logs/baseline/Market2Duke --finetune
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s Market1501 -t DukeMTMC -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/Market2Duke
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s Market1501 -t DukeMTMC -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/Market2Duke
+
 # Duke -> Market1501
-# ibn_a
-CUDA_VISIBLE_DEVICES=5 python baseline.py data -s DukeMTMC -t Market1501 -a resnet50_ibn_a \
---seed 0 --log logs/baseline/Duke2Market --finetune
-# ibn_b
-CUDA_VISIBLE_DEVICES=5 python baseline.py data -s DukeMTMC -t Market1501 -a resnet50_ibn_b \
---seed 0 --log logs/baseline/Duke2Market --finetune
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s DukeMTMC -t Market1501 -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/Duke2Market
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s DukeMTMC -t Market1501 -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/Duke2Market
+
+# Market1501 -> MSMT
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s Market1501 -t MSMT17 -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/Market2MSMT
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s Market1501 -t MSMT17 -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/Market2MSMT
+
+# MSMT -> Market1501
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t Market1501 -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/MSMT2Market
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t Market1501 -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/MSMT2Market
+
+# Duke -> MSMT
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s DukeMTMC -t MSMT17 -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/Duke2MSMT
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s DukeMTMC -t MSMT17 -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/Duke2MSMT
+
+# MSMT -> Duke
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t DukeMTMC -a resnet50_ibn_a \
+--finetune --seed 0 --log logs/baseline/MSMT2Duke
+CUDA_VISIBLE_DEVICES=0 python baseline.py data -s MSMT17 -t DukeMTMC -a resnet50_ibn_b \
+--finetune --seed 0 --log logs/baseline/MSMT2Duke
