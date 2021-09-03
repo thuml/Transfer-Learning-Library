@@ -2,10 +2,8 @@
 # ------------------------------------------------------------------------------
 # Modified from https://github.com/yxgeee/MMT
 # ------------------------------------------------------------------------------
-import cv2
 import os
 import os.path as osp
-import errno
 from collections import defaultdict
 import time
 import numpy as np
@@ -302,12 +300,7 @@ def visualize_ranked_results(data_loader, model, query, gallery, device, visuali
         dist_mat = re_ranking(dist_mat, dist_mat_query, dist_mat_gallery)
 
     # make dir if not exists
-    if not osp.exists(visualize_dir):
-        try:
-            os.makedirs(visualize_dir)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
+    os.makedirs(visualize_dir, exist_ok=True)
 
     dist_mat = dist_mat.numpy()
     num_q, num_g = dist_mat.shape
@@ -318,6 +311,7 @@ def visualize_ranked_results(data_loader, model, query, gallery, device, visuali
     assert num_g == len(gallery)
 
     # start visualizing
+    import cv2
     sorted_idxes = np.argsort(dist_mat, axis=1)
     for q_idx in range(num_q):
         q_img_path, q_pid, q_cid = query[q_idx]

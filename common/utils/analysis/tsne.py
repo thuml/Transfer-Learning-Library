@@ -32,6 +32,12 @@ def visualize(source_feature: torch.Tensor, target_feature: torch.Tensor,
     domains = np.concatenate((np.ones(len(source_feature)), np.zeros(len(target_feature))))
 
     # visualize using matplotlib
-    plt.figure(figsize=(10, 10))
-    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap([source_color, target_color]), s=2)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=domains, cmap=col.ListedColormap([target_color, source_color]), s=20)
+    plt.xticks([])
+    plt.yticks([])
     plt.savefig(filename)
