@@ -58,10 +58,11 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     working_dir = osp.dirname(osp.abspath(__file__))
-    root = osp.join(working_dir, args.root)
+    source_root = osp.join(working_dir, args.source_root)
+    target_root = osp.join(working_dir, args.target_root)
 
     # source dataset
-    source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
+    source_dataset = datasets.__dict__[args.source](root=osp.join(source_root, args.source.lower()))
     source_train_set = sorted(source_dataset.train)
     sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
     train_source_loader = DataLoader(
@@ -75,7 +76,7 @@ def main(args: argparse.Namespace):
         batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
     # target dataset
-    target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
+    target_dataset = datasets.__dict__[args.target](root=osp.join(target_root, args.target.lower()))
     target_train_set = sorted(target_dataset.train)
     train_target_loader = DataLoader(
         convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
@@ -238,8 +239,8 @@ if __name__ == '__main__':
     )
     parser = argparse.ArgumentParser(description="Baseline for Domain Adaptive ReID")
     # dataset parameters
-    parser.add_argument('root', metavar='DIR',
-                        help='root path of dataset')
+    parser.add_argument('source_root', help='root path of the source dataset')
+    parser.add_argument('target_root', help='root path of the target dataset')
     parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
     parser.add_argument('--train-resizing', type=str, default='default')

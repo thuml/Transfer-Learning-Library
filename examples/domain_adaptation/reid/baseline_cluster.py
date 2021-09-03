@@ -59,10 +59,19 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     working_dir = osp.dirname(osp.abspath(__file__))
-    root = osp.join(working_dir, args.root)
+    source_root = osp.join(working_dir, args.source_root)
+    target_root = osp.join(working_dir, args.target_root)
+
+    # source dataset
+    source_dataset = datasets.__dict__[args.source](root=osp.join(source_root, args.source.lower()))
+    val_loader = DataLoader(
+        convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
+                                   root=source_dataset.images_dir,
+                                   transform=val_transform),
+        batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
     # target dataset
-    target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
+    target_dataset = datasets.__dict__[args.target](root=osp.join(target_root, args.target.lower()))
     cluster_loader = DataLoader(
         convert_to_pytorch_dataset(target_dataset.train, root=target_dataset.images_dir, transform=val_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
@@ -91,14 +100,7 @@ def main(args: argparse.Namespace):
     # analysis the model
     if args.phase == 'analysis':
         # plot t-SNE
-        assert args.source is not None
-        source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-        source_loader = DataLoader(
-            convert_to_pytorch_dataset(list(set(source_dataset.query) | set(source_dataset.gallery)),
-                                       root=source_dataset.images_dir,
-                                       transform=val_transform),
-            batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
-        utils.visualize_tsne(source_loader=source_loader, target_loader=test_loader, model=model,
+        utils.visualize_tsne(source_loader=val_loader, target_loader=test_loader, model=model,
                              filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
         # visualize ranked results
         visualize_ranked_results(test_loader, model, target_dataset.query, target_dataset.gallery, device,
@@ -107,6 +109,9 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
+        print("Test on Source domain:")
+        validate(val_loader, model, source_dataset.query, source_dataset.gallery, device, cmc_flag=True,
+                 rerank=args.rerank)
         print("Test on target domain:")
         validate(test_loader, model, target_dataset.query, target_dataset.gallery, device, cmc_flag=True,
                  rerank=args.rerank)
@@ -248,10 +253,9 @@ if __name__ == '__main__':
     )
     parser = argparse.ArgumentParser(description="Cluster Baseline for Domain Adaptive ReID")
     # dataset parameters
-    parser.add_argument('root', metavar='DIR',
-                        help='root path of dataset')
-    parser.add_argument('-s', '--source', type=str, default=None,
-                        help='source domain, this method only uses source domain when phase is analysis')
+    parser.add_argument('source_root', help='root path of the source dataset')
+    parser.add_argument('target_root', help='root path of the target dataset')
+    parser.add_argument('-s', '--source', type=str, help='source domain')
     parser.add_argument('-t', '--target', type=str, help='target domain')
     parser.add_argument('--train-resizing', type=str, default='default')
     # model parameters
