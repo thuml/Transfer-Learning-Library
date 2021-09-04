@@ -98,6 +98,7 @@ class Market1501(BaseImageDataset):
         self.translate_dir(transform, self.train_dir, translated_train_dir)
         self.translate_dir(None, self.query_dir, translated_query_dir)
         self.translate_dir(None, self.gallery_dir, translated_gallery_dir)
+        print("Translation process is done, save dataset to {}".format(translated_dataset_dir))
 
     def translate_dir(self, transform, origin_dir: str, target_dir: str):
         image_list = os.listdir(origin_dir)

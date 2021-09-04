@@ -18,7 +18,7 @@ import torchvision.transforms as T
 sys.path.append('../../..')
 import dalib.translation.cyclegan as cyclegan
 import dalib.translation.spgan as spgan
-from dalib.translation.cyclegan.util import ImagePool
+from dalib.translation.cyclegan.util import ImagePool, set_requires_grad
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from common.vision.transforms import Denormalize
@@ -236,6 +236,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # train the generators (every two iterations)
         # ===============================================
         if i % 2 == 0:
+            # save memory
+            set_requires_grad(netD_S, False)
+            set_requires_grad(netD_T, False)
+            set_requires_grad(siamese_net, False)
             # GAN loss D_T(G_S2T(S))
             loss_G_S2T = criterion_gan(netD_T(fake_T), real=True)
             # GAN loss D_S(G_T2S(B))
@@ -291,6 +295,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # train the siamese network (when epoch > 0)
         # ===============================================
         if epoch > 0:
+            set_requires_grad(siamese_net, True)
             # siamese network output
             f_real_S = siamese_net(real_S)
             f_fake_T = siamese_net(fake_T.detach())
@@ -317,6 +322,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # train the discriminators
         # ===============================================
 
+        set_requires_grad(netD_S, True)
+        set_requires_grad(netD_T, True)
         # Calculate GAN loss for discriminator D_S
         fake_S_ = fake_S_pool.query(fake_S.detach())
         loss_D_S = 0.5 * (criterion_gan(netD_S(real_S), True) + criterion_gan(netD_S(fake_S_), False))

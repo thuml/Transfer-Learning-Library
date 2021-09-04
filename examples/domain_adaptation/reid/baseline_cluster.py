@@ -95,7 +95,7 @@ def main(args: argparse.Namespace):
     # resume from the best checkpoint
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-        model.load_state_dict(checkpoint)
+        model.load_state_dict(checkpoint['model'])
 
     # analysis the model
     if args.phase == 'analysis':
@@ -121,9 +121,15 @@ def main(args: argparse.Namespace):
     criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
     criterion_triplet = SoftTripletLoss(margin=args.margin).to(device)
 
+    # optionally resume from a checkpoint
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        model.load_state_dict(checkpoint['model'])
+        args.start_epoch = checkpoint['epoch'] + 1
+
     # start training
     best_test_mAP = 0.
-    for epoch in range(args.epochs):
+    for epoch in range(args.start_epoch, args.epochs):
         # run cluster algorithm
         cluster_labels, cluster_centers = run_cluster_algorithm(cluster_loader, model, args)
 
@@ -140,20 +146,20 @@ def main(args: argparse.Namespace):
 
         if (epoch + 1) % args.eval_step == 0 or (epoch == args.epochs - 1):
             # remember best mAP and save checkpoint
-            torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
+            torch.save(
+                {
+                    'model': model.state_dict(),
+                    'epoch': epoch
+                }, logger.get_checkpoint_path(epoch)
+            )
             print("Test on target domain...")
             _, test_mAP = validate(test_loader, model, target_dataset.query, target_dataset.gallery, device,
                                    cmc_flag=True, rerank=args.rerank)
             if test_mAP > best_test_mAP:
-                shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+                shutil.copy(logger.get_checkpoint_path(epoch), logger.get_checkpoint_path('best'))
             best_test_mAP = max(test_mAP, best_test_mAP)
 
-    # evaluate on test set
-    model.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    print("Test on target domain:")
-    _, test_mAP = validate(test_loader, model, target_dataset.query, target_dataset.gallery, device,
-                           cmc_flag=True, rerank=args.rerank)
-    print("test mAP on target = {}".format(test_mAP))
+    print("best mAP on target = {}".format(best_test_mAP))
     logger.close()
 
 
@@ -269,6 +275,8 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
+    parser.add_argument('--resume', type=str, default=None,
+                        help="Where restore model parameters from.")
     parser.add_argument('--pretrained-model-path', type=str, help='path to pretrained (source-only) model')
     parser.add_argument('--trade-off', type=float, default=1,
                         help='trade-off hyper parameter between cross entropy loss and triplet loss')
@@ -286,6 +294,7 @@ if __name__ == '__main__':
                         help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=40)
+    parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     parser.add_argument('--eval-step', type=int, default=1)
     parser.add_argument('--iters-per-epoch', type=int, default=400)
     parser.add_argument('--print-freq', type=int, default=40)

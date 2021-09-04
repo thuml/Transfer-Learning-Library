@@ -3,7 +3,6 @@ import time
 import warnings
 import sys
 import argparse
-import shutil
 import os.path as osp
 
 import numpy as np
@@ -117,9 +116,18 @@ def main(args: argparse.Namespace):
     criterion_triplet = SoftTripletLoss(margin=0.0).to(device)
     criterion_triplet_soft = SoftTripletLoss(margin=None).to(device)
 
+    # optionally resume from a checkpoint
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        model_1.load_state_dict(checkpoint['model_1'])
+        model_1_ema.load_state_dict(checkpoint['model_1_ema'])
+        model_2.load_state_dict(checkpoint['model_2'])
+        model_2_ema.load_state_dict(checkpoint['model_2_ema'])
+        args.start_epoch = checkpoint['epoch'] + 1
+
     # start training
     best_test_mAP = 0.
-    for epoch in range(args.epochs):
+    for epoch in range(args.start_epoch, args.epochs):
         # run cluster algorithm
         cluster_labels, cluster_centers = run_cluster_algorithm(cluster_loader, model_1_ema, model_2_ema, args)
 
@@ -140,8 +148,15 @@ def main(args: argparse.Namespace):
 
         if (epoch + 1) % args.eval_step == 0 or (epoch == args.epochs - 1):
             # save checkpoint and remember best mAP
-            torch.save(model_1_ema.state_dict(), logger.get_checkpoint_path('model_1_latest'))
-            torch.save(model_2_ema.state_dict(), logger.get_checkpoint_path('model_2_latest'))
+            torch.save(
+                {
+                    'model_1': model_1.state_dict(),
+                    'model_1_ema': model_1_ema.state_dict(),
+                    'model_2': model_2.state_dict(),
+                    'model_2_ema': model_2_ema.state_dict(),
+                    'epoch': epoch
+                }, logger.get_checkpoint_path(epoch)
+            )
             print("Test model_1 on target domain...")
             _, test_mAP_1 = validate(test_loader, model_1_ema, target_dataset.query, target_dataset.gallery,
                                      device, cmc_flag=True, rerank=args.rerank)
@@ -149,19 +164,13 @@ def main(args: argparse.Namespace):
             _, test_mAP_2 = validate(test_loader, model_2_ema, target_dataset.query, target_dataset.gallery,
                                      device, cmc_flag=True, rerank=args.rerank)
             if test_mAP_1 > test_mAP_2 and test_mAP_1 > best_test_mAP:
-                shutil.copy(logger.get_checkpoint_path('model_1_latest'), logger.get_checkpoint_path('best'))
+                torch.save(model_1_ema.state_dict(), logger.get_checkpoint_path('best'))
                 best_test_mAP = test_mAP_1
             if test_mAP_2 > test_mAP_1 and test_mAP_2 > best_test_mAP:
-                shutil.copy(logger.get_checkpoint_path('model_2_latest'), logger.get_checkpoint_path('best'))
+                torch.save(model_2_ema.state_dict(), logger.get_checkpoint_path('best'))
                 best_test_mAP = test_mAP_2
 
-    # evaluate on test set
-    model_1_ema.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    print("Test on target domain:")
-    _, test_mAP = validate(test_loader, model_1_ema, target_dataset.query, target_dataset.gallery, device,
-                           cmc_flag=True, rerank=args.rerank)
-    print("test mAP on target = {}".format(test_mAP))
-    print("oracle mAP on target = {}".format(best_test_mAP))
+    print("best mAP on target = {}".format(best_test_mAP))
     logger.close()
 
 
@@ -353,6 +362,8 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
+    parser.add_argument('--resume', type=str, default=None,
+                        help="Where restore model parameters from.")
     parser.add_argument('--pretrained-model-1-path', type=str, help='path to pretrained (source-only) model_1')
     parser.add_argument('--pretrained-model-2-path', type=str, help='path to pretrained (source-only) model_2')
     parser.add_argument('--trade-off-ce-soft', type=float, default=0.5,
@@ -372,6 +383,7 @@ if __name__ == '__main__':
                         help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4)
     parser.add_argument('--epochs', type=int, default=40)
+    parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     parser.add_argument('--eval-step', type=int, default=1)
     parser.add_argument('--iters-per-epoch', type=int, default=400)
     parser.add_argument('--print-freq', type=int, default=40)
