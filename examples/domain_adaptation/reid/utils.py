@@ -124,13 +124,19 @@ def visualize_tsne(source_loader, target_loader, model, filename, device, n_data
 
 
 def k_reciprocal_neigh(initial_rank, i, k1):
+    """Compute k-reciprocal neighbors of i-th sample. Two samples f_i, f_j are k reciprocal-neighbors if and only if
+    each one of them is among the k-nearest samples of another sample.
+    """
     forward_k_neigh_index = initial_rank[i, :k1 + 1]
     backward_k_neigh_index = initial_rank[forward_k_neigh_index, :k1 + 1]
     fi = torch.nonzero(backward_k_neigh_index == i)[:, 0]
     return forward_k_neigh_index[fi]
 
 
-def compute_rerank_dist(target_features, k1=20, k2=6):
+def compute_rerank_dist(target_features, k1=30, k2=6):
+    """Compute distance according to `Re-ranking Person Re-identification with k-reciprocal Encoding
+    (CVPR 2017) <https://arxiv.org/pdf/1701.08398.pdf>`_.
+    """
     n = target_features.size(0)
     original_dist = torch.pow(target_features, 2).sum(dim=1, keepdim=True) * 2
     original_dist = original_dist.expand(n, n) - 2 * torch.mm(target_features, target_features.t())

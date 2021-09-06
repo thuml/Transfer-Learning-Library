@@ -33,7 +33,6 @@ sys.path.append('.')
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-eps = None
 
 
 def main(args: argparse.Namespace):
@@ -244,17 +243,8 @@ def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
     feature = F.normalize(feature, dim=1)
     rerank_dist = utils.compute_rerank_dist(feature).numpy()
 
-    global eps
-    if eps is None:
-        tri_mat = np.triu(rerank_dist, 1)
-        tri_mat = tri_mat[np.nonzero(tri_mat)]
-        tri_mat = np.sort(tri_mat, axis=None)
-        rho = 1.6e-3
-        top_num = np.round(rho * tri_mat.size).astype(int)
-        eps = tri_mat[:top_num].mean()
-
     print('Clustering with dbscan algorithm')
-    dbscan = DBSCAN(eps=eps, min_samples=4, metric='precomputed', n_jobs=-1)
+    dbscan = DBSCAN(eps=0.7, min_samples=4, metric='precomputed', n_jobs=-1)
     cluster_labels = dbscan.fit_predict(rerank_dist)
     print('Clustering finished')
 
