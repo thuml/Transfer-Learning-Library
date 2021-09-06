@@ -58,15 +58,13 @@ def main(args):
     root = osp.join(working_dir, args.root)
 
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
     train_source_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_dataset.train, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=True, pin_memory=True, drop_last=True)
 
     target_dataset = datasets.__dict__[args.target](root=osp.join(root, args.target.lower()))
-    target_train_set = sorted(target_dataset.train)
     train_target_loader = DataLoader(
-        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(target_dataset.train, root=target_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=True, pin_memory=True, drop_last=True)
 
     train_source_iter = ForeverDataIterator(train_source_loader)

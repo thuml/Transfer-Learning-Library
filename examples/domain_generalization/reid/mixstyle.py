@@ -65,11 +65,10 @@ def main(args: argparse.Namespace):
 
     # source dataset
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
-    sampler = RandomDomainMultiInstanceSampler(source_train_set, batch_size=args.batch_size, n_domains_per_batch=2,
+    sampler = RandomDomainMultiInstanceSampler(source_dataset.train, batch_size=args.batch_size, n_domains_per_batch=2,
                                                num_instances=args.num_instances)
     train_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_dataset.train, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
     val_loader = DataLoader(

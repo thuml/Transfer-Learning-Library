@@ -63,10 +63,9 @@ def main(args: argparse.Namespace):
 
     # source dataset
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
-    sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
+    sampler = RandomMultipleGallerySampler(source_dataset.train, args.num_instances)
     train_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_dataset.train, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
     val_loader = DataLoader(

@@ -63,10 +63,9 @@ def main(args: argparse.Namespace):
 
     # source dataset
     source_dataset = datasets.__dict__[args.source](root=osp.join(source_root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
-    sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
+    sampler = RandomMultipleGallerySampler(source_dataset.train, args.num_instances)
     train_source_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_dataset.train, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_source_iter = ForeverDataIterator(train_source_loader)
     val_loader = DataLoader(
@@ -77,9 +76,8 @@ def main(args: argparse.Namespace):
 
     # target dataset
     target_dataset = datasets.__dict__[args.target](root=osp.join(target_root, args.target.lower()))
-    target_train_set = sorted(target_dataset.train)
     train_target_loader = DataLoader(
-        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(target_dataset.train, root=target_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, shuffle=True, pin_memory=True, drop_last=True)
     train_target_iter = ForeverDataIterator(train_target_loader)
     test_loader = DataLoader(

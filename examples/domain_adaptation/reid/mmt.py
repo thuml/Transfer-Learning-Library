@@ -8,11 +8,12 @@ import os.path as osp
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn import DataParallel
 import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import normalize as sklearn_normalize
 
 sys.path.append('../../..')
@@ -32,6 +33,7 @@ sys.path.append('.')
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+eps = None
 
 
 def main(args: argparse.Namespace):
@@ -128,17 +130,15 @@ def main(args: argparse.Namespace):
     # start training
     best_test_mAP = 0.
     for epoch in range(args.start_epoch, args.epochs):
-        # run cluster algorithm
-        cluster_labels, cluster_centers = run_cluster_algorithm(cluster_loader, model_1_ema, model_2_ema, args)
+        # run clustering algorithm and generate pseudo labels
+        if args.clustering_algorithm == 'kmeans':
+            train_target_iter = run_kmeans(cluster_loader, model_1, model_2, model_1_ema, model_2_ema, target_dataset,
+                                           train_transform, args)
+        elif args.clustering_algorithm == 'dbscan':
+            train_target_iter = run_dbscan(cluster_loader, model_1, model_2, model_1_ema, model_2_ema, target_dataset,
+                                           train_transform, args)
 
-        # generate pseudo labels
-        train_target_iter = generate_pseudo_labels(target_dataset, cluster_labels, train_transform)
-
-        # reinitialize classifier head and define optimizer
-        model_1.module.head.weight.data.copy_(cluster_centers)
-        model_2.module.head.weight.data.copy_(cluster_centers)
-        model_1_ema.module.head.weight.data.copy_(cluster_centers)
-        model_2_ema.module.head.weight.data.copy_(cluster_centers)
+        # define optimizer
         optimizer = Adam(model_1.module.get_parameters(base_lr=args.lr, rate=args.rate) + model_2.module.get_parameters(
             base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
 
@@ -190,8 +190,9 @@ def create_model(args: argparse.Namespace, pretrained_model_path: str):
     return model, model_ema
 
 
-def run_cluster_algorithm(cluster_loader: DataLoader, model_1_ema: EmaTeacher, model_2_ema: EmaTeacher,
-                          args: argparse.Namespace):
+def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EmaTeacher,
+               model_2_ema: EmaTeacher, target_dataset, train_transform, args: argparse.Namespace):
+    # run kmeans clustering algorithm
     print('Clustering into {} classes'.format(args.num_clusters))
     # collect feature with different ema teachers
     feature_dict_1 = extract_reid_feature(cluster_loader, model_1_ema, device, normalize=True)
@@ -208,18 +209,86 @@ def run_cluster_algorithm(cluster_loader: DataLoader, model_1_ema: EmaTeacher, m
 
     # normalize cluster centers and convert to pytorch tensor
     cluster_centers = torch.from_numpy(sklearn_normalize(cluster_centers, axis=1)).float().to(device)
+    # reinitialize classifier head
+    model_1.module.head.weight.data.copy_(cluster_centers)
+    model_2.module.head.weight.data.copy_(cluster_centers)
+    model_1_ema.module.head.weight.data.copy_(cluster_centers)
+    model_2_ema.module.head.weight.data.copy_(cluster_centers)
 
-    return cluster_labels, cluster_centers
+    # generate training set with pseudo labels
+    target_train_set = []
+    for (fname, _, cid), label in zip(target_dataset.train, cluster_labels):
+        target_train_set.append((fname, label, cid))
+
+    sampler = RandomMultipleGallerySampler(target_train_set, args.num_instances)
+    train_target_loader = DataLoader(
+        convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir,
+                                   transform=MultipleApply([train_transform, train_transform])),
+        batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
+    train_target_iter = ForeverDataIterator(train_target_loader)
+
+    return train_target_iter
 
 
-def generate_pseudo_labels(target_dataset, cluster_labels, train_transform) -> ForeverDataIterator:
-    for i in range(len(target_dataset.train)):
-        target_dataset.train[i] = list(target_dataset.train[i])
-        target_dataset.train[i][1] = int(cluster_labels[i])
-        target_dataset.train[i] = tuple(target_dataset.train[i])
+def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EmaTeacher,
+               model_2_ema: EmaTeacher, target_dataset, train_transform, args: argparse.Namespace):
+    # run dbscan clustering algorithm
 
-    # get train target iter with pseudo labels
-    target_train_set = sorted(target_dataset.train)
+    # collect feature with different ema teachers
+    feature_dict_1 = extract_reid_feature(cluster_loader, model_1_ema, device, normalize=True)
+    feature_1 = torch.stack(list(feature_dict_1.values())).cpu()
+    feature_dict_2 = extract_reid_feature(cluster_loader, model_2_ema, device, normalize=True)
+    feature_2 = torch.stack(list(feature_dict_2.values())).cpu()
+    # average feature_1, feature_2 to create final feature
+    feature = (feature_1 + feature_2) / 2
+    feature = F.normalize(feature, dim=1)
+    rerank_dist = utils.compute_rerank_dist(feature).numpy()
+
+    global eps
+    if eps is None:
+        tri_mat = np.triu(rerank_dist, 1)
+        tri_mat = tri_mat[np.nonzero(tri_mat)]
+        tri_mat = np.sort(tri_mat, axis=None)
+        rho = 1.6e-3
+        top_num = np.round(rho * tri_mat.size).astype(int)
+        eps = tri_mat[:top_num].mean()
+
+    print('Clustering with dbscan algorithm')
+    dbscan = DBSCAN(eps=eps, min_samples=4, metric='precomputed', n_jobs=-1)
+    cluster_labels = dbscan.fit_predict(rerank_dist)
+    print('Clustering finished')
+
+    # generate training set with pseudo labels and calculate cluster centers
+    target_train_set = []
+    cluster_centers = {}
+    for i, ((fname, _, cid), label) in enumerate(zip(target_dataset.train, cluster_labels)):
+        if label == -1:
+            continue
+        target_train_set.append((fname, label, cid))
+
+        if label not in cluster_centers:
+            cluster_centers[label] = []
+        cluster_centers[label].append(feature[i])
+
+    cluster_centers = [torch.stack(cluster_centers[idx]).mean(0) for idx in sorted(cluster_centers.keys())]
+    cluster_centers = torch.stack(cluster_centers)
+    # normalize cluster centers
+    cluster_centers = F.normalize(cluster_centers, dim=1).float().to(device)
+
+    # reinitialize classifier head
+    features_dim = model_1.module.features_dim
+    num_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+
+    model_1.module.head = nn.Linear(features_dim, num_clusters, bias=False).to(device)
+    model_2.module.head = nn.Linear(features_dim, num_clusters, bias=False).to(device)
+    model_1_ema.module.head = nn.Linear(features_dim, num_clusters, bias=False).to(device)
+    model_2_ema.module.head = nn.Linear(features_dim, num_clusters, bias=False).to(device)
+
+    model_1.module.head.weight.data.copy_(cluster_centers)
+    model_2.module.head.weight.data.copy_(cluster_centers)
+    model_1_ema.module.head.weight.data.copy_(cluster_centers)
+    model_2_ema.module.head.weight.data.copy_(cluster_centers)
+
     sampler = RandomMultipleGallerySampler(target_train_set, args.num_instances)
     train_target_loader = DataLoader(
         convert_to_pytorch_dataset(target_train_set, root=target_dataset.images_dir,
@@ -362,6 +431,8 @@ if __name__ == '__main__':
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--rate', type=float, default=0.2)
     # training parameters
+    parser.add_argument('--clustering-algorithm', type=str, default='dbscan', choices=['kmeans', 'dbscan'],
+                        help='clustering algorithm to run, currently supported method: ["kmeans", "dbscan"]')
     parser.add_argument('--resume', type=str, default=None,
                         help="Where restore model parameters from.")
     parser.add_argument('--pretrained-model-1-path', type=str, help='path to pretrained (source-only) model_1')
