@@ -125,7 +125,7 @@ def main(args: argparse.Namespace):
     # optionally resume from a checkpoint
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        utils.copy_state_dict(model, checkpoint['model'])
         args.start_epoch = checkpoint['epoch'] + 1
 
     # start training
