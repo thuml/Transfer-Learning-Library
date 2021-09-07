@@ -89,7 +89,7 @@ def main(args: argparse.Namespace):
     # resume from the best checkpoint
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-        model_1_ema.load_state_dict(checkpoint)
+        utils.copy_state_dict(model_1_ema, checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
