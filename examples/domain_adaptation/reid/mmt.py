@@ -217,7 +217,7 @@ def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
     # generate training set with pseudo labels
     target_train_set = []
     for (fname, _, cid), label in zip(target_dataset.train, cluster_labels):
-        target_train_set.append((fname, label, cid))
+        target_train_set.append((fname, int(label), cid))
 
     sampler = RandomMultipleGallerySampler(target_train_set, args.num_instances)
     train_target_loader = DataLoader(
