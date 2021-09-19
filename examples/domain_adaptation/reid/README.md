@@ -17,6 +17,7 @@ Following datasets can be downloaded automatically:
 ## Supported Methods
 
 - Instance-Batch Normalization Network (IBN-Net)
+- Similarity Preserving Generative Adversarial Network (SPGAN)
 - Mutual Mean-Teaching (MMT)
 
 The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/reid_da.rst) with specified hyper-parameters.
