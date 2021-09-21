@@ -56,12 +56,13 @@ class ImageClassifierHead(nn.Module):
         super(ImageClassifierHead, self).__init__()
         self.num_classes = num_classes
         if pool_layer is None:
-            pool_layer = nn.Sequential(
+            self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
                 nn.Flatten()
             )
+        else:
+            self.pool_layer = pool_layer
         self.head = nn.Sequential(
-            pool_layer,
             nn.Dropout(0.5),
             nn.Linear(in_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
@@ -74,4 +75,4 @@ class ImageClassifierHead(nn.Module):
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        return self.head(inputs)
+        return self.head(self.pool_layer(inputs))

@@ -9,14 +9,15 @@ import os.path as osp
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-from torch.optim import SGD
+from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
+import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
+from dalib.adaptation.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
+from common.vision.transforms import ResizeImage, MultipleApply
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -46,13 +47,26 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
-    val_transform = utils.get_val_transform(args.val_resizing)
-    print("train_transform: ", train_transform)
-    print("val_transform: ", val_transform)
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_transform = T.Compose([
+        ResizeImage(256),
+        T.RandomCrop(224),
+        T.RandomHorizontalFlip(),
+        T.ColorJitter(brightness=0.7, contrast=0.7, saturation=0.7, hue=0.5),
+        T.RandomGrayscale(),
+        T.ToTensor(),
+        normalize
+    ])
+    val_transform = T.Compose([
+        ResizeImage(256),
+        T.CenterCrop(224),
+        T.ToTensor(),
+        normalize
+    ])
 
     train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
-        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+        utils.get_dataset(args.data, args.root, args.source, args.target,
+                              train_transform, val_transform, MultipleApply([train_transform, val_transform]))
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
@@ -64,28 +78,15 @@ def main(args: argparse.Namespace):
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch)
+    print("=> using model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
-    classifier_feature_dim = classifier.features_dim
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 pool_layer=pool_layer, finetune=not args.scratch).to(device)
 
-    if args.randomized:
-        domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024).to(device)
-    else:
-        domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
-
-    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
     # define optimizer and lr scheduler
-    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer = Adam(classifier.get_parameters(), args.lr)
     lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-
-    # define loss function
-    domain_adv = ConditionalDomainAdversarialLoss(
-        domain_discri, entropy_conditioning=args.entropy,
-        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized,
-        randomized_dim=args.randomized_dim
-    ).to(device)
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -99,7 +100,7 @@ def main(args: argparse.Namespace):
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
         tsne.visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
@@ -112,12 +113,37 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
+    if args.pretrain is None:
+        # first pretrain the classifier wish source data
+        print("Pretraining the model on source domain.")
+        args.pretrain = logger.get_checkpoint_path('pretrain')
+        pretrained_model = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.pretrain_lr)
+        pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
+                                         lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
+                                             -args.lr_decay))
+
+        # start pretraining
+        for epoch in range(args.pretrain_epochs):
+            # pretrain for one epoch
+            pretrain(train_source_iter, pretrained_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args)
+            # validate to show pretrain process
+            utils.validate(val_loader, pretrained_model, args, device)
+
+        torch.save(pretrained_model.state_dict(), args.pretrain)
+
+    checkpoint = torch.load(args.pretrain, map_location='cpu')
+    classifier.load_state_dict(checkpoint)
+    teacher = EmaTeacher(classifier, alpha=args.alpha)
+    consistent_loss = L2ConsistencyLoss().to(device)
+    class_balance_loss = ClassBalanceLoss(num_classes).to(device)
+
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
-        print("lr:", lr_scheduler.get_last_lr()[0])
+        print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
+        train(train_source_iter, train_target_iter, classifier, teacher, consistent_loss, class_balance_loss, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
@@ -139,53 +165,40 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          domain_adv: ConditionalDomainAdversarialLoss, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, optimizer: Adam, lr_scheduler: LambdaLR,
+             epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
-    trans_losses = AverageMeter('Trans Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    domain_accs = AverageMeter('Domain Acc', ':3.1f')
+
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, domain_accs],
+        [batch_time, data_time, losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
-    domain_adv.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
-
         x_s = x_s.to(device)
-        x_t = x_t.to(device)
         labels_s = labels_s.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        f_s, f_t = f.chunk(2, dim=0)
+        y_s, f_s = model(x_s)
 
         cls_loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
-        domain_acc = domain_adv.domain_discriminator_accuracy
-        loss = cls_loss + transfer_loss * args.trade_off
+        loss = cls_loss
 
         cls_acc = accuracy(y_s, labels_s)[0]
 
         losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc, x_s.size(0))
-        domain_accs.update(domain_acc, x_s.size(0))
-        trans_losses.update(transfer_loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -201,8 +214,86 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
             progress.display(i)
 
 
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
+          teacher: EmaTeacher, consistent_loss, class_balance_loss,
+          optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':3.1f')
+    data_time = AverageMeter('Data', ':3.1f')
+    cls_losses = AverageMeter('Cls Loss', ':3.2f')
+    cons_losses = AverageMeter('Cons Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, cls_losses, cons_losses, cls_accs, tgt_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    model.train()
+    teacher.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        (x_t1, x_t2), labels_t = next(train_target_iter)
+
+        x_s = x_s.to(device)
+        x_t1 = x_t1.to(device)
+        x_t2 = x_t2.to(device)
+        labels_s = labels_s.to(device)
+        labels_t = labels_t.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # compute output
+        y_s, _ = model(x_s)
+        y_t, _ = model(x_t1)
+        y_t_teacher, _ = teacher(x_t2)
+
+        # classification loss
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        # compute output and mask
+        y_t = F.softmax(y_t, dim=1)
+        y_t_teacher = F.softmax(y_t_teacher, dim=1)
+        max_prob, _ = y_t_teacher.max(dim=1)
+        mask = (max_prob > args.threshold).float()
+
+        # consistent loss
+        cons_loss = consistent_loss(y_t, y_t_teacher, mask)
+        # balance loss
+        balance_loss = class_balance_loss(y_t) * mask.mean()
+
+        loss = cls_loss + args.trade_off_cons * cons_loss + args.trade_off_balance * balance_loss
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        # update teacher
+        teacher.update()
+
+        # update statistics
+        cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
+        cls_losses.update(cls_loss.item(), x_s.size(0))
+        cons_losses.update(cons_loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_s.size(0))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='CDAN for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='DANN for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -213,38 +304,47 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--resize-size', type=int, default=224,
+                        help='the image size after resizing')
+    parser.add_argument('--no-hflip', action='store_true',
+                        help='no random horizontal flipping during training')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--pretrain', type=str, default=None,
+                        help='pretrain checkpoints for classification model')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
-    parser.add_argument('-r', '--randomized', action='store_true',
-                        help='using randomized multi-linear-map (default: False)')
-    parser.add_argument('-rd', '--randomized-dim', default=1024, type=int,
-                        help='randomized dimension when using randomized multi-linear-map (default: 1024)')
-    parser.add_argument('--entropy', default=False, action='store_true', help='use entropy conditioning')
-    parser.add_argument('--trade-off', default=1., type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     # training parameters
-    parser.add_argument('-b', '--batch-size', default=32, type=int,
+    parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+                        help='mini-batch size (default: 36)')
+    parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--pretrain-lr', '--pretrain-learning-rate', default=3e-5, type=float,
+                        help='initial pretrain learning rate', dest='pretrain_lr')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
-                        metavar='W', help='weight decay (default: 1e-3)',
-                        dest='weight_decay')
+    parser.add_argument('--alpha', default=0.99, type=float, help='ema decay rate (default: 0.99)')
+    parser.add_argument('--threshold', default=0.8, type=float, help='confidence threshold')
+    parser.add_argument('--trade-off-cons', default=3, type=float, help='trade off parameter for consistent loss')
+    parser.add_argument('--trade-off-balance', default=0.01, type=float,
+                        help='trade off parameter for class balance loss')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+                        help='number of data loading workers (default: 2)')
+    parser.add_argument('--pretrain-epochs', default=0, type=int, metavar='N',
+                        help='number of total epochs(pretrain) to run')
+    parser.add_argument('--epochs', default=10, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
@@ -254,7 +354,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='cdan',
+    parser.add_argument("--log", type=str, default='self_ensemble',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

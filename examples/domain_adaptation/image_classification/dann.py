@@ -46,8 +46,11 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
-    val_transform = utils.get_val_transform(args.val_resizing)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+                                                random_color_jitter=False, resize_size=args.resize_size,
+                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
+    val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
+                                            norm_mean=args.norm_mean, norm_std=args.norm_std)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
@@ -64,10 +67,11 @@ def main(args: argparse.Namespace):
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch)
+    print("=> using model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 pool_layer=pool_layer, finetune=not args.scratch).to(device)
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
     # define optimizer and lr scheduler
@@ -90,7 +94,7 @@ def main(args: argparse.Namespace):
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
         tsne.visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
@@ -106,6 +110,7 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
+        print("lr:", lr_scheduler.get_last_lr()[0])
         # train for one epoch
         train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
               lr_scheduler, epoch, args)
@@ -201,6 +206,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--resize-size', type=int, default=224,
+                        help='the image size after resizing')
+    parser.add_argument('--no-hflip', action='store_true',
+                        help='no random horizontal flipping during training')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
@@ -211,6 +224,7 @@ if __name__ == '__main__':
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
+    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     # training parameters
@@ -227,7 +241,7 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,

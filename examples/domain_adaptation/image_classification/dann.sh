@@ -30,7 +30,6 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c -t p -a r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_c2r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c -t s -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_c2s
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s p -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_p2c
-CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s p -t i -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_p2i
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s p -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_p2r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s p -t s -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_p2s
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s r -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_r2c
@@ -39,10 +38,6 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s r -t s -a r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2c
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/DomainNet_s2r
-
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python dann.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/iwildcam
-CUDA_VISIBLE_DEVICES=0 python dann.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/fmow
 
 # ResNet50, ImageNet200 -> ImageNetR
 CUDA_VISIBLE_DEVICES=0 python dann.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/dann/ImageNet_IN2INR
@@ -77,3 +72,21 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c i q r s -
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet101 --bottleneck-dim 1024 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/dann/DomainNet_:2q
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --bottleneck-dim 1024 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/dann/DomainNet_:2r
 CUDA_VISIBLE_DEVICES=0 python dann.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --bottleneck-dim 1024 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/dann/DomainNet_:2s
+
+# ResNet50, Wilds Dataset
+CUDA_VISIBLE_DEVICES=5 python dann.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/dann/iwildcam
+
+# DenseNet121, Wilds Dataset
+CUDA_VISIBLE_DEVICES=5 python dann.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
+  -a densenet121 --scratch --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/dann/camelyon17
+CUDA_VISIBLE_DEVICES=5 python dann.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
+  -a densenet121 --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/dann/fmow
+
+# Digits
+CUDA_VISIBLE_DEVICES=5 python dann.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/dann/MNIST2USPS
+CUDA_VISIBLE_DEVICES=5 python dann.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/dann/USPS2MNIST
+CUDA_VISIBLE_DEVICES=5 python dann.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/dann/SVHN2MNIST
+

@@ -45,14 +45,19 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
-    val_transform = utils.get_val_transform(args.val_resizing)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+                                                random_color_jitter=False, resize_size=args.resize_size,
+                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
+    val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
+                                            norm_mean=args.norm_mean, norm_std=args.norm_std)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_source_dataset, _, val_dataset, test_dataset, num_classes, args.class_names = \
+    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
@@ -60,10 +65,11 @@ def main(args: argparse.Namespace):
     train_source_iter = ForeverDataIterator(train_source_loader)
 
     # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch)
+    print("=> using model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = Classifier(backbone, num_classes, pool_layer=pool_layer).to(device)
+    classifier = Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=not args.scratch).to(device)
+
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
@@ -75,14 +81,12 @@ def main(args: argparse.Namespace):
 
     # analysis the model
     if args.phase == 'analysis':
-        # using shuffled val loader
-        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
         # extract features from both domains
         feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
-        target_feature = collect_feature(val_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
         tsne.visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
@@ -98,6 +102,7 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
         # train for one epoch
         train(train_source_iter, classifier, optimizer,
               lr_scheduler, epoch, args)
@@ -182,6 +187,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--resize-size', type=int, default=224,
+                        help='the image size after resizing')
+    parser.add_argument('--no-hflip', action='store_true',
+                        help='no random horizontal flipping during training')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
@@ -190,6 +203,7 @@ if __name__ == '__main__':
                              ' (default: resnet18)')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
+    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
@@ -203,7 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,

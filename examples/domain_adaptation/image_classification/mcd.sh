@@ -42,10 +42,6 @@ CUDA_VISIBLE_DEVICES=0 python mcd.py data/domainnet -d DomainNet -s s -t c -a re
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --trade-off 120.0 --log logs/mcd/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --trade-off 120.0 --log logs/mcd/DomainNet_s2r
 
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --trade-off 30.0 --log logs/mcd/iwildcam
-CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d fmow -a resnet50 --epochs 30 -i 1000 --seed 0 --trade-off 30.0 --log logs/mcd/fmow
-
 # ResNet50, ImageNet200 -> ImageNetR
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 30 -i 2500 -p 500 --seed 0 --trade-off 100.0 --log logs/mcd/ImageNet_IN2INR
 
@@ -65,3 +61,20 @@ CUDA_VISIBLE_DEVICES=0 python mcd.py data/office-home -d OfficeHome -s Pr -t Rw 
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/office-home -d OfficeHome -s Rw -t Ar -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --trade-off 30.0 --log logs/mcd_vit/OfficeHome_Rw2Ar
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/office-home -d OfficeHome -s Rw -t Cl -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --trade-off 30.0 --log logs/mcd_vit/OfficeHome_Rw2Cl
 CUDA_VISIBLE_DEVICES=0 python mcd.py data/office-home -d OfficeHome -s Rw -t Pr -a vit_base_patch16_224 --epochs 30 --seed 0 -b 24 --no-pool --trade-off 30.0 --log logs/mcd_vit/OfficeHome_Rw2Pr
+
+# ResNet50, Wilds Dataset
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --trade-off 100.0 --log logs/mcd/iwildcam
+
+# DenseNet121, Wilds Dataset
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
+  -a densenet121 --scratch --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/mcd/camelyon17
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
+  -a densenet121 --epochs 10 -i 1000 --lr 0.01 --seed 0 --trade-off 30.0 --log logs/mcd/fmow
+
+# Digits
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/mcd/MNIST2USPS
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/mcd/USPS2MNIST
+CUDA_VISIBLE_DEVICES=0 python mcd.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/mcd/SVHN2MNIST

@@ -47,11 +47,6 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t p -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2p
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_s2r
 
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d iwildcam -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/iwildcam --lr 0.01
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d camelyon17 -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/camelyon17 --lr 0.01
-CUDA_VISIBLE_DEVICES=0 python source_only.py data/wilds -d fmow -a resnet50 --epochs 20 -i 1000 --seed 0 --log logs/src_only/fmow --lr 0.01
-
 # ResNet50, ImageNet200 -> ImageNetR
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 20 -i 2500 --seed 0 --log logs/src_only/ImageNet_IN2INR
 
@@ -85,3 +80,23 @@ CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i 
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2q
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2r
 CUDA_VISIBLE_DEVICES=0 python source_only.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --epochs 20 -i 2500 --seed 0 --lr 0.01 --log logs/src_only/DomainNet_:2s
+
+# ResNet50, Wilds Dataset
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/wilds -d iwildcam --train-resizing 'res.' --val-resizing 'res.'  \
+  -a resnet50 --epochs 10 -i 1000 --seed 0 --log logs/src_only/iwildcam
+
+# DenseNet121, Wilds Dataset
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
+  -a densenet121 --scratch --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/src_only/camelyon17
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
+  -a densenet121 --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/src_only/fmow
+
+# Digits
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/src_only/MNIST2USPS
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/src_only/USPS2MNIST
+CUDA_VISIBLE_DEVICES=2 python source_only.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/src_only/SVHN2MNIST
+
+

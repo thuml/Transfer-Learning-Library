@@ -234,8 +234,8 @@ def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
 
 class GeneralModule(nn.Module):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: nn.Module,
-                head: nn.Module, adv_head: nn.Module,
-                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune: Optional[bool] = True):
+                 head: nn.Module, adv_head: nn.Module, grl: Optional[WarmStartGradientReverseLayer] = None,
+                 finetune: Optional[bool] = True):
         super(GeneralModule, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
@@ -442,55 +442,3 @@ class ImageRegressor(GeneralModule):
         super(ImageRegressor, self).__init__(backbone, num_factors, bottleneck,
                                               head, adv_head, grl_layer, finetune)
         self.num_factors = num_factors
-
-
-class SequenceClassifier(GeneralModule):
-
-    def __init__(self, backbone: nn.Module, num_classes: int,
-                 bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
-                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
-        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
-                                                       auto_step=False) if grl is None else grl
-
-        # bottleneck = nn.Sequential(
-        #     nn.Linear(backbone.out_features, bottleneck_dim),
-        #     nn.BatchNorm1d(bottleneck_dim),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.5)
-        # )
-        # bottleneck[0].weight.data.normal_(0, 0.005)
-        # bottleneck[0].bias.data.fill_(0.1)
-        bottleneck = nn.Identity()
-        bottleneck_dim = backbone.out_features
-
-        # The classifier head used for final predictions.
-        head = nn.Sequential(
-            nn.Linear(bottleneck_dim, width),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(width, num_classes)
-        )
-        # The adversarial classifier head
-        adv_head = nn.Sequential(
-            nn.Linear(bottleneck_dim, width),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(width, num_classes)
-        )
-        for dep in range(2):
-            head[dep * 3].weight.data.normal_(0, 0.01)
-            head[dep * 3].bias.data.fill_(0.0)
-            adv_head[dep * 3].weight.data.normal_(0, 0.01)
-            adv_head[dep * 3].bias.data.fill_(0.0)
-        super(SequenceClassifier, self).__init__(backbone, num_classes, bottleneck,
-                                              head, adv_head, grl_layer, finetune)
-
-    def forward(self, *args, **kwargs):
-        """"""
-        hidden_state = self.backbone(*args, **kwargs)[0]  # (bs, seq_len, dim)
-        pooled_output = hidden_state[:, 0]  # (bs, dim)
-        features = self.bottleneck(pooled_output)
-        outputs = self.head(features)
-        features_adv = self.grl_layer(features)
-        outputs_adv = self.adv_head(features_adv)
-        return outputs, outputs_adv

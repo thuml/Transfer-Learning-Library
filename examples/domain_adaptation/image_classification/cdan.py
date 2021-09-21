@@ -3,8 +3,8 @@ import time
 import warnings
 import sys
 import argparse
-import os.path as osp
 import shutil
+import os.path as osp
 
 import torch
 import torch.nn as nn
@@ -15,8 +15,8 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy\
-    as MarginDisparityDiscrepancy, ImageClassifier
+from dalib.modules.domain_discriminator import DomainDiscriminator
+from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -46,8 +46,11 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
-    val_transform = utils.get_val_transform(args.val_resizing)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+                                                random_color_jitter=False, resize_size=args.resize_size,
+                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
+    val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
+                                            norm_mean=args.norm_mean, norm_std=args.norm_std)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
@@ -64,17 +67,29 @@ def main(args: argparse.Namespace):
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch)
+    print("=> using model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 width=args.bottleneck_dim, pool_layer=pool_layer).to(device)
-    mdd = MarginDisparityDiscrepancy(args.margin).to(device)
+                                 pool_layer=pool_layer, finetune=not args.scratch).to(device)
+    classifier_feature_dim = classifier.features_dim
 
-    # define optimizer and lr_scheduler
-    # The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    if args.randomized:
+        domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024).to(device)
+    else:
+        domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
+
+    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    # define optimizer and lr scheduler
+    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    # define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(
+        domain_discri, entropy_conditioning=args.entropy,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized,
+        randomized_dim=args.randomized_dim
+    ).to(device)
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -88,7 +103,7 @@ def main(args: argparse.Namespace):
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
         tsne.visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
@@ -104,8 +119,9 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
+        print("lr:", lr_scheduler.get_last_lr()[0])
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
+        train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
@@ -127,63 +143,56 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
-          classifier: ImageClassifier, mdd: MarginDisparityDiscrepancy, optimizer: SGD,
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
+          domain_adv: ConditionalDomainAdversarialLoss, optimizer: SGD,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
     trans_losses = AverageMeter('Trans Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
-
+    domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
+        [batch_time, data_time, losses, trans_losses, cls_accs, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
-    classifier.train()
-    mdd.train()
+    model.train()
+    domain_adv.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        optimizer.zero_grad()
-
         x_s, labels_s = next(train_source_iter)
-        x_t, labels_t = next(train_target_iter)
+        x_t, _ = next(train_target_iter)
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
         labels_s = labels_s.to(device)
-        labels_t = labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
         x = torch.cat((x_s, x_t), dim=0)
-        outputs, outputs_adv = classifier(x)
-        y_s, y_t = outputs.chunk(2, dim=0)
-        y_s_adv, y_t_adv = outputs_adv.chunk(2, dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
 
-        # compute cross entropy loss on source domain
         cls_loss = F.cross_entropy(y_s, labels_s)
-        # compute margin disparity discrepancy between domains
-        # for adversarial classifier, minimize negative mdd is equal to maximize mdd
-        transfer_loss = -mdd(y_s, y_s_adv, y_t, y_t_adv)
+        transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
+        domain_acc = domain_adv.domain_discriminator_accuracy
         loss = cls_loss + transfer_loss * args.trade_off
-        classifier.step()
 
         cls_acc = accuracy(y_s, labels_s)[0]
-        tgt_acc = accuracy(y_t, labels_t)[0]
 
         losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_t.size(0))
+        cls_accs.update(cls_acc, x_s.size(0))
+        domain_accs.update(domain_acc, x_s.size(0))
         trans_losses.update(transfer_loss.item(), x_s.size(0))
 
         # compute gradient and do SGD step
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         lr_scheduler.step()
@@ -197,7 +206,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='MDD for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='CDAN for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -208,31 +217,46 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--resize-size', type=int, default=224,
+                        help='the image size after resizing')
+    parser.add_argument('--no-hflip', action='store_true',
+                        help='no random horizontal flipping during training')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
-    parser.add_argument('--bottleneck-dim', default=1024, type=int)
+    parser.add_argument('--bottleneck-dim', default=256, type=int,
+                        help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
-    parser.add_argument('--margin', type=float, default=4., help="margin gamma")
+    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
+    parser.add_argument('-r', '--randomized', action='store_true',
+                        help='using randomized multi-linear-map (default: False)')
+    parser.add_argument('-rd', '--randomized-dim', default=1024, type=int,
+                        help='randomized dimension when using randomized multi-linear-map (default: 1024)')
+    parser.add_argument('--entropy', default=False, action='store_true', help='use entropy conditioning')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.004, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--lr-gamma', default=0.0002, type=float)
+    parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
-                        metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
+                        metavar='W', help='weight decay (default: 1e-3)',
+                        dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
@@ -243,11 +267,10 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='mdd',
+    parser.add_argument("--log", type=str, default='cdan',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

@@ -13,6 +13,7 @@ from .stanford_dogs import StanfordDogs
 from .coco70 import COCO70
 from .oxfordpet import OxfordIIITPet
 from .pacs import PACS
+from .digits import *
 
 __all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "ImageNetR", "ImageNetSketch",
            "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPet", "PACS"]

@@ -3,40 +3,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from ..modules.gl import WarmStartGradientLayer
+from dalib.modules.gl import WarmStartGradientLayer
 from common.utils.metric.keypoint_detection import get_max_preds
-
-
-class LabelGenerator1d:
-
-    def __init__(self, width=64, sigma=2):
-        self.width = width
-        self.sigma = sigma
-        heatmaps = np.zeros((width, width), dtype=np.float32)
-        tmp_size = sigma * 3
-        for mu_x in range(width):
-            for mu_y in range(width):
-                # Check that any part of the gaussian is in-bounds
-                ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
-                br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
-
-                # Generate gaussian
-                size = 2 * tmp_size + 1
-                x = np.arange(0, size, 1, np.float32)
-                x0 = size // 2
-                # The gaussian is not normalized, we want the center value to equal 1
-                g = np.exp(- ((x - x0) ** 2) / (2 * sigma ** 2))
-
-                # Usable gaussian range
-                g_x = max(0, -ul[0]), min(br[0], width) - ul[0]
-                # Image range
-                img_x = max(0, ul[0]), min(br[0], width)
-
-                heatmaps[mu_x][img_x[0]:img_x[1]] = g[g_x[0]:g_x[1]]
-        self.heatmaps = heatmaps
-
-    def __call__(self, y):
-        return torch.from_numpy(self.heatmaps[y[:], :].copy()).to(y.device)
 
 
 class PseudoLabelGenerator2d(nn.Module):

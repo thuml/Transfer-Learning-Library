@@ -119,7 +119,7 @@ class SVHN(D.SVHN):
             downloaded again.
 
     """
-    def __init__(self, root, mode="RGB", **kwargs):
+    def __init__(self, root, mode="L", **kwargs):
         super(SVHN, self).__init__(root, **kwargs)
         assert mode in ['L', 'RGB']
         self.mode = mode
@@ -145,3 +145,18 @@ class SVHN(D.SVHN):
             target = self.target_transform(target)
 
         return img, target
+
+
+class MNISTRGB(MNIST):
+    def __init__(self, root, **kwargs):
+        super(MNISTRGB, self).__init__(root, mode='RGB', **kwargs)
+
+
+class USPSRGB(USPS):
+    def __init__(self, root, **kwargs):
+        super(USPSRGB, self).__init__(root, mode='RGB', **kwargs)
+
+
+class SVHNRGB(SVHN):
+    def __init__(self, root, **kwargs):
+        super(SVHNRGB, self).__init__(root, mode='RGB', **kwargs)

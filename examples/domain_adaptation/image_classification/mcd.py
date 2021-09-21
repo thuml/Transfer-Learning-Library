@@ -46,8 +46,11 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
-    val_transform = utils.get_val_transform(args.val_resizing)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+                                                random_color_jitter=False, resize_size=args.resize_size,
+                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
+    val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
+                                            norm_mean=args.norm_mean, norm_std=args.norm_std)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
@@ -64,8 +67,8 @@ def main(args: argparse.Namespace):
     train_target_iter = ForeverDataIterator(train_target_loader)
 
     # create model
-    print("=> using pre-trained model '{}'".format(args.arch))
-    G = utils.get_model(args.arch).to(device)  # feature extractor
+    print("=> using model '{}'".format(args.arch))
+    G = utils.get_model(args.arch, pretrain=not args.scratch).to(device)  # feature extractor
     # two image classifier heads
     pool_layer = nn.Identity() if args.no_pool else None
     F1 = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim, pool_layer).to(device)
@@ -89,11 +92,11 @@ def main(args: argparse.Namespace):
     # analysis the model
     if args.phase == 'analysis':
         # extract features from both domains
-        feature_extractor = nn.Sequential(G, nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten()).to(device)
+        feature_extractor = nn.Sequential(G, F1.pool_layer).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
         tsne.visualize(source_feature, target_feature, tSNE_filename)
         print("Saving t-SNE to", tSNE_filename)
         # calculate A-distance, which is a measure for distribution discrepancy
@@ -301,6 +304,14 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--resize-size', type=int, default=224,
+                        help='the image size after resizing')
+    parser.add_argument('--no-hflip', action='store_true',
+                        help='no random horizontal flipping during training')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
@@ -310,6 +321,7 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck-dim', default=1024, type=int)
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
+    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('--num-k', type=int, default=4, metavar='K',
@@ -321,13 +333,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
-                        metavar='N', help='print frequency (default: 10)')
+                        metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
