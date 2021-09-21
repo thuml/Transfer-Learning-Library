@@ -7,16 +7,16 @@ import shutil
 import os.path as osp
 
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
+import torch.nn as nn
 
 sys.path.append('../../..')
-from common.modules.regressor import Regressor
+from dalib.adaptation.mdd import RegressionMarginDisparityDiscrepancy as MarginDisparityDiscrepancy, ImageRegressor
 import common.vision.datasets.regression as datasets
 import common.vision.models as models
 from common.utils.data import ForeverDataIterator
@@ -74,12 +74,58 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
+    num_factors = train_source_dataset.num_factors
     backbone = models.__dict__[args.arch](pretrained=True)
+    bottleneck_dim = args.bottleneck_dim
     if args.normalization == 'IN':
         backbone = convert_model(backbone)
-    num_factors = train_source_dataset.num_factors
-    regressor = Regressor(backbone=backbone, num_factors=num_factors).to(device)
+        bottleneck = nn.Sequential(
+            nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+        )
+        head = nn.Sequential(
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
+            nn.Linear(bottleneck_dim, num_factors),
+            nn.Sigmoid()
+        )
+        for layer in head:
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                nn.init.normal_(layer.weight, 0, 0.01)
+                nn.init.constant_(layer.bias, 0)
+        adv_head = nn.Sequential(
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Conv2d(bottleneck_dim, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+            nn.InstanceNorm2d(bottleneck_dim),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            nn.Flatten(),
+            nn.Linear(bottleneck_dim, num_factors),
+            nn.Sigmoid()
+        )
+        for layer in adv_head:
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                nn.init.normal_(layer.weight, 0, 0.01)
+                nn.init.constant_(layer.bias, 0)
+        regressor = ImageRegressor(backbone, num_factors, bottleneck=bottleneck, head=head, adv_head=adv_head,
+                               bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
+    else:
+        regressor = ImageRegressor(backbone, num_factors,
+                                   bottleneck_dim=bottleneck_dim, width=bottleneck_dim)
+
+    regressor = regressor.to(device)
     print(regressor)
+    mdd = MarginDisparityDiscrepancy(args.margin).to(device)
+
     # define optimizer and lr scheduler
     optimizer = SGD(regressor.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
@@ -96,7 +142,7 @@ def main(args: argparse.Namespace):
         train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                          shuffle=True, num_workers=args.workers, drop_last=True)
         # extract features from both domains
-        feature_extractor = nn.Sequential(regressor.backbone, regressor.bottleneck).to(device)
+        feature_extractor = nn.Sequential(regressor.backbone, regressor.bottleneck, regressor.head[:-2]).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
@@ -118,7 +164,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         # train for one epoch
         print("lr", lr_scheduler.get_lr())
-        train(train_source_iter, train_target_iter, regressor, optimizer,
+        train(train_source_iter, train_target_iter, regressor, mdd, optimizer,
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
@@ -137,21 +183,23 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
-          model: Regressor, optimizer: SGD,
+          model, mdd: MarginDisparityDiscrepancy, optimizer: SGD,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
-    mse_losses = AverageMeter('MSE Loss', ':6.3f')
+    source_losses = AverageMeter('Source Loss', ':6.3f')
+    trans_losses = AverageMeter('Trans Loss', ':6.3f')
     mae_losses_s = AverageMeter('MAE Loss (s)', ':6.3f')
     mae_losses_t = AverageMeter('MAE Loss (t)', ':6.3f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, mse_losses, mae_losses_s, mae_losses_t],
+        [batch_time, data_time, source_losses, trans_losses, mae_losses_s, mae_losses_t],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
+    mdd.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
@@ -168,15 +216,25 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         data_time.update(time.time() - end)
 
         # compute output
-        y_s, _ = model(x_s)
-        y_t, _ = model(x_t)
+        x = torch.cat([x_s, x_t], dim=0)
+        outputs, outputs_adv = model(x)
+        y_s, y_t = outputs.chunk(2, dim=0)
+        y_s_adv, y_t_adv = outputs_adv.chunk(2, dim=0)
 
+        # compute mean square loss on source domain
         mse_loss = F.mse_loss(y_s, labels_s)
+
+        # compute margin disparity discrepancy between domains
+        transfer_loss = mdd(y_s, y_s_adv, y_t, y_t_adv)
+        # for adversarial classifier, minimize negative mdd is equal to maximize mdd
+        loss = mse_loss - transfer_loss * args.trade_off
+        model.step()
+
         mae_loss_s = F.l1_loss(y_s, labels_s)
         mae_loss_t = F.l1_loss(y_t, labels_t)
-        loss = mse_loss
 
-        mse_losses.update(mse_loss.item(), x_s.size(0))
+        source_losses.update(mse_loss.item(), x_s.size(0))
+        trans_losses.update(transfer_loss.item(), x_s.size(0))
         mae_losses_s.update(mae_loss_s.item(), x_s.size(0))
         mae_losses_t.update(mae_loss_t.item(), x_s.size(0))
 
@@ -204,7 +262,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='Source Only for Regression Domain Adaptation')
+    parser = argparse.ArgumentParser(description='MDD for Regression Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -220,7 +278,11 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(architecture_names) +
                              ' (default: resnet18)')
-    parser.add_argument('--normalization', default='BN', type=str, choices=["IN", "BN"])
+    parser.add_argument('--bottleneck-dim', default=512, type=int)
+    parser.add_argument('--normalization', default='BN', type=str, choices=['BN', 'IN'])
+    parser.add_argument('--margin', type=float, default=1., help="margin gamma")
+    parser.add_argument('--trade-off', default=1., type=float,
+                        help='the trade-off hyper-parameter for transfer loss')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
@@ -243,7 +305,7 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--log", type=str, default='src_only',
+    parser.add_argument("--log", type=str, default='mdd',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model." 

@@ -13,5 +13,3 @@ CUDA_VISIBLE_DEVICES=0 python mdd.py data/mpi3d -d MPI3D -s RC -t RL -a resnet18
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/mpi3d -d MPI3D -s RC -t T -a resnet18 --epochs 60 --seed 0 -b 36 --log logs/mdd/MPI3D_RC2T --normalization IN --resize-size 224 --weight-decay 0.001
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/mpi3d -d MPI3D -s T -t RL -a resnet18 --epochs 60 --seed 0 -b 36 --log logs/mdd/MPI3D_T2RL --normalization IN --resize-size 224 --weight-decay 0.001
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/mpi3d -d MPI3D -s T -t RC -a resnet18 --epochs 60 --seed 0 -b 36 --log logs/mdd/MPI3D_T2RC --normalization IN --resize-size 224 --weight-decay 0.001
-
-

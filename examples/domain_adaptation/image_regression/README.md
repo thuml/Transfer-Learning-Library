@@ -11,7 +11,7 @@ Following datasets can be downloaded automatically:
 
 Supported methods include:
 
-- Margin Disparity Discrepancy (MDD)
+- Disparity Discrepancy (DD)
 - Representation Subspace Distance (RSD)
 
 ## Experiment and Results
@@ -20,10 +20,10 @@ The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchm
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script
-# Train a MDD on DSprites C->N task using ResNet 18.
+# Train a DD on DSprites C->N task using ResNet 18.
 # Assume you have put the datasets under the path `data/dSprites`, 
 # or you are glad to download the datasets automatically from the Internet to this path
-CUDA_VISIBLE_DEVICES=0 python mdd.py data/dSprites -d DSprites -s C -t N -a resnet18 --epochs 40 --seed 0 -b 128 --log logs/mdd/dSprites_C2N --wd 0.0005
+CUDA_VISIBLE_DEVICES=0 python dd.py data/dSprites -d DSprites -s C -t N -a resnet18 --epochs 40 --seed 0 -b 128 --log logs/mdd/dSprites_C2N --wd 0.0005
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.

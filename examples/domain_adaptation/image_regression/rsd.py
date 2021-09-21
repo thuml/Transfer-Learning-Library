@@ -4,6 +4,7 @@ import warnings
 import sys
 import argparse
 import shutil
+import os.path as osp
 
 import torch
 import torch.nn as nn
@@ -22,6 +23,7 @@ import common.vision.models as models
 from common.utils.data import ForeverDataIterator
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
+from common.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 from utils import convert_model, validate
@@ -79,7 +81,9 @@ def main(args: argparse.Namespace):
     num_factors = train_source_dataset.num_factors
     bottleneck = nn.Sequential(
         nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-        nn.Flatten()
+        nn.Flatten(),
+        nn.Linear(backbone.out_features, 256),
+        nn.ReLU()
     )
     regressor = Regressor(backbone=backbone, num_factors=num_factors, bottleneck=bottleneck, bottleneck_dim=backbone.out_features).to(device)
     print(regressor)
@@ -91,9 +95,32 @@ def main(args: argparse.Namespace):
     # define loss function
     rsd = RepresentationSubspaceDistance(args.trade_off_bmp)
 
+    # resume from the best checkpoint
+    if args.phase != 'train':
+        checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
+        regressor.load_state_dict(checkpoint)
+
+    # analysis the model
+    if args.phase == 'analysis':
+        train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                         shuffle=True, num_workers=args.workers, drop_last=True)
+        train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
+                                         shuffle=True, num_workers=args.workers, drop_last=True)
+        # extract features from both domains
+        feature_extractor = nn.Sequential(regressor.backbone, regressor.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        # plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.pdf')
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        # calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
     if args.phase == 'test':
-        regressor.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-        mae = validate(val_loader, regressor, args, train_source_dataset.factors)
+        mae = validate(val_loader, regressor, args, train_source_dataset.factors, device)
         print(mae)
         return
 
@@ -234,8 +261,9 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument("--log", type=str, default='src_only',
                         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
-                        help="When phase is 'test', only test the model.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
+                        help="When phase is 'test', only test the model." 
+                             "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
 
