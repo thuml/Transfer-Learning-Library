@@ -38,6 +38,7 @@ Domain Adaptation Library
     translation/cyclegan
     translation/cycada
     translation/fda
+    translation/spgan
     modules
 
 

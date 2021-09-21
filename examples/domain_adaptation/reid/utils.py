@@ -1,15 +1,22 @@
 import sys
 import timm
+import numpy as np
+import torch
 import torch.nn as nn
 from torch.nn import Parameter
 import torchvision.transforms as T
 
 sys.path.append('../../..')
+from common.utils.metric.reid import extract_reid_feature
+from common.utils.analysis import tsne
 from common.vision.transforms import RandomErasing
 import common.vision.models.reid as models
 
 
 def copy_state_dict(model, state_dict, strip=None):
+    """Copy state dict into the passed in ReID model. As we are using classification loss, which means we need to output
+    different number of classes(identities) for different datasets, we will not copy the parameters of last `fc` layer.
+    """
     tgt_state = model.state_dict()
     copied_names = set()
     for name, param in state_dict.items():
@@ -96,3 +103,95 @@ def get_val_transform(height, width):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+
+
+def visualize_tsne(source_loader, target_loader, model, filename, device, n_data_points_per_domain=3000):
+    """Visualize features from different domains using t-SNE. As we can have very large number of samples in each
+    domain, only `n_data_points_per_domain` number of samples are randomly selected in each domain.
+    """
+    source_feature_dict = extract_reid_feature(source_loader, model, device, normalize=True)
+    source_feature = torch.stack(list(source_feature_dict.values())).cpu()
+    source_feature = source_feature[torch.randperm(len(source_feature))]
+    source_feature = source_feature[:n_data_points_per_domain]
+
+    target_feature_dict = extract_reid_feature(target_loader, model, device, normalize=True)
+    target_feature = torch.stack(list(target_feature_dict.values())).cpu()
+    target_feature = target_feature[torch.randperm(len(target_feature))]
+    target_feature = target_feature[:n_data_points_per_domain]
+
+    tsne.visualize(source_feature, target_feature, filename, source_color='cornflowerblue', target_color='darkorange')
+    print('T-SNE process is done, figure is saved to {}'.format(filename))
+
+
+def k_reciprocal_neigh(initial_rank, i, k1):
+    """Compute k-reciprocal neighbors of i-th sample. Two samples f_i, f_j are k reciprocal-neighbors if and only if
+    each one of them is among the k-nearest samples of another sample.
+    """
+    forward_k_neigh_index = initial_rank[i, :k1 + 1]
+    backward_k_neigh_index = initial_rank[forward_k_neigh_index, :k1 + 1]
+    fi = torch.nonzero(backward_k_neigh_index == i)[:, 0]
+    return forward_k_neigh_index[fi]
+
+
+def compute_rerank_dist(target_features, k1=30, k2=6):
+    """Compute distance according to `Re-ranking Person Re-identification with k-reciprocal Encoding
+    (CVPR 2017) <https://arxiv.org/pdf/1701.08398.pdf>`_.
+    """
+    n = target_features.size(0)
+    original_dist = torch.pow(target_features, 2).sum(dim=1, keepdim=True) * 2
+    original_dist = original_dist.expand(n, n) - 2 * torch.mm(target_features, target_features.t())
+    original_dist /= original_dist.max(0)[0]
+    original_dist = original_dist.t()
+    initial_rank = torch.argsort(original_dist, dim=-1)
+    all_num = gallery_num = original_dist.size(0)
+
+    del target_features
+
+    nn_k1 = []
+    nn_k1_half = []
+    for i in range(all_num):
+        nn_k1.append(k_reciprocal_neigh(initial_rank, i, k1))
+        nn_k1_half.append(k_reciprocal_neigh(initial_rank, i, int(np.around(k1 / 2))))
+
+    V = torch.zeros(all_num, all_num)
+    for i in range(all_num):
+        k_reciprocal_index = nn_k1[i]
+        k_reciprocal_expansion_index = k_reciprocal_index
+        for candidate in k_reciprocal_index:
+            candidate_k_reciprocal_index = nn_k1_half[candidate]
+            if (len(np.intersect1d(candidate_k_reciprocal_index, k_reciprocal_index)) > 2 / 3 * len(
+                    candidate_k_reciprocal_index)):
+                k_reciprocal_expansion_index = torch.cat((k_reciprocal_expansion_index, candidate_k_reciprocal_index))
+
+        k_reciprocal_expansion_index = torch.unique(k_reciprocal_expansion_index)
+        weight = torch.exp(-original_dist[i, k_reciprocal_expansion_index])
+        V[i, k_reciprocal_expansion_index] = weight / torch.sum(weight)
+
+    if k2 != 1:
+        k2_rank = initial_rank[:, :k2].clone().view(-1)
+        V_qe = V[k2_rank]
+        V_qe = V_qe.view(initial_rank.size(0), k2, -1).sum(1)
+        V_qe /= k2
+        V = V_qe
+        del V_qe
+    del initial_rank
+
+    invIndex = []
+    for i in range(gallery_num):
+        invIndex.append(torch.nonzero(V[:, i])[:, 0])
+
+    jaccard_dist = torch.zeros_like(original_dist)
+    for i in range(all_num):
+        temp_min = torch.zeros(1, gallery_num)
+        indNonZero = torch.nonzero(V[i, :])[:, 0]
+        indImages = [invIndex[ind] for ind in indNonZero]
+        for j in range(len(indNonZero)):
+            temp_min[0, indImages[j]] = temp_min[0, indImages[j]] + \
+                                        torch.min(V[i, indNonZero[j]], V[indImages[j], indNonZero[j]])
+        jaccard_dist[i] = 1 - temp_min / (2 - temp_min)
+    del invIndex
+    del V
+
+    pos_bool = (jaccard_dist < 0)
+    jaccard_dist[pos_bool] = 0.0
+    return jaccard_dist

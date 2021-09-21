@@ -20,7 +20,7 @@ from common.vision.models.reid.identifier import ReIdentifier
 import common.vision.datasets.reid as datasets
 from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from common.utils.scheduler import WarmupMultiStepLR
-from common.utils.metric.reid import validate
+from common.utils.metric.reid import validate, visualize_ranked_results
 from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -63,10 +63,9 @@ def main(args: argparse.Namespace):
 
     # source dataset
     source_dataset = datasets.__dict__[args.source](root=osp.join(root, args.source.lower()))
-    source_train_set = sorted(source_dataset.train)
-    sampler = RandomMultipleGallerySampler(source_train_set, args.num_instances)
+    sampler = RandomMultipleGallerySampler(source_dataset.train, args.num_instances)
     train_loader = DataLoader(
-        convert_to_pytorch_dataset(source_train_set, root=source_dataset.images_dir, transform=train_transform),
+        convert_to_pytorch_dataset(source_dataset.train, root=source_dataset.images_dir, transform=train_transform),
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
     val_loader = DataLoader(
@@ -96,9 +95,23 @@ def main(args: argparse.Namespace):
     lr_scheduler = WarmupMultiStepLR(optimizer, args.milestones, gamma=0.1, warmup_factor=0.1,
                                      warmup_steps=args.warmup_steps)
 
-    if args.phase == 'test':
+    # resume from the best checkpoint
+    if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         model.load_state_dict(checkpoint)
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # plot t-SNE
+        utils.visualize_tsne(source_loader=val_loader, target_loader=test_loader, model=model,
+                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
+        # visualize ranked results
+        visualize_ranked_results(test_loader, model, target_dataset.query, target_dataset.gallery, device,
+                                 visualize_dir=logger.visualize_directory, width=args.width, height=args.height,
+                                 rerank=args.rerank)
+        return
+
+    if args.phase == 'test':
         print("Test on source domain:")
         validate(val_loader, model, source_dataset.query, source_dataset.gallery, device, cmc_flag=True,
                  rerank=args.rerank)
@@ -256,7 +269,8 @@ if __name__ == '__main__':
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
     parser.add_argument("--log", type=str, default='baseline',
                         help="Where to save logs, checkpoints and debugging images.")
-    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
-                        help="When phase is 'test', only test the model.")
+    parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
+                        help="When phase is 'test', only test the model."
+                             "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)

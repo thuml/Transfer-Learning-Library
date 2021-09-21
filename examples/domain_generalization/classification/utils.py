@@ -1,6 +1,7 @@
 import sys
 import time
 import timm
+import tqdm
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
@@ -301,3 +302,31 @@ def get_val_transform(resizing='default'):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+
+
+def collect_feature(data_loader, feature_extractor: nn.Module, device: torch.device,
+                    max_num_features=None) -> torch.Tensor:
+    """
+    Fetch data from `data_loader`, and then use `feature_extractor` to collect features. This function is
+    specific for domain generalization because each element in data_loader is a tuple
+    (images, labels, domain_labels).
+
+    Args:
+        data_loader (torch.utils.data.DataLoader): Data loader.
+        feature_extractor (torch.nn.Module): A feature extractor.
+        device (torch.device)
+        max_num_features (int): The max number of features to return
+
+    Returns:
+        Features in shape (min(len(data_loader), max_num_features * mini-batch size), :math:`|\mathcal{F}|`).
+    """
+    feature_extractor.eval()
+    all_features = []
+    with torch.no_grad():
+        for i, (images, target, domain_labels) in enumerate(tqdm.tqdm(data_loader)):
+            if max_num_features is not None and i >= max_num_features:
+                break
+            images = images.to(device)
+            feature = feature_extractor(images).cpu()
+            all_features.append(feature)
+    return torch.cat(all_features, dim=0)
