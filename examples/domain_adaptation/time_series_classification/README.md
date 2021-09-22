@@ -35,8 +35,6 @@ CUDA_VISIBLE_DEVICES=1 python dann.py data -d UCIHHAR -s 1 -t 3 -a fcn --epochs 
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
-## TODO
-Support methods: ADDA, BSP, AdaBN/TransNorm, CycleGAN, CyCADA
 
 ## Citation
 If you use these methods in your research, please consider citing.

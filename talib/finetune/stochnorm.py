@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 import numpy as np
 import torch
 import torch.nn as nn

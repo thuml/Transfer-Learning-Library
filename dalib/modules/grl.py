@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional, Any, Tuple
 import numpy as np
 import torch.nn as nn

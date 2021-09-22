@@ -78,7 +78,5 @@ CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/cub200 -d CUB200 -sr 100 --seed 
   --log logs/moco_pretrain_bi_tuning/cub200_100 --pretrained checkpoints/moco_v1_200ep_backbone.pth
 ```
 The shell files als give the script to reproduce the [unsupervised pretrained benchmarks](/docs/talib/benchmarks/image_classification_unsupervised.rst) with specified hyper-parameters.
- 
-## TODO
-Support datasets: clevr, kitti, dsprites, resisc45, diabetic_retinopathy_detection, eurosat
+
 

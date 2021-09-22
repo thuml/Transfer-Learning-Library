@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 import os
 from typing import Optional
 from .imagelist import ImageList

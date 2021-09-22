@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import torchvision.datasets as D
 from PIL import Image
 from typing import Tuple, Any

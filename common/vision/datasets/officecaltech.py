@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import os
 from typing import Optional
 from torchvision.datasets.folder import DatasetFolder, IMG_EXTENSIONS, default_loader

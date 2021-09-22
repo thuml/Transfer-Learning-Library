@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 # TODO needs better documentation
 import numpy as np
 from PIL import ImageFilter, Image
