@@ -28,7 +28,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class SequenceClassifier(GeneralModule):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim=1024,
                  width=1024, grl=None, finetune=False, pool_layer=None):
-        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.01, max_iters=1000, auto_step=False) if grl is None else grl
+        grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000, auto_step=False) if grl is None else grl
         if pool_layer is None:
             pool_layer = nn.Sequential(
                 nn.AdaptiveMaxPool1d(output_size=(1,)),
@@ -64,6 +64,19 @@ class SequenceClassifier(GeneralModule):
             adv_head[dep * 3].bias.data.fill_(0.0)
         super(SequenceClassifier, self).__init__(backbone, num_classes, bottleneck,
                                               head, adv_head, grl_layer, finetune)
+
+    def get_parameters(self, base_lr=1.0):
+        """
+        Return a parameters list which decides optimization hyper-parameters,
+        such as the relative learning rate of each layer.
+        """
+        params = [
+            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else base_lr},
+            {"params": self.bottleneck.parameters(), "lr": 0.1 * base_lr if self.finetune else base_lr},
+            {"params": self.head.parameters(), "lr": base_lr},
+            {"params": self.adv_head.parameters(), "lr": base_lr}
+        ]
+        return params
 
 
 def main(args):
