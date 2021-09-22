@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.co_tuning import CoTuningLoss, Relationship, Classifier
+from talib.finetune.co_tuning import CoTuningLoss, Relationship, Classifier
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger

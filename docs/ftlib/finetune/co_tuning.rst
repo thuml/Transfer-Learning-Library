@@ -3,7 +3,7 @@
 Co-Tuning
 ------------------------------------------
 
-.. autoclass:: ftlib.finetune.co_tuning.CoTuningLoss
+.. autoclass:: talib.finetune.co_tuning.CoTuningLoss
 
-.. autoclass:: ftlib.finetune.co_tuning.Relationship
+.. autoclass:: talib.finetune.co_tuning.Relationship
 

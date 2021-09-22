@@ -17,7 +17,7 @@ from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.data import ForeverDataIterator
 from common.utils.logger import CompleteLogger
-from ftlib.finetune.bi_tuning import Classifier, Bituning
+from talib.finetune.bi_tuning import Classifier, Bituning
 
 sys.path.append('.')
 import utils

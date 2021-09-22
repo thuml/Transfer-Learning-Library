@@ -3,5 +3,5 @@
 Bi-Tuning
 ------------------------------------------
 
-.. autoclass:: ftlib.finetune.bi_tuning.Bituning
+.. autoclass:: talib.finetune.bi_tuning.Bituning
 

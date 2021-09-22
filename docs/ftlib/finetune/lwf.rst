@@ -3,5 +3,5 @@
 Learning without Forgetting (LWF)
 ------------------------------------------
 
-.. autoclass:: ftlib.finetune.lwf.Classifier
+.. autoclass:: talib.finetune.lwf.Classifier
 

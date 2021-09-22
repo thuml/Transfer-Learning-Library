@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.stochnorm import convert_model
+from talib.finetune.stochnorm import convert_model
 from common.modules.classifier import Classifier
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.lwf import collect_pretrain_labels, Classifier
+from talib.finetune.lwf import collect_pretrain_labels, Classifier
 from common.loss import KnowledgeDistillationLoss
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter

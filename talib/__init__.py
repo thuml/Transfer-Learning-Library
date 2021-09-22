@@ -1,1 +1,1 @@
-__all__ = ['finetune', 'pretrain']
+__all__ = ['finetune']

@@ -20,7 +20,7 @@ Welcome to Transfer Learning Library
     :titlesonly:
 
     dalib/index
-    ftlib/index
+    talib/index
     dglib/index
     common/index
 

@@ -32,7 +32,7 @@ common/modules                      Frequently used modules in transfer learning
 dalib/adaptation                    Adaptation algorithms and losses for DA
 dalib/translation                   Image translation algorithms for DA
 dalib/modules                       Frequently used modules in DA
-ftlib/finetune                      Finetune algorithms and losses
+talib/finetune                      Finetune algorithms and losses
 ===============================     ==========================================================================
 
 

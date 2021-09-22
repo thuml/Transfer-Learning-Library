@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.bss import BatchSpectralShrinkage
+from talib.finetune.bss import BatchSpectralShrinkage
 from common.modules.classifier import Classifier
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter

@@ -3,5 +3,5 @@
 Batch Spectral Shrinkage (BSS)
 ------------------------------------------
 
-.. autoclass:: ftlib.finetune.bss.BatchSpectralShrinkage
+.. autoclass:: talib.finetune.bss.BatchSpectralShrinkage
 

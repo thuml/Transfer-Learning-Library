@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from ftlib.finetune.delta import *
+from talib.finetune.delta import *
 from common.modules.classifier import Classifier
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy
