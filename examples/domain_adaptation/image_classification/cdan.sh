@@ -75,19 +75,19 @@ CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q s -
 CUDA_VISIBLE_DEVICES=0 python cdan.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --bottleneck-dim 1024 -r -rd 51200 --epochs 40 -i 5000 -p 500 --seed 0 --log logs/cdan/DomainNet_:2s
 
 # ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/cdan/iwildcam
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d iwildcam -a resnet50 --epochs 30 -i 1000 --seed 0 --log logs/cdan/iwildcam
 
 # DenseNet121, Wilds Dataset
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
   -a densenet121 --scratch --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/cdan/camelyon17
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
   -a densenet121 --epochs 10 -i 1000 --lr 0.01 --seed 0 --log logs/cdan/fmow
 
 # Digits
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
   --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/cdan/MNIST2USPS
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
   --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/cdan/USPS2MNIST
-CUDA_VISIBLE_DEVICES=3 python cdan.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
-  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/cdan/SVHN2MNIST
+CUDA_VISIBLE_DEVICES=0 python cdan.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
+  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/cdan/SVHN2MNIST
 

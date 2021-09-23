@@ -19,6 +19,7 @@ pip install timm
 
 Following datasets can be downloaded automatically:
 
+- MNIST, SVHN, USPS 
 - Office31
 - OfficeCaltech
 - OfficeHome
