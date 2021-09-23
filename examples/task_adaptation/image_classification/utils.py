@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import time
 from PIL import Image
 import timm
@@ -49,9 +53,8 @@ def get_model(model_name, pretrained_checkpoint=None):
     return backbone
 
 
-# resisc45, diabetic_retinopathy_detection
 def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, sample_size=None):
-    if dataset_name in datasets_finetune.__dict__:
+    if dataset_name in ["Aircraft", "CUB200", "StanfordCars", "COCO70"]:
         # load datasets from common.vision.datasets
         dataset = datasets_finetune.__dict__[dataset_name]
         train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=train_transform)
