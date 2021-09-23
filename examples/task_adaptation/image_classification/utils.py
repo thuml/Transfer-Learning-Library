@@ -1,7 +1,3 @@
-"""
-@author: Junguang Jiang
-@contact: JiangJunguang1123@outlook.com
-"""
 import time
 from PIL import Image
 import timm
@@ -12,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Subset
 import torchvision.transforms as T
+from torch.optim import SGD, Adam, optimizer
 
 import common.vision.datasets as datasets_finetune
 import common.vision.models as models
@@ -184,6 +181,26 @@ def get_val_transform(resizing='default'):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+
+def get_optimizer(optimizer_name, params, lr, wd, momentum):
+    '''
+    Args:
+        optimizer_name:
+            - SGD
+            - Adam
+        params: iterable of parameters to optimize or dicts defining parameter groups
+        lr: learning rate
+        weight_decay: weight decay
+        momentum: momentum factor for SGD
+    '''
+    optimizer = None
+    if optimizer_name == 'SGD':
+        optimizer = SGD(params=params, lr=lr, momentum=momentum, weight_decay=wd, nesterov=True)
+    elif optimizer_name == 'Adam':
+        optimizer = Adam(params=params, lr=lr, weight_decay=wd)
+    else:
+        raise NotImplementedError(optimizer_name)
+    return optimizer
 
 
 def visualize(image, filename):
