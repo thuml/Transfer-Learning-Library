@@ -1,3 +1,8 @@
+"""
+Modified from https://github.com/jihanyang/AFN
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from typing import Optional, List, Dict
 import torch
 import torch.nn as nn

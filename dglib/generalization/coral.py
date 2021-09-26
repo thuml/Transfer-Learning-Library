@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import torch
 import torch.nn as nn
 

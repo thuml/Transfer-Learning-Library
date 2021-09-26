@@ -1,6 +1,6 @@
 """
-@author: Junguang Jiang
-@contact: JiangJunguang1123@outlook.com
+@author: Junguang Jiang, Baixu Chen
+@contact: JiangJunguang1123@outlook.com, cbx_99_hasta@outlook.com
 """
 import sys
 import os.path as osp
@@ -71,11 +71,14 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
     if train_target_transform is None:
         train_target_transform = train_source_transform
     if dataset_name == "Digits":
-       train_source_dataset = datasets.__dict__[source[0]](osp.join(root, source[0]), download=True, transform=train_source_transform)
-       train_target_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), download=True, transform=train_target_transform)
-       val_dataset = test_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), split='test', download=True, transform=val_transform)
-       class_names = datasets.MNIST.classes
-       num_classes = len(class_names)
+        train_source_dataset = datasets.__dict__[source[0]](osp.join(root, source[0]), download=True,
+                                                            transform=train_source_transform)
+        train_target_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), download=True,
+                                                            transform=train_target_transform)
+        val_dataset = test_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), split='test',
+                                                                  download=True, transform=val_transform)
+        class_names = datasets.MNIST.get_classes()
+        num_classes = len(class_names)
     elif dataset_name in datasets.__dict__:
         # load datasets from common.vision.datasets
         dataset = datasets.__dict__[dataset_name]

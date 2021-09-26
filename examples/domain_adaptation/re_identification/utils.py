@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import sys
 import timm
 import numpy as np

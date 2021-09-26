@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import os.path as osp
 from torch.utils.data import Dataset
 from PIL import Image
