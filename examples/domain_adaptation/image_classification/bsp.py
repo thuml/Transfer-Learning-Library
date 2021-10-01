@@ -113,6 +113,32 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
+    if args.pretrain is None:
+        # first pretrain the classifier wish source data
+        print("Pretraining the model on source domain.")
+        args.pretrain = logger.get_checkpoint_path('pretrain')
+        pretrain_model = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                         pool_layer=pool_layer, finetune=not args.scratch).to(device)
+        pretrain_optimizer = SGD(pretrain_model.get_parameters(), args.pretrain_lr, momentum=args.momentum,
+                                 weight_decay=args.weight_decay, nesterov=True)
+        pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
+                                         lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
+                                             -args.lr_decay))
+        # start pretraining
+        for epoch in range(args.pretrain_epochs):
+            print("lr:", pretrain_lr_scheduler.get_lr())
+            # pretrain for one epoch
+            utils.pretrain(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+                           device)
+            # validate to show pretrain process
+            utils.validate(val_loader, pretrain_model, args, device)
+
+        torch.save(pretrain_model.state_dict(), args.pretrain)
+        print("Pretraining process is done.")
+
+    checkpoint = torch.load(args.pretrain, map_location='cpu')
+    classifier.load_state_dict(checkpoint)
+
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
@@ -227,6 +253,8 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--pretrain', type=str, default=None,
+                        help='pretrain checkpoint for classification model')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
@@ -234,14 +262,15 @@ if __name__ == '__main__':
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    parser.add_argument('--trade-off-bsp', default=1e-4, type=float,
+    parser.add_argument('--trade-off-bsp', default=2e-4, type=float,
                         help='the trade-off hyper-parameter for bsp loss')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.003, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--pretrain-lr', default=0.001, type=float, help='initial pretrain learning rate')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -253,6 +282,8 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
+    parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
+                        help='number of total epochs(pretrain) to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -261,7 +292,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='dann',
+    parser.add_argument("--log", type=str, default='bsp',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

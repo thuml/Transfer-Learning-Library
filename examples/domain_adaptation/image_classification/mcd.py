@@ -194,7 +194,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
-               0.01 * (entropy(y1_t) + entropy(y2_t))
+               (entropy(y1_t) + entropy(y2_t)) * args.trade_off_entropy
         loss.backward()
         optimizer_g.step()
         optimizer_f.step()
@@ -210,7 +210,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         y2_s, y2_t = y_2.chunk(2, dim=0)
         y1_t, y2_t = F.softmax(y1_t, dim=1), F.softmax(y2_t, dim=1)
         loss = F.cross_entropy(y1_s, labels_s) + F.cross_entropy(y2_s, labels_s) + \
-               0.01 * (entropy(y1_t) + entropy(y2_t)) - classifier_discrepancy(y1_t, y2_t) * args.trade_off
+               (entropy(y1_t) + entropy(y2_t)) * args.trade_off_entropy - \
+               classifier_discrepancy(y1_t, y2_t) * args.trade_off
         loss.backward()
         optimizer_f.step()
 
@@ -328,6 +329,8 @@ if __name__ == '__main__':
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
+    parser.add_argument('--trade-off-entropy', default=0.01, type=float,
+                        help='the trade-off hyper-parameter for entropy loss')
     parser.add_argument('--num-k', type=int, default=4, metavar='K',
                         help='how many steps to repeat the generator update')
     # training parameters
@@ -355,4 +358,3 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-
