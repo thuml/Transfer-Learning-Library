@@ -5,10 +5,30 @@
 from typing import Optional
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 from dalib.modules.gl import WarmStartGradientLayer
 from common.utils.metric.keypoint_detection import get_max_preds
+
+
+class FastPseudoLabelGenerator2d(nn.Module):
+    def __init__(self, sigma=2):
+        super().__init__()
+        self.sigma = sigma
+    
+    def forward(self, heatmap: torch.Tensor):
+        heatmap = heatmap.detach()
+        height, width = heatmap.shape[-2:]
+        idx = heatmap.flatten(-2).argmax(dim=-1) # B, K
+        pred_h, pred_w = idx.div(width, rounding_mode='floor'), idx.remainder(width) # B, K
+        delta_h = torch.arange(height, device=heatmap.device) - pred_h.unsqueeze(-1) # B, K, H
+        delta_w = torch.arange(width, device=heatmap.device) - pred_w.unsqueeze(-1) # B, K, W
+        gaussian = (delta_h.square().unsqueeze(-1) + delta_w.square().unsqueeze(-2)).div(-2 * self.sigma * self.sigma).exp() # B, K, H, W
+        ground_truth = F.threshold(gaussian, threshold=1e-2, value=0.)
+
+        ground_false = (ground_truth.sum(dim=1, keepdim=True) - ground_truth).clamp(0., 1.)
+        return ground_truth, ground_false
 
 
 class PseudoLabelGenerator2d(nn.Module):
