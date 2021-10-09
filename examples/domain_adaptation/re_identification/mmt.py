@@ -18,7 +18,6 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.preprocessing import normalize as sklearn_normalize
 
 sys.path.append('../../..')
 import common.vision.datasets.reid as datasets
@@ -99,7 +98,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'analysis':
         # plot t-SNE
         utils.visualize_tsne(source_loader=val_loader, target_loader=test_loader, model=model_1_ema,
-                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
+                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.pdf'), device=device)
         # visualize ranked results
         visualize_ranked_results(test_loader, model_1_ema, target_dataset.query, target_dataset.gallery, device,
                                  visualize_dir=logger.visualize_directory, width=args.width, height=args.height,
@@ -211,7 +210,9 @@ def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
     print('Clustering finished')
 
     # normalize cluster centers and convert to pytorch tensor
-    cluster_centers = torch.from_numpy(sklearn_normalize(cluster_centers, axis=1)).float().to(device)
+    cluster_centers = torch.from_numpy(cluster_centers).float().to(device)
+    cluster_centers = F.normalize(cluster_centers, dim=1)
+
     # reinitialize classifier head
     model_1.module.head.weight.data.copy_(cluster_centers)
     model_2.module.head.weight.data.copy_(cluster_centers)

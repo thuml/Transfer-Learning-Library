@@ -21,14 +21,13 @@ class ReIdentifier(nn.Module):
                  bottleneck_dim: Optional[int] = -1, finetune=True, pool_layer=None):
         super(ReIdentifier, self).__init__()
         if pool_layer is None:
-            pool_layer = nn.Sequential(
+            self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
                 nn.Flatten()
             )
-        self.backbone = nn.Sequential(
-            backbone,
-            pool_layer
-        )
+        else:
+            self.pool_layer = pool_layer
+        self.backbone = backbone
         self.num_classes = num_classes
         if bottleneck is None:
             feature_bn = nn.BatchNorm1d(backbone.out_features)
@@ -58,7 +57,7 @@ class ReIdentifier(nn.Module):
 
     def forward(self, x: torch.Tensor):
         """"""
-        f = self.backbone(x)
+        f = self.pool_layer(self.backbone(x))
         bn_f = self.bottleneck(f)
         if not self.training:
             return bn_f

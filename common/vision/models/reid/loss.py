@@ -120,6 +120,44 @@ class TripletLoss(nn.Module):
         return loss
 
 
+class TripletLossXBM(nn.Module):
+    def __init__(self, margin=0.3, norm=False):
+        super(TripletLossXBM, self).__init__()
+        self.margin = margin
+        self.norm = norm
+        self.ranking_loss = nn.MarginRankingLoss(margin=margin)
+
+    def forward(self, inputs_col, targets_col, inputs_row, targets_row):
+
+        n = inputs_col.size(0)
+        if self.norm:
+            inputs_col = F.normalize(inputs_col)
+            inputs_row = F.normalize(inputs_row)
+
+        dist = pairwise_euclidean_distance(inputs_col, inputs_row)
+
+        # split the positive and negative pairs
+        pos_mask = targets_col.expand(
+            targets_row.shape[0], n
+        ).t() == targets_row.expand(n, targets_row.shape[0])
+        neg_mask = ~pos_mask
+        # For each anchor, find the hardest positive and negative
+        dist_ap, dist_an = [], []
+
+        for i in range(n):
+            dist_ap.append(dist[i][pos_mask[i]].max().unsqueeze(0))
+            dist_an.append(dist[i][neg_mask[i]].min().unsqueeze(0))
+
+        dist_ap = torch.cat(dist_ap)
+        dist_an = torch.cat(dist_an)
+
+        # Compute ranking hinge loss
+        y = torch.ones_like(dist_an)
+        loss = self.ranking_loss(dist_an, dist_ap, y)
+
+        return loss
+
+
 class SoftTripletLoss(nn.Module):
     r"""Soft triplet loss from `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised
     Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_.

@@ -7,13 +7,14 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 
-def convert_to_pytorch_dataset(dataset, root=None, transform=None):
+def convert_to_pytorch_dataset(dataset, root=None, transform=None, return_idxes=False):
     class ReidDataset(Dataset):
         def __init__(self, dataset, root, transform):
             super(ReidDataset, self).__init__()
             self.dataset = dataset
             self.root = root
             self.transform = transform
+            self.return_idxes = return_idxes
 
         def __len__(self):
             return len(self.dataset)
@@ -29,6 +30,9 @@ def convert_to_pytorch_dataset(dataset, root=None, transform=None):
             if self.transform is not None:
                 img = self.transform(img)
 
-            return img, fname, pid, cid
+            if not self.return_idxes:
+                return img, fname, pid, cid
+            else:
+                return img, fname, pid, cid, index
 
     return ReidDataset(dataset, root, transform)
