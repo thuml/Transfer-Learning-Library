@@ -19,18 +19,18 @@ pip install timm
 
 Following datasets can be downloaded automatically:
 
-- MNIST, SVHN, USPS 
-- Office31
-- OfficeCaltech
-- OfficeHome
-- VisDA2017
-- DomainNet
-- iwildcam (WILDS)
-- camelyon17 (WILDS)
-- fmow (WILDS)
+- [MNIST](http://yann.lecun.com/exdb/mnist/), [SVHN](http://ufldl.stanford.edu/housenumbers/), [USPS](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html#usps) 
+- [Office31](https://www.cc.gatech.edu/~judy/domainadapt/)
+- [OfficeCaltech](https://www.cc.gatech.edu/~judy/domainadapt/)
+- [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
+- [VisDA2017](http://ai.bu.edu/visda-2017/)
+- [DomainNet](http://ai.bu.edu/M3SDA/)
+- [iwildcam (WILDS)](https://wilds.stanford.edu/datasets/)
+- [camelyon17 (WILDS)](https://wilds.stanford.edu/datasets/)
+- [fmow (WILDS)](https://wilds.stanford.edu/datasets/)
 
 You need to prepare following datasets manually if you want to use them:
-- ImageNet
+- [ImageNet](https://www.image-net.org/)
 - [ImageNetR](https://github.com/hendrycks/imagenet-r)
 - [ImageNet-Sketch](https://github.com/HaohanWang/ImageNet-Sketch)
 
@@ -40,18 +40,20 @@ and prepare them following [Documentation for ImageNetR](/common/vision/datasets
 
 Supported methods include:
 
-- Domain Adversarial Neural Network (DANN)
-- Deep Adaptation Network (DAN)
-- Joint Adaptation Network (JAN)
-- Conditional Domain Adversarial Network (CDAN)
-- Maximum Classifier Discrepancy (MCD)
-- Adaptive Feature Norm (AFN)
-- Margin Disparity Discrepancy (MDD)
-- Minimum Class Confusion (MCC)
+- [Domain Adversarial Neural Network (DANN)](https://arxiv.org/abs/1505.07818)
+- [Deep Adaptation Network (DAN)](https://arxiv.org/pdf/1502.02791)
+- [Joint Adaptation Network (JAN)](https://arxiv.org/abs/1605.06636)
+- [Adversarial Discriminative Domain Adaptation (ADDA)](https://arxiv.org/pdf/1702.05464.pdf)
+- [Conditional Domain Adversarial Network (CDAN)](https://arxiv.org/abs/1705.10667)
+- [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
+- [Adaptive Feature Norm (AFN)](https://arxiv.org/pdf/1811.07456v2.pdf)
+- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
+- [Batch Spectral Penalization (BSP)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf)
+- [Minimum Class Confusion (MCC)](https://arxiv.org/abs/1912.03699)
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/unsupervised_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/image_classification.rst) with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script
@@ -64,27 +66,27 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
 ## TODO
-Support methods: ADDA, BSP, AdaBN/TransNorm, CycleGAN, CyCADA
+Support methods: AdaBN/TransNorm, CycleGAN, CyCADA
 
 ## Citation
 If you use these methods in your research, please consider citing.
 
 ```
 @inproceedings{DANN,
-	Author = {Ganin, Yaroslav and Lempitsky, Victor},
-	Booktitle = {ICML},
-	Title = {Unsupervised domain adaptation by backpropagation},
-	Year = {2015}
+    author = {Ganin, Yaroslav and Lempitsky, Victor},
+    Booktitle = {ICML},
+    Title = {Unsupervised domain adaptation by backpropagation},
+    Year = {2015}
 }
 
 @inproceedings{DAN,
-	author    = {Mingsheng Long and
-	Yue Cao and
-	Jianmin Wang and
-	Michael I. Jordan},
-	title     = {Learning Transferable Features with Deep Adaptation Networks},
-	booktitle = {ICML},
-	year      = {2015},
+    author    = {Mingsheng Long and
+    Yue Cao and
+    Jianmin Wang and
+    Michael I. Jordan},
+    title     = {Learning Transferable Features with Deep Adaptation Networks},
+    booktitle = {ICML},
+    year      = {2015},
 }
 
 @inproceedings{JAN,
@@ -94,14 +96,21 @@ If you use these methods in your research, please consider citing.
     year={2017},
 }
 
+@inproceedings{ADDA,
+    title={Adversarial discriminative domain adaptation},
+    author={Tzeng, Eric and Hoffman, Judy and Saenko, Kate and Darrell, Trevor},
+    booktitle={CVPR},
+    year={2017}
+}
+
 @inproceedings{CDAN,
-  author    = {Mingsheng Long and
-               Zhangjie Cao and
-               Jianmin Wang and
-               Michael I. Jordan},
-  title     = {Conditional Adversarial Domain Adaptation},
-  booktitle = {NeurIPS},
-  year      = {2018}
+    author    = {Mingsheng Long and
+                Zhangjie Cao and
+                Jianmin Wang and
+                Michael I. Jordan},
+    title     = {Conditional Adversarial Domain Adaptation},
+    booktitle = {NeurIPS},
+    year      = {2018}
 }
 
 @inproceedings{MCD,
@@ -125,14 +134,21 @@ If you use these methods in your research, please consider citing.
     year={2019},
 }
 
+@inproceedings{BSP,
+    title={Transferability vs. discriminability: Batch spectral penalization for adversarial domain adaptation},
+    author={Chen, Xinyang and Wang, Sinan and Long, Mingsheng and Wang, Jianmin},
+    booktitle={ICML},
+    year={2019},
+}
+
 @inproceedings{MCC,
-  author    = {Ying Jin and
-               Ximei Wang and
-               Mingsheng Long and
-               Jianmin Wang},
-  title     = {Less Confusion More Transferable: Minimum Class Confusion for Versatile
+    author    = {Ying Jin and
+                Ximei Wang and
+                Mingsheng Long and
+                Jianmin Wang},
+    title     = {Less Confusion More Transferable: Minimum Class Confusion for Versatile
                Domain Adaptation},
-  year={2020},
-  booktitle={ECCV},
+    year={2020},
+    booktitle={ECCV},
 }
 ```

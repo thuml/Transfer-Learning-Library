@@ -28,7 +28,7 @@ Supported methods include:
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/unsupervised_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/image_classification.rst) with specified hyper-parameters.
 For example, if you want to train LDD on Goemtions -> SemEval-2018, use the following script
 
 ```shell script

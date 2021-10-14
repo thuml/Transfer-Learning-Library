@@ -1,9 +1,6 @@
 Vision Datasets
 =============================
 
-.. toctree::
-   datasets
-
 Unsupervised DA for Classification
 ---------------------------------------------------------
 

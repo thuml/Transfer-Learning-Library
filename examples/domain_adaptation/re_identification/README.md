@@ -20,7 +20,7 @@ Following datasets can be downloaded automatically:
 - Similarity Preserving Generative Adversarial Network (SPGAN)
 - Mutual Mean-Teaching (MMT)
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/reid_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/re_identification.rst) with specified hyper-parameters.
 For example, if you want to reproduce MMT on Market1501 -> DukeMTMC task, use the following script
 
 ```shell script
