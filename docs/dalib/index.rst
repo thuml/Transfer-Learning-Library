@@ -7,14 +7,14 @@ Domain Adaptation Library
     :caption: Benchmarks
     :titlesonly:
 
-    benchmarks/unsupervised_da
-    benchmarks/partial_da
-    benchmarks/open_set_da
+    benchmarks/image_classification
+    benchmarks/partial_domain_adaptation
+    benchmarks/openset_domain_adaptation
     benchmarks/multi_source_da
-    benchmarks/regression_da
-    benchmarks/segmentation_da
-    benchmarks/keypoint_detection_da
-    benchmarks/reid_da
+    benchmarks/image_regression
+    benchmarks/semantic_segmentation
+    benchmarks/keypoint_detection
+    benchmarks/re_identification
 
 .. toctree::
     :maxdepth: 4
@@ -23,6 +23,8 @@ Domain Adaptation Library
 
     adaptation/dan_jan
     adaptation/dann_cdan
+    adaptation/adda
+    adaptation/bsp
     adaptation/mcd
     adaptation/mdd
     adaptation/mcc

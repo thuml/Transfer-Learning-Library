@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from typing import Optional, Callable
 import copy
 import torch

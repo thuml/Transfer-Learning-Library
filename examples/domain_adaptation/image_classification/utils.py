@@ -1,6 +1,6 @@
 """
-@author: Junguang Jiang
-@contact: JiangJunguang1123@outlook.com
+@author: Junguang Jiang, Baixu Chen
+@contact: JiangJunguang1123@outlook.com, cbx_99_hasta@outlook.com
 """
 import sys
 import os.path as osp
@@ -71,11 +71,14 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
     if train_target_transform is None:
         train_target_transform = train_source_transform
     if dataset_name == "Digits":
-       train_source_dataset = datasets.__dict__[source[0]](osp.join(root, source[0]), download=True, transform=train_source_transform)
-       train_target_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), download=True, transform=train_target_transform)
-       val_dataset = test_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), split='test', download=True, transform=val_transform)
-       class_names = datasets.MNIST.classes
-       num_classes = len(class_names)
+        train_source_dataset = datasets.__dict__[source[0]](osp.join(root, source[0]), download=True,
+                                                            transform=train_source_transform)
+        train_target_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), download=True,
+                                                            transform=train_target_transform)
+        val_dataset = test_dataset = datasets.__dict__[target[0]](osp.join(root, target[0]), split='test',
+                                                                  download=True, transform=val_transform)
+        class_names = datasets.MNIST.get_classes()
+        num_classes = len(class_names)
     elif dataset_name in datasets.__dict__:
         # load datasets from common.vision.datasets
         dataset = datasets.__dict__[dataset_name]
@@ -205,3 +208,51 @@ def get_val_transform(resizing='default', resize_size=224,
         T.ToTensor(),
         T.Normalize(mean=norm_mean, std=norm_std)
     ])
+
+
+def pretrain(train_source_iter, model, optimizer, lr_scheduler, epoch, args, device):
+    batch_time = AverageMeter('Time', ':3.1f')
+    data_time = AverageMeter('Data', ':3.1f')
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        x_s = x_s.to(device)
+        labels_s = labels_s.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # compute output
+        y_s, f_s = model(x_s)
+
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        loss = cls_loss
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)

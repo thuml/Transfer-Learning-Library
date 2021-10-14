@@ -84,9 +84,9 @@ CUDA_VISIBLE_DEVICES=0 python afn.py data/wilds -d fmow --train-resizing 'res.' 
 
 # Digits
 CUDA_VISIBLE_DEVICES=0 python afn.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
-  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/afn/MNIST2USPS
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool -r 0.3 --lr 0.01 --trade-off-entropy 0.03 -b 128 -i 2500 --scratch --seed 0 --log logs/afn/MNIST2USPS
 CUDA_VISIBLE_DEVICES=0 python afn.py data/digits -d Digits -s USPS -t MNIST --train-resizing 'res.' --val-resizing 'res.' \
-  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/afn/USPS2MNIST
+  --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool -r 0.1 --lr 0.03 --trade-off-entropy 0.03 -b 128 -i 2500 --scratch --seed 0 --log logs/afn/USPS2MNIST
 CUDA_VISIBLE_DEVICES=0 python afn.py data/digits -d Digits -s SVHNRGB -t MNISTRGB --train-resizing 'res.' --val-resizing 'res.' \
-  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool --lr 0.1 -b 128 -i 2500 --scratch --seed 0 --log logs/afn/SVHN2MNIST
+  --resize-size 32 --no-hflip --norm-mean 0.5 0.5 0.5 --norm-std 0.5 0.5 0.5 -a dtn --no-pool -r 0.1 --lr 0.1 --trade-off-entropy 0.03  -b 128 -i 2500 --scratch --seed 0 --log logs/afn/SVHN2MNIST
 

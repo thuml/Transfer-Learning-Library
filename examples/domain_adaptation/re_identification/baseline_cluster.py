@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import random
 import time
 import warnings
@@ -15,7 +19,6 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.preprocessing import normalize as sklearn_normalize
 
 sys.path.append('../../..')
 import common.vision.datasets.reid as datasets
@@ -102,7 +105,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'analysis':
         # plot t-SNE
         utils.visualize_tsne(source_loader=val_loader, target_loader=test_loader, model=model,
-                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
+                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.pdf'), device=device)
         # visualize ranked results
         visualize_ranked_results(test_loader, model, target_dataset.query, target_dataset.gallery, device,
                                  visualize_dir=logger.visualize_directory, width=args.width, height=args.height,
@@ -135,7 +138,10 @@ def main(args: argparse.Namespace):
         if args.clustering_algorithm == 'kmeans':
             train_target_iter = run_kmeans(cluster_loader, model, target_dataset, train_transform, args)
         elif args.clustering_algorithm == 'dbscan':
-            train_target_iter = run_dbscan(cluster_loader, model, target_dataset, train_transform, args)
+            train_target_iter, num_classes = run_dbscan(cluster_loader, model, target_dataset, train_transform, args)
+
+        # define cross entropy loss with current number of classes
+        criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
 
         # define optimizer
         optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
@@ -175,7 +181,8 @@ def run_kmeans(cluster_loader: DataLoader, model: DataParallel, target_dataset, 
     print('Clustering finished')
 
     # normalize cluster centers and convert to pytorch tensor
-    cluster_centers = torch.from_numpy(sklearn_normalize(cluster_centers, axis=1)).float().to(device)
+    cluster_centers = torch.from_numpy(cluster_centers).float().to(device)
+    cluster_centers = F.normalize(cluster_centers, dim=1)
     # reinitialize classifier head
     model.module.head.weight.data.copy_(cluster_centers)
 
@@ -234,7 +241,7 @@ def run_dbscan(cluster_loader: DataLoader, model: DataParallel, target_dataset, 
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
-    return train_target_iter
+    return train_target_iter, num_clusters
 
 
 def train(train_target_iter: ForeverDataIterator, model, optimizer, criterion_ce: CrossEntropyLossWithLabelSmooth,

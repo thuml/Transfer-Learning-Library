@@ -1,6 +1,8 @@
-# ------------------------------------------------------------------------------
-# Modified from https://github.com/yxgeee/MMT
-# ------------------------------------------------------------------------------
+"""
+Modified from https://github.com/yxgeee/MMT
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,23 +24,23 @@ def hard_examples_mining(dist_mat, identity_mat, return_idxes=False):
     Re-Identification (ICCV 2017) <https://arxiv.org/pdf/1703.07737v2.pdf>`_
 
     Args:
-        dist_mat (tensor): pairwise distance matrix of current mini-batch
-        identity_mat (tensor): a matrix of shape :math:`(N, N)`, where :math:`N` is mini-batch size. If two images
-            :math:`i, j` of current mini-batch come from the same person, then :math:`identity\_mat[i, j] = 1`,
+        dist_mat (tensor): pairwise distance matrix between two sets of features
+        identity_mat (tensor): a matrix of shape :math:`(N, M)`. If two images :math:`P[i]` of set :math:`P` and
+            :math:`Q[j]` of set :math:`Q` come from the same person, then :math:`identity\_mat[i, j] = 1`,
             otherwise :math:`identity\_mat[i, j] = 0`
         return_idxes (bool, optional): if True, also return indexes of hard examples. Default: False
     """
     # the implementation here is a little tricky, dist_mat contains pairwise distance between probe image and other
     # images in current mini-batch. As we want to select positive examples of the same person, we add a constant
     # negative offset on other images before sorting. As a result, images of the **same** person will rank first.
-    sorted_dist_mat, sorted_idxes = torch.sort(dist_mat + (-9999999.) * (1 - identity_mat), dim=1,
+    sorted_dist_mat, sorted_idxes = torch.sort(dist_mat + (-1e7) * (1 - identity_mat), dim=1,
                                                descending=True)
     dist_ap = sorted_dist_mat[:, 0]
     hard_positive_idxes = sorted_idxes[:, 0]
 
     # the implementation here is similar to above code, we add a constant positive offset on images of same person
     # before sorting. Besides, we sort in ascending order. As a result, images of **different** persons will rank first.
-    sorted_dist_mat, sorted_idxes = torch.sort(dist_mat + 9999999. * identity_mat, dim=1,
+    sorted_dist_mat, sorted_idxes = torch.sort(dist_mat + 1e7 * identity_mat, dim=1,
                                                descending=False)
     dist_an = sorted_dist_mat[:, 0]
     hard_negative_idxes = sorted_idxes[:, 0]
@@ -92,7 +94,8 @@ class TripletLoss(nn.Module):
 
     Args:
         margin (float): margin of triplet loss
-        normalize_feature (bool, optional): if True, normalize features into unit norm first before computing loss
+        normalize_feature (bool, optional): if True, normalize features into unit norm first before computing loss.
+            Default: False.
     """
 
     def __init__(self, margin, normalize_feature=False):
@@ -101,20 +104,67 @@ class TripletLoss(nn.Module):
         self.normalize_feature = normalize_feature
         self.margin_loss = nn.MarginRankingLoss(margin=margin).cuda()
 
-    def forward(self, features, labels):
+    def forward(self, f, labels):
         if self.normalize_feature:
-            # equal to cosine similarity
-            features = F.normalize(features)
-        dist_mat = pairwise_euclidean_distance(features, features)
-        assert dist_mat.size(0) == dist_mat.size(1)
+            # equivalent to cosine similarity
+            f = F.normalize(f)
+        dist_mat = pairwise_euclidean_distance(f, f)
 
         n = dist_mat.size(0)
         identity_mat = labels.expand(n, n).eq(labels.expand(n, n).t()).float()
 
         dist_ap, dist_an = hard_examples_mining(dist_mat, identity_mat)
-        assert dist_an.size(0) == dist_ap.size(0)
         y = torch.ones_like(dist_ap)
         loss = self.margin_loss(dist_an, dist_ap, y)
+        return loss
+
+
+class TripletLossXBM(nn.Module):
+    r"""Triplet loss augmented with batch hard from `In defense of the Triplet Loss for Person Re-Identification
+    (ICCV 2017) <https://arxiv.org/pdf/1703.07737v2.pdf>`_. The only difference from triplet loss lies in that
+    both features from current mini batch and external storage (XBM) are involved.
+
+    Args:
+        margin (float, optional): margin of triplet loss. Default: 0.3
+        normalize_feature (bool, optional): if True, normalize features into unit norm first before computing loss.
+            Default: False
+
+    Inputs:
+        - f (tensor): features of current mini batch, :math:`f`
+        - labels (tensor): identity labels for current mini batch, :math:`labels`
+        - xbm_f (tensor): features collected from XBM, :math:`xbm\_f`
+        - xbm_labels (tensor): corresponding identity labels of xbm_f, :math:`xbm\_labels`
+
+    Shape:
+        - f: :math:`(minibatch, F)`, where :math:`F` is the feature dimension
+        - labels: :math:`(minibatch, )`
+        - xbm_f: :math:`(minibatch, F)`
+        - xbm_labels: :math:`(minibatch, )`
+    """
+
+    def __init__(self, margin=0.3, normalize_feature=False):
+        super(TripletLossXBM, self).__init__()
+        self.margin = margin
+        self.normalize_feature = normalize_feature
+        self.ranking_loss = nn.MarginRankingLoss(margin=margin)
+
+    def forward(self, f, labels, xbm_f, xbm_labels):
+        if self.normalize_feature:
+            # equivalent to cosine similarity
+            f = F.normalize(f)
+            xbm_f = F.normalize(xbm_f)
+
+        dist_mat = pairwise_euclidean_distance(f, xbm_f)
+
+        # hard examples mining
+        n, m = f.size(0), xbm_f.size(0)
+        identity_mat = labels.expand(m, n).t().eq(xbm_labels.expand(n, m)).float()
+        dist_ap, dist_an = hard_examples_mining(dist_mat, identity_mat)
+
+        # Compute ranking hinge loss
+        y = torch.ones_like(dist_an)
+        loss = self.ranking_loss(dist_an, dist_ap, y)
+
         return loss
 
 

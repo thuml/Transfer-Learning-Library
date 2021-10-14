@@ -8,7 +8,7 @@ Fourier Domain Adaptation (FDA)
 .. autofunction:: dalib.translation.fourier_transform.low_freq_mutate
 
 
-.. autofunction:: dalib.adaptation.segmentation.fda.robust_entropy
+.. autofunction:: dalib.adaptation.fda.robust_entropy
 
 
 

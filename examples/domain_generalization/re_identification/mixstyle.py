@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import random
 import time
 import warnings
@@ -107,7 +111,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'analysis':
         # plot t-SNE
         utils.visualize_tsne(source_loader=val_loader, target_loader=test_loader, model=model,
-                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.png'), device=device)
+                             filename=osp.join(logger.visualize_directory, 'analysis', 'TSNE.pdf'), device=device)
         # visualize ranked results
         visualize_ranked_results(test_loader, model, target_dataset.query, target_dataset.gallery, device,
                                  visualize_dir=logger.visualize_directory, width=args.width, height=args.height,

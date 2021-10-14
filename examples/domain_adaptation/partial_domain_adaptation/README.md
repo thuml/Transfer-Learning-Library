@@ -12,12 +12,12 @@ pip install timm
 
 Following datasets can be downloaded automatically:
 
-- Office31
-- OfficeHome
-- VisDA2017
+- [Office31](https://www.cc.gatech.edu/~judy/domainadapt/)
+- [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
+- [VisDA2017](http://ai.bu.edu/visda-2017/)
 
 You need to prepare following datasets manually if you want to use them:
-- ImageNet
+- [ImageNet](https://www.image-net.org/)
 
 and prepare them following [Documentation for ImageNetCaltech](/common/vision/datasets/partial/imagenet_caltech.py) and [CaltechImageNet](/common/vision/datasets/partial/caltech_imagenet.py).
 
@@ -25,14 +25,14 @@ and prepare them following [Documentation for ImageNetCaltech](/common/vision/da
 
 Supported methods include:
 
-- Domain Adversarial Neural Network (DANN)
-- Partial Adversarial Domain Adaptation (PADA)
-- Importance Weighted Adversarial Nets (IWAN)
-- Adaptive Feature Norm (AFN)
+- [Domain Adversarial Neural Network (DANN)](https://arxiv.org/abs/1505.07818)
+- [Partial Adversarial Domain Adaptation (PADA)](https://arxiv.org/abs/1808.04205)
+- [Importance Weighted Adversarial Nets (IWAN)](https://arxiv.org/abs/1803.09210)
+- [Adaptive Feature Norm (AFN)](https://arxiv.org/pdf/1811.07456v2.pdf)
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/partial_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/partial_domain_adaptation.rst) with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script
@@ -44,11 +44,20 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
+## TODO
+Support methods: TBD
 
 ## Citation
 If you use these methods in your research, please consider citing.
 
 ```
+@inproceedings{DANN,
+    author = {Ganin, Yaroslav and Lempitsky, Victor},
+    Booktitle = {ICML},
+    Title = {Unsupervised domain adaptation by backpropagation},
+    Year = {2015}
+}
+
 @InProceedings{PADA,
     author    = {Zhangjie Cao and
                Lijia Ma and

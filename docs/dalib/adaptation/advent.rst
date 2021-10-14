@@ -3,7 +3,7 @@
 Adversarial Entropy Minimization (ADVENT)
 ------------------------------------------
 
-.. autoclass:: dalib.adaptation.segmentation.advent.Discriminator
+.. autoclass:: dalib.adaptation.advent.Discriminator
 
-.. autoclass:: dalib.adaptation.segmentation.advent.DomainAdversarialEntropyLoss
+.. autoclass:: dalib.adaptation.advent.DomainAdversarialEntropyLoss
     :members:

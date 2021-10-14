@@ -76,7 +76,7 @@ def main(args: argparse.Namespace):
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -108,8 +108,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_source_iter, classifier, optimizer,
-              lr_scheduler, epoch, args)
+        utils.pretrain(train_source_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
 
         # evaluate on validation set
         acc1 = utils.validate(val_loader, classifier, args, device)
@@ -128,55 +127,6 @@ def main(args: argparse.Namespace):
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
-
-
-def train(train_source_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':4.2f')
-    data_time = AverageMeter('Data', ':3.1f')
-    losses = AverageMeter('Loss', ':3.2f')
-    cls_accs = AverageMeter('Cls Acc', ':3.1f')
-
-    progress = ProgressMeter(
-        args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs],
-        prefix="Epoch: [{}]".format(epoch))
-
-    # switch to train mode
-    model.train()
-
-    end = time.time()
-    for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_s = x_s.to(device)
-        labels_s = labels_s.to(device)
-
-        # measure data loading time
-        data_time.update(time.time() - end)
-
-        # compute output
-        y_s, f_s = model(x_s)
-
-        cls_loss = F.cross_entropy(y_s, labels_s)
-        loss = cls_loss
-
-        cls_acc = accuracy(y_s, labels_s)[0]
-
-        losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % args.print_freq == 0:
-            progress.display(i)
 
 
 if __name__ == '__main__':
@@ -239,4 +189,3 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

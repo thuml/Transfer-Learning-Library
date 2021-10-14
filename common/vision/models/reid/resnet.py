@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from common.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
 
 __all__ = ['reid_resnet18', 'reid_resnet34', 'reid_resnet50', 'reid_resnet101']

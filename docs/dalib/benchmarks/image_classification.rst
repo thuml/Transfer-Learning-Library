@@ -1,17 +1,19 @@
 ===============================
-Unsupervised Domain Adaptation
+Image Classification
 ===============================
 
-We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_, `VisDA-2017`_  and  `DomainNet`_.
+We provide benchmarks of different domain adaptation algorithms on `Digits`_, `Office-31`_ , `Office-Home`_, `VisDA-2017`_  and  `DomainNet`_.
 Those domain adaptation algorithms includes:
 
 -  :ref:`DANN`
+-  :ref:`ADDA`
 -  :ref:`DAN`
 -  :ref:`JAN`
 -  :ref:`CDAN`
 -  :ref:`MCD`
 -  :ref:`AFN`
 -  :ref:`MDD`
+-  :ref:`BSP`
 -  :ref:`MCC`
 
 .. note::
@@ -23,9 +25,16 @@ Those domain adaptation algorithms includes:
 
 .. note::
 
-    We found that the accuracies of adversarial methods (including DANN, CDAN, MCD and MDD) are not stable even after the random seed is fixed, thus
-    we repeat running adversarial methods on *Office-31* and *VisDA-2017* for three times and report their average accuracy.
+    We found that the accuracies of adversarial methods (including DANN, ADDA, CDAN, MCD, BSP and MDD) are not stable
+    even after the random seed is fixed, thus we repeat running adversarial methods on *Office-31* and *VisDA-2017*
+    for three times and report their average accuracy.
 
+
+.. _Digits:
+
+--------------------------------
+Digits accuracy
+--------------------------------
 
 .. _Office-31:
 
@@ -35,15 +44,18 @@ Office-31 accuracy on ResNet-50
 
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 Methods         Origin  Avg     A → W   D → W   W → D   A → D   D → A   W → A
-Source Only     76.1	79.5	75.8	95.5	99.0	79.3	63.6	63.8
-DANN            82.2	86.1	91.4	97.9	100.0	83.6	73.3	70.4
-DAN             80.4	83.7	84.2	98.4	100.0	87.3	66.9	65.2
-JAN             84.3	87.0	93.7	98.4	100.0	89.4	69.2	71.0
-CDAN            87.7	87.7	93.8	98.5	100.0	89.9	73.4	70.4
-MCD             /       85.4	90.4	98.5	100.0	87.3	68.3	67.6
-AFN             85.7	88.6	94.0	98.9	100.0	94.4	72.9	71.1
-MDD             88.9	89.6	95.6	98.6	100.0	94.4	76.6	72.2
-MCC             89.4	89.6	94.1	98.4	99.8	95.6	75.5	74.2
+Source Only     76.1    79.5    75.8    95.5    99.0    79.3    63.6    63.8
+DANN            82.2    86.1    91.4    97.9    100.0   83.6    73.3    70.4
+ADDA            /       86.5    91.2    98.5    100.0   84.3    73.7    71.2
+ADDAgrl         /       87.3    94.6    97.5    99.7    90.0    69.6    72.5
+DAN             80.4    83.7    84.2    98.4    100.0   87.3    66.9    65.2
+JAN             84.3    87.0    93.7    98.4    100.0   89.4    69.2    71.0
+CDAN            87.7    87.7    93.8    98.5    100.0   89.9    73.4    70.4
+MCD             /       85.4    90.4    98.5    100.0   87.3    68.3    67.6
+AFN             85.7    88.6    94.0    98.9    100.0   94.4    72.9    71.1
+MDD             88.9    89.6    95.6    98.6    100.0   94.4    76.6    72.2
+BSP             87.7    87.8    92.7    97.9    100.0   88.2    74.1    73.8
+MCC             89.4    89.6    94.1    98.4    99.8    95.6    75.5    74.2
 ===========     ======  ======  ======  ======  ======  ======  ======  ======
 
 
@@ -57,12 +69,15 @@ Office-Home accuracy on ResNet-50
 Methods     Origin  Avg     Ar → Cl Ar → Pr Ar → Rw Cl → Ar Cl → Pr Cl → Rw Pr → Ar Pr → Cl Pr → Rw Rw → Ar Rw → Cl Rw → Pr
 Source Only 46.1    58.4    41.1    65.9    73.7    53.1    60.1    63.3    52.2    36.7    71.8    64.8    42.6    75.2
 DANN        57.6    65.2    53.8    62.6    74.0    55.8    67.3    67.3    55.8    55.1    77.9    71.1    60.7    81.1
+ADDA        /       62.5    47.4    63.9    72.6    53.1    62.6    64.3    56.0    49.1    76.3    68.1    56.5    80.3
+ADDAgrl     /       65.6    52.6    62.9    74.0    59.7    68.0    68.8    61.4    52.5    77.6    71.1    58.6    80.2
 DAN         56.3    61.4    45.6    67.7    73.9    57.7    63.8    66.0    54.9    40.0    74.5    66.2    49.1    77.9
 JAN         58.3    65.9    50.8    71.9    76.5    60.6    68.3    68.7    60.5    49.6    76.9    71.0    55.9    80.5
 CDAN        65.8    68.8    55.2    72.4    77.6    62.0    69.7    70.9    62.4    54.3    80.5    75.5    61.0    83.8
 MCD         /       67.8    51.7    72.2    78.2    63.7    69.5    70.8    61.5    52.8    78.0    74.5    58.4    81.8
 AFN         67.3    68.2    53.2    72.7    76.8    65.0    71.3    72.3    65.0    51.4    77.9    72.3    57.8    82.4
 MDD         68.1    69.7    56.2    75.4    79.6    63.5    72.1    73.8    62.5    54.8    79.9    73.5    60.9    84.5
+BSP         64.9    67.6    54.7    67.7    76.2    61.0    69.4    70.9    60.9    55.2    80.2    73.4    60.3    81.2
 MCC         /       72.4    58.4    79.6    83.0    67.5    77.0    78.5    66.6    54.8    81.8    74.4    61.4    85.6
 =========== ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 
@@ -81,8 +96,8 @@ VisDA-2017 accuracy ResNet-101
 =========== ==========  ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= ======= =======
 Methods     Origin      Mean    plane   bcycl   bus     car     horse   knife   mcycl   person  plant   sktbrd  train   truck   Avg
 Source Only 52.4        51.7    63.6    35.3    50.6    78.2    74.6    18.7    82.1    16.0    84.2    35.5    77.4    4.7     56.9
-DANN        57.4        79.5	93.5	74.3	83.4	50.7	87.2	90.2	89.9	76.1	88.1	91.4	89.7	39.8	74.9
-DAN         61.1        66.4	89.2	37.2	77.7	61.8	81.7	64.3	90.6	61.4	79.9	37.7	88.1	27.4	67.2
+DANN        57.4        79.5    93.5    74.3    83.4    50.7    87.2    90.2    89.9    76.1    88.1    91.4    89.7    39.8    74.9
+DAN         61.1        66.4    89.2    37.2    77.7    61.8    81.7    64.3    90.6    61.4    79.9    37.7    88.1    27.4    67.2
 JAN         /           73.4	96.3	66.0	82.0	44.1	86.4	70.3	87.9	74.6	83.0	64.6	84.5	41.3	70.3
 CDAN        /           80.1	94.0	69.2	78.9	57.0	89.8	94.9	91.9	80.3	86.8	84.9	85.0	48.5	76.5
 MCD         71.9        77.7	87.8	75.7	84.2	78.1	91.6	95.3	88.1	78.3	83.4	64.5	84.8	20.9	76.7

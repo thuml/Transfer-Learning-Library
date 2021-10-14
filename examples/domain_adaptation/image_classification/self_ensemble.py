@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import random
 import time
 import warnings
@@ -66,7 +70,7 @@ def main(args: argparse.Namespace):
 
     train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target,
-                              train_transform, val_transform, MultipleApply([train_transform, val_transform]))
+                          train_transform, val_transform, MultipleApply([train_transform, val_transform]))
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
@@ -117,8 +121,9 @@ def main(args: argparse.Namespace):
         # first pretrain the classifier wish source data
         print("Pretraining the model on source domain.")
         args.pretrain = logger.get_checkpoint_path('pretrain')
-        pretrained_model = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
-        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.pretrain_lr)
+        pretrain_model = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                         pool_layer=pool_layer, finetune=not args.scratch).to(device)
+        pretrain_optimizer = Adam(pretrain_model.get_parameters(), args.pretrain_lr)
         pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
                                          lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
                                              -args.lr_decay))
@@ -126,11 +131,13 @@ def main(args: argparse.Namespace):
         # start pretraining
         for epoch in range(args.pretrain_epochs):
             # pretrain for one epoch
-            pretrain(train_source_iter, pretrained_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args)
+            utils.pretrain(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+                           device)
             # validate to show pretrain process
-            utils.validate(val_loader, pretrained_model, args, device)
+            utils.validate(val_loader, pretrain_model, args, device)
 
-        torch.save(pretrained_model.state_dict(), args.pretrain)
+        torch.save(pretrain_model.state_dict(), args.pretrain)
+        print("Pretraining process is done.")
 
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
@@ -163,55 +170,6 @@ def main(args: argparse.Namespace):
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
-
-
-def pretrain(train_source_iter: ForeverDataIterator, model: ImageClassifier, optimizer: Adam, lr_scheduler: LambdaLR,
-             epoch: int, args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':3.1f')
-    data_time = AverageMeter('Data', ':3.1f')
-    losses = AverageMeter('Loss', ':3.2f')
-    cls_accs = AverageMeter('Cls Acc', ':3.1f')
-
-    progress = ProgressMeter(
-        args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs],
-        prefix="Epoch: [{}]".format(epoch))
-
-    # switch to train mode
-    model.train()
-
-    end = time.time()
-    for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_s = x_s.to(device)
-        labels_s = labels_s.to(device)
-
-        # measure data loading time
-        data_time.update(time.time() - end)
-
-        # compute output
-        y_s, f_s = model(x_s)
-
-        cls_loss = F.cross_entropy(y_s, labels_s)
-        loss = cls_loss
-
-        cls_acc = accuracy(y_s, labels_s)[0]
-
-        losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % args.print_freq == 0:
-            progress.display(i)
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
@@ -319,7 +277,7 @@ if __name__ == '__main__':
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
     parser.add_argument('--pretrain', type=str, default=None,
-                        help='pretrain checkpoints for classification model')
+                        help='pretrain checkpoint for classification model')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',

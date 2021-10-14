@@ -20,7 +20,7 @@ Supported methods include:
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/segmentation_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/semantic_segmentation.rst) with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script

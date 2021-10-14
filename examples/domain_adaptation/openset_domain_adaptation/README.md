@@ -12,19 +12,19 @@ pip install timm
 
 Following datasets can be downloaded automatically:
 
-- Office31
-- OfficeHome
-- VisDA2017
+- [Office31](https://www.cc.gatech.edu/~judy/domainadapt/)
+- [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
+- [VisDA2017](http://ai.bu.edu/visda-2017/)
 
 ## Supported Methods
 
 Supported methods include:
 
-- Open Set Domain Adaptation (OSBP)
+- [Open Set Domain Adaptation (OSBP)](https://arxiv.org/abs/1804.10427)
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/open_set_da.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/openset_domain_adaptation.rst) with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script
@@ -35,6 +35,9 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+
+## TODO
+Support methods: TBD
 
 ## Citation
 If you use these methods in your research, please consider citing.
