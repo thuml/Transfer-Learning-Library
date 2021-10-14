@@ -9,17 +9,25 @@ from common.modules.classifier import Classifier as ClassifierBase
 
 
 class BatchSpectralPenalizationLoss(nn.Module):
-    r"""Batch spectral penalization loss from `Transferability vs. Discriminability:
-     Batch Spectral Penalization for Adversarial Domain Adaptation (ICML 2019)
-     <http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf>`_.
+    r"""Batch spectral penalization loss from `Transferability vs. Discriminability: Batch
+    Spectral Penalization for Adversarial Domain Adaptation (ICML 2019)
+    <http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf>`_.
 
-     Given source features :math:`f_s` and target features :math:`f_t` in a mini batch, singular value
-     decomposition is performed. Then batch spectral penalization loss is calculated as
+    Given source features :math:`f_s` and target features :math:`f_t` in current mini batch, singular value
+    decomposition is first performed
 
-     .. math::
+    .. math::
+        f_s = U_s\Sigma_sV_s^T
+
+    .. math::
+        f_t = U_t\Sigma_tV_t^T
+
+    Then batch spectral penalization loss is calculated as
+
+    .. math::
         L_{bsp}=\sum_{i=1}^k(\sigma_{s,i}^2+\sigma_{t,i}^2)
 
-    where :math:`\sigma_{s,i},\sigma_{t,i}` refer to the i-th largest singular values of source features
+    where :math:`\sigma_{s,i},\sigma_{t,i}` refer to the :math:`i-th` largest singular value of source features
     and target features respectively. We empirically set :math:`k=1`.
 
     Inputs:

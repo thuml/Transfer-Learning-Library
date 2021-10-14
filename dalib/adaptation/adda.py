@@ -2,7 +2,7 @@
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
-from typing import Optional
+from typing import Optional, List, Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,11 +12,14 @@ from common.modules.classifier import Classifier as ClassifierBase
 class DomainAdversarialLoss(nn.Module):
     r"""Domain adversarial loss from `Adversarial Discriminative Domain Adaptation (CVPR 2017)
     <https://arxiv.org/pdf/1702.05464.pdf>`_.
+    Similar to the original `GAN <https://arxiv.org/pdf/1406.2661.pdf>`_ paper, ADDA argues that replacing
+    :math:`log(1-p)` with :math:`-log(p)` in the adversarial loss provides better gradient qualities. Detailed
+    optimization process can be found at `examples/domain_adaptation/image_classification/adda.py`.
 
     Inputs:
         - domain_pred (tensor): predictions of domain discriminator
         - domain_label (str, optional): whether the data comes from source or target.
-          Choices: ['source', 'target']. Default: 'source'
+          Must be 'source' or 'target'. Default: 'source'
 
     Shape:
         - domain_pred: :math:`(minibatch,)`.
@@ -45,3 +48,18 @@ class ImageClassifier(ClassifierBase):
             nn.ReLU()
         )
         super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)
+
+    def freeze_bn(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
+                m.eval()
+
+    def get_parameters(self, base_lr=1.0, optimize_head=True) -> List[Dict]:
+        params = [
+            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
+            {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr}
+        ]
+        if optimize_head:
+            params.append({"params": self.head.parameters(), "lr": 1.0 * base_lr})
+
+        return params
