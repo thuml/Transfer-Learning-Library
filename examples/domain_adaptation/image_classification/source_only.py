@@ -108,7 +108,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        utils.pretrain(train_source_iter, classifier, optimizer, lr_scheduler, epoch, args)
+        utils.pretrain(train_source_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
 
         # evaluate on validation set
         acc1 = utils.validate(val_loader, classifier, args, device)
