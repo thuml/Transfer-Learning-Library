@@ -138,7 +138,10 @@ def main(args: argparse.Namespace):
         if args.clustering_algorithm == 'kmeans':
             train_target_iter = run_kmeans(cluster_loader, model, target_dataset, train_transform, args)
         elif args.clustering_algorithm == 'dbscan':
-            train_target_iter = run_dbscan(cluster_loader, model, target_dataset, train_transform, args)
+            train_target_iter, num_classes = run_dbscan(cluster_loader, model, target_dataset, train_transform, args)
+
+        # define cross entropy loss with current number of classes
+        criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
 
         # define optimizer
         optimizer = Adam(model.module.get_parameters(base_lr=args.lr, rate=args.rate), args.lr,
@@ -238,7 +241,7 @@ def run_dbscan(cluster_loader: DataLoader, model: DataParallel, target_dataset, 
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
-    return train_target_iter
+    return train_target_iter, num_clusters
 
 
 def train(train_target_iter: ForeverDataIterator, model, optimizer, criterion_ce: CrossEntropyLossWithLabelSmooth,

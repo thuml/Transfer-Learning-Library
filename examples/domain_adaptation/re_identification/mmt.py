@@ -115,7 +115,8 @@ def main(args: argparse.Namespace):
         return
 
     # define loss function
-    criterion_ce = CrossEntropyLossWithLabelSmooth(args.num_clusters).to(device)
+    num_classes = args.num_clusters
+    criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
     criterion_ce_soft = CrossEntropyLoss().to(device)
     criterion_triplet = SoftTripletLoss(margin=0.0).to(device)
     criterion_triplet_soft = SoftTripletLoss(margin=None).to(device)
@@ -137,8 +138,11 @@ def main(args: argparse.Namespace):
             train_target_iter = run_kmeans(cluster_loader, model_1, model_2, model_1_ema, model_2_ema, target_dataset,
                                            train_transform, args)
         elif args.clustering_algorithm == 'dbscan':
-            train_target_iter = run_dbscan(cluster_loader, model_1, model_2, model_1_ema, model_2_ema, target_dataset,
-                                           train_transform, args)
+            train_target_iter, num_classes = run_dbscan(cluster_loader, model_1, model_2, model_1_ema, model_2_ema,
+                                                        target_dataset, train_transform, args)
+
+        # define cross entropy loss with current number of classes
+        criterion_ce = CrossEntropyLossWithLabelSmooth(num_classes).to(device)
 
         # define optimizer
         optimizer = Adam(model_1.module.get_parameters(base_lr=args.lr, rate=args.rate) + model_2.module.get_parameters(
@@ -291,7 +295,7 @@ def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
         batch_size=args.batch_size, num_workers=args.workers, sampler=sampler, pin_memory=True, drop_last=True)
     train_target_iter = ForeverDataIterator(train_target_loader)
 
-    return train_target_iter
+    return train_target_iter, num_clusters
 
 
 def train(train_target_iter: ForeverDataIterator, model_1: DataParallel, model_1_ema: EmaTeacher, model_2: DataParallel,
