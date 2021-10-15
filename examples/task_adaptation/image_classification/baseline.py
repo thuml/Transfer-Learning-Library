@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji, Junguang Jiang
+@contact: jiyf990330@163.com, JiangJunguang1123@outlook.com
+"""
 import random
 import time
 import warnings
@@ -48,7 +52,7 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                    val_transform, args.sample_rate, args.sample_size)
+                                                                    val_transform, args.sample_rate, args.num_samples_per_classes)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
@@ -62,8 +66,7 @@ def main(args: argparse.Namespace):
     classifier = Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=args.finetune).to(device)
 
     # define optimizer and lr scheduler
-    # optimizer = SGD(classifier.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    optimizer = utils.get_optimizer(args.optimizer, classifier.get_parameters(args.lr), args.lr, args.wd, args.momentum)
+    optimizer = SGD(classifier.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
@@ -74,20 +77,16 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
-    # define visualization function
-    def visualize(image, prefix):
-        return utils.visualize(image, logger.get_image_path("{}.png".format(prefix)))
-
     # start training
     best_acc1 = 0.0
     for epoch in range(args.epochs):
         logger.set_epoch(epoch)
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, optimizer, epoch, args, visualize=visualize if args.debug else None)
+        train(train_iter, classifier, optimizer, epoch, args)
         lr_scheduler.step()
         # evaluate on validation set
-        acc1 = utils.validate(val_loader, classifier, args, device, visualize=visualize if args.debug else None)
+        acc1 = utils.validate(val_loader, classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -100,7 +99,7 @@ def main(args: argparse.Namespace):
 
 
 def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
-          epoch: int, args: argparse.Namespace, visualize=None):
+          epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -145,8 +144,6 @@ def train(train_iter: ForeverDataIterator, model: Classifier, optimizer: SGD,
 
         if i % args.print_freq == 0:
             progress.display(i)
-            if visualize is not None:
-                visualize(x[0], "train_{}".format(i))
 
 
 if __name__ == '__main__':
@@ -155,10 +152,11 @@ if __name__ == '__main__':
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA')
-    parser.add_argument('-sr', '--sample-rate', default=100, type=int,
+    parser.add_argument('-sr', '--sample-rate', default=100, type=float,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
-    parser.add_argument('-ss', '--sample-size', default=None, type=int)
+    parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
+                        help='number of samples per classes.')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
@@ -179,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
                         help='mini-batch size (default: 48)')
+    parser.add_argument('--optimizer', type=str, default='SGD', choices=['SGD', 'Adam'])
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
@@ -201,9 +200,6 @@ if __name__ == '__main__':
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model.")
-    parser.add_argument('--debug', action="store_true",
-                        help='In the debug mode, save images and predictions during training')
-    parser.add_argument('--optimizer', type=str, default='SGD', choices=['SGD', 'Adam'])
     args = parser.parse_args()
     main(args)
 

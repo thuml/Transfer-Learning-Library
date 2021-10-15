@@ -245,7 +245,7 @@ MSMT17
 .. autoclass:: common.vision.datasets.reid.msmt17.MSMT17
    :members:
 
-Finetune for Classification
+Task Adaptation for Image Classification
 ---------------------------------------------------------
 
 
@@ -289,4 +289,46 @@ COCO-70
 -------------------------------------
 
 .. autoclass:: common.vision.datasets.coco70.COCO70
+   :members:
+
+-------------------------------------
+DTD
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.dtd.DTD
+   :members:
+
+-------------------------------------
+OxfordFlowers102
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.oxfordflowers.OxfordFlowers102
+   :members:
+
+-------------------------------------
+PatchCamelyon
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.patchcamelyon.PatchCamelyon
+   :members:
+
+-------------------------------------
+Retinopathy
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.retinopathy.Retinopathy
+   :members:
+
+-------------------------------------
+EuroSAT
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.eurosat.EuroSAT
+   :members:
+
+-------------------------------------
+Resisc45
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.resisc45.Resisc45
    :members:

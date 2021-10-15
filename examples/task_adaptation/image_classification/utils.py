@@ -6,21 +6,20 @@ import time
 from PIL import Image
 import timm
 import numpy as np
+import random
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Subset
 import torchvision.transforms as T
-from torch.optim import SGD, Adam, optimizer
+from torch.optim import SGD, Adam
 
-import common.vision.datasets as datasets_finetune
+import common.vision.datasets as datasets
 import common.vision.models as models
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.vision.transforms import Denormalize
-
-import datasets as datasets_vtab
 
 
 def get_model_names():
@@ -53,19 +52,28 @@ def get_model(model_name, pretrained_checkpoint=None):
     return backbone
 
 
-def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, sample_size=None):
-    if dataset_name in ["Aircraft", "CUB200", "StanfordCars", "COCO70"]:
-        # load datasets from common.vision.datasets
-        dataset = datasets_finetune.__dict__[dataset_name]
+def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, num_samples_per_classes=None):
+    """
+    When sample_rate < 100,  e.g. sample_rate = 50, use 50% data to train the model.
+    Otherwise,
+        if num_samples_per_classes is not None, e.g. 5, then sample 5 images for each class, and use them to train the model;
+        otherwise, keep all the data.
+    """
+    dataset = datasets.__dict__[dataset_name]
+    if sample_rate < 100:
         train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=train_transform)
         test_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
         num_classes = train_dataset.num_classes
     else:
-        dataset = datasets_vtab.__dict__[dataset_name]
-        train_dataset = dataset(root=root, split='train', transform=train_transform)
-        test_dataset = dataset(root=root, split='test', transform=val_transform)
+        train_dataset = dataset(root=root, split='train', download=True, transform=train_transform)
+        test_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
         num_classes = train_dataset.num_classes
-        train_dataset = Subset(train_dataset, list(range(sample_size)))
+        if num_samples_per_classes is not None:
+            samples = list(range(len(train_dataset)))
+            random.shuffle(samples)
+            samples_len = min(num_samples_per_classes * num_classes, len(train_dataset))
+            print("Origin dataset:", len(train_dataset), "Sampled dataset:", samples_len, "Ratio:", float(samples_len) / len(train_dataset))
+            train_dataset = Subset(train_dataset, samples[:samples_len])
     return train_dataset, test_dataset, num_classes
 
 
@@ -185,6 +193,7 @@ def get_val_transform(resizing='default'):
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
+
 def get_optimizer(optimizer_name, params, lr, wd, momentum):
     '''
     Args:
@@ -196,7 +205,6 @@ def get_optimizer(optimizer_name, params, lr, wd, momentum):
         weight_decay: weight decay
         momentum: momentum factor for SGD
     '''
-    optimizer = None
     if optimizer_name == 'SGD':
         optimizer = SGD(params=params, lr=lr, momentum=momentum, weight_decay=wd, nesterov=True)
     elif optimizer_name == 'Adam':
