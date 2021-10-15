@@ -1,4 +1,5 @@
-Image Classification (Supervised Pretrained on ImageNet)
+========================================================
+Image Classification
 ========================================================
 
 We provide benchmarks of different finetune algorithms on `CUB-200-2011`_, `StanfordCars`_,

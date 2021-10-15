@@ -1,10 +1,10 @@
-Moment Matching Methods (DAN, JAN)
+Statistics Matching
 ===================================
 
 
 .. _DAN:
 
-Deep Adaptation Network (DAN)
+DAN: Deep Adaptation Network
 -----------------------------
 
 .. autoclass:: dalib.adaptation.dan.MultipleKernelMaximumMeanDiscrepancy
@@ -12,7 +12,15 @@ Deep Adaptation Network (DAN)
 
 .. _JAN:
 
-Joint Adaptation Network (JAN)
+JAN: Joint Adaptation Network
 ------------------------------
 
 .. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
+
+
+.. _RSD:
+
+RSD: Representation Subspace Distance
+---------------------------------------
+
+.. autoclass:: dalib.adaptation.rsd.RepresentationSubspaceDistance

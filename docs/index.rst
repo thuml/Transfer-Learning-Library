@@ -1,9 +1,9 @@
 =====================================
-Welcome to Transfer Learning Library
+Transfer Learning
 =====================================
 
 .. toctree::
-   :caption: Get Started
+   :caption: Get Started for Transfer Learning Library
    :maxdepth: 2
    :titlesonly:
 
@@ -15,12 +15,84 @@ Welcome to Transfer Learning Library
 
 
 .. toctree::
-    :maxdepth: 3
-    :caption: Transfer Learning Library
+    :maxdepth: 2
+    :caption: Domain Adaptation Settings
     :titlesonly:
 
-    dalib/index
-    talib/index
-    dglib/index
-    common/index
+    dalib/benchmarks/image_classification
+    dalib/benchmarks/image_regression
+    dalib/benchmarks/semantic_segmentation
+    dalib/benchmarks/keypoint_detection
+    dalib/benchmarks/re_identification
+    dalib/benchmarks/partial_domain_adaptation
+    dalib/benchmarks/openset_domain_adaptation
+    dalib/benchmarks/multi_source_da
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Task Adaptation Settings
+    :titlesonly:
+
+    talib/benchmarks/image_classification
+
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Domain Generalization Settings
+    :titlesonly:
+
+    dglib/benchmarks/classification
+    dglib/benchmarks/reid
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Domain Adaptation Methods
+    :titlesonly:
+
+    dalib/adaptation/statistics_matching.rst
+    dalib/adaptation/domain_adversarial.rst
+    dalib/adaptation/hypothesis_adversarial.rst
+    dalib/adaptation/domain_translation.rst
+    dalib/adaptation/others.rst
+    dalib/modules.rst
+
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Task Adaptation Methods
+    :titlesonly:
+
+    talib/finetune.rst
+
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Domain Generalization Methods
+    :titlesonly:
+
+    dglib/generalization/coral
+    dglib/generalization/groupdro
+    dglib/generalization/irm
+    dglib/generalization/vrex
+    dglib/generalization/mldg
+    dglib/generalization/ibn
+    dglib/generalization/mixstyle
+    dglib/modules.rst
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Common Packages
+    :titlesonly:
+
+    common/modules
+    common/loss
+    common/vision/datasets
+    common/vision/models
+    common/vision/transforms
+    common/utils/base
+    common/utils/metric
+    common/utils/analysis

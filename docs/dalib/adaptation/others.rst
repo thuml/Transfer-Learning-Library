@@ -1,6 +1,35 @@
+=======================================
+Self Training Methods
+=======================================
+
+.. _SelfEnsemble:
+
+Self Ensemble
+-----------------------------
+
+.. autoclass:: dalib.adaptation.self_ensemble.ConsistencyLoss
+
+
+.. autoclass:: dalib.adaptation.self_ensemble.L2ConsistencyLoss
+
+
+.. autoclass:: dalib.adaptation.self_ensemble.ClassBalanceLoss
+
+
+.. autoclass:: dalib.adaptation.self_ensemble.EmaTeacher
+
+
+.. _MCC:
+
+MCC: Minimum Class Confusion
+-----------------------------
+
+.. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss
+
+
 .. _MMT:
 
-Mutual Mean-Teaching(MMT)
+MMT: Mutual Mean-Teaching
 --------------------------
 `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised
 Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_
@@ -38,3 +67,19 @@ The above mentioned loss functions are listed below, more details can be found i
 .. autoclass:: common.vision.models.reid.loss.SoftTripletLoss
 
 .. autoclass:: common.vision.models.reid.loss.CrossEntropyLoss
+
+
+=======================================
+Other Methods
+=======================================
+
+.. _AFN:
+
+Adaptive Feature Norm (AFN)
+-----------------------------
+
+.. autoclass:: dalib.adaptation.afn.AdaptiveFeatureNorm
+
+.. autoclass:: dalib.adaptation.afn.Block
+
+.. autoclass:: dalib.adaptation.afn.ImageClassifier
