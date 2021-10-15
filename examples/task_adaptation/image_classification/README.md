@@ -1,4 +1,4 @@
-# Fine-tune for Image Classification
+# Task Adaptation for Image Classification
 
 ## Installation
 Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
