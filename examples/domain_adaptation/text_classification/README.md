@@ -24,7 +24,7 @@ Supported methods include:
 
 - [Domain Adversarial Neural Network (DANN, only serve as a baseline)](https://arxiv.org/abs/1505.07818)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
-- [Localized Disparity Discrepancy (LDD)](https://arxiv.org/abs/1904.05801)
+- [Localized Disparity Discrepancy (LDD)](https://arxiv.org/abs/2008.06242)
 
 ## Experiment and Results
 
@@ -51,5 +51,14 @@ If you use these methods in your research, please consider citing.
     author={Zhang, Yuchen and Liu, Tianle and Long, Mingsheng and Jordan, Michael},
     booktitle={ICML},
     year={2019},
+}
+
+@misc{LDD,
+      title={On Localized Discrepancy for Domain Adaptation}, 
+      author={Yuchen Zhang and Mingsheng Long and Jianmin Wang and Michael I. Jordan},
+      year={2020},
+      eprint={2008.06242},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
