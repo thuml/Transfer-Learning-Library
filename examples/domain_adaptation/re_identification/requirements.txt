@@ -1,2 +1,2 @@
 timm
-cv2
+opencv-python

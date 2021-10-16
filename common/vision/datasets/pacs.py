@@ -5,7 +5,7 @@ from ._util import download as download_data, check_exits
 
 
 class PACS(ImageList):
-    """PACS Dataset.
+    """`PACS Dataset <https://domaingeneralization.github.io/#data>`_.
 
     Args:
         root (str): Root directory of dataset

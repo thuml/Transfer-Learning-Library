@@ -8,17 +8,23 @@ You also need to install timm to use PyTorch-Image-Models.
 pip install timm
 ```
 
+## Dataset 
 Following datasets can be downloaded automatically:
 
-- Market1501
-- DukeMTMC
-- MSMT17
+- [Market1501](http://zheng-lab.cecs.anu.edu.au/Project/project_reid.html)
+- [DukeMTMC](https://exposing.ai/duke_mtmc/)
+- [MSMT17](https://arxiv.org/pdf/1711.08565.pdf)
 
 ## Supported Methods
 
-- Instance-Batch Normalization Network (IBN-Net)
-- Similarity Preserving Generative Adversarial Network (SPGAN)
-- Mutual Mean-Teaching (MMT)
+Supported methods include:
+
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (MMT, 2020 ICLR)](https://arxiv.org/abs/2001.01526)
+- [Similarity Preserving Generative Adversarial Network (SPGAN)](https://arxiv.org/pdf/1811.10551.pdf)
+
+## Experiment and Results
 
 The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/re_identification.rst) with specified hyper-parameters.
 For example, if you want to reproduce MMT on Market1501 -> DukeMTMC task, use the following script
@@ -43,3 +49,24 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python mmt.py data -t DukeMTMC -a reid_resnet50 \
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+
+## Citation
+If you use these methods in your research, please consider citing.
+
+```
+@inproceedings{IBN-Net,  
+  author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
+  title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+  booktitle = {ECCV},  
+  year = {2018}  
+}
+
+@inproceedings{
+  MMT,
+  title={Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification},
+  author={Yixiao Ge and Dapeng Chen and Hongsheng Li},
+  booktitle={International Conference on Learning Representations},
+  year={2020},
+  url={https://openreview.net/forum?id=rJlnOhVYPS}
+}
+```
