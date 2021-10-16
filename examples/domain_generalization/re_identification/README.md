@@ -8,16 +8,22 @@ You also need to install timm to use PyTorch-Image-Models.
 pip install timm
 ```
 
+## Dataset 
 Following datasets can be downloaded automatically:
 
-- Market1501
-- DukeMTMC
-- MSMT17
+- [Market1501](http://zheng-lab.cecs.anu.edu.au/Project/project_reid.html)
+- [DukeMTMC](https://exposing.ai/duke_mtmc/)
+- [MSMT17](https://arxiv.org/pdf/1711.08565.pdf)
 
 ## Supported Methods
 
-- Instance-Batch Normalization Network (IBN-Net)
-- Domain Generalization with MixStyle (MixStyle)
+Supported methods include:
+
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
+
+## Experiment and Results
 
 The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/reid.rst) with specified hyper-parameters.
 For example, if you want to reproduce MixStyle on Market1501 -> DukeMTMC task, use the following script
@@ -31,3 +37,22 @@ CUDA_VISIBLE_DEVICES=0 python mixstyle.py data -s Market1501 -t DukeMTMC -a resn
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+
+## Citation
+If you use these methods in your research, please consider citing.
+
+```
+@inproceedings{IBN-Net,  
+  author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
+  title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+  booktitle = {ECCV},  
+  year = {2018}  
+}
+
+@inproceedings{mixstyle,
+  title={Domain Generalization with MixStyle},
+  author={Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
+  booktitle={ICLR},
+  year={2021}
+}
+```
