@@ -25,7 +25,7 @@ Supported methods include:
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/reid.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/re_identification.rst) with specified hyper-parameters.
 For example, if you want to reproduce MixStyle on Market1501 -> DukeMTMC task, use the following script
 
 ```shell script
@@ -43,16 +43,16 @@ If you use these methods in your research, please consider citing.
 
 ```
 @inproceedings{IBN-Net,  
-  author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
-  title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle = {ECCV},  
-  year = {2018}  
+    author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
+    title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+    booktitle = {ECCV},  
+    year = {2018}  
 }
 
 @inproceedings{mixstyle,
-  title={Domain Generalization with MixStyle},
-  author={Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
-  booktitle={ICLR},
-  year={2021}
+    title={Domain Generalization with MixStyle},
+    author={Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
+    booktitle={ICLR},
+    year={2021}
 }
 ```

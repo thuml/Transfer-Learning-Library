@@ -2,7 +2,7 @@
 Image Classification
 ===============================
 
-We provide benchmarks of different domain generalization algorithms on `PACS`_, `Office-Home`_, `DomainNet`_,
+We provide benchmarks of different domain generalization algorithms on `PACS`_, `Office-Home`_,
 `iWildCam-Wilds`_, `Camelyon17-Wilds`_, `FMoW-Wilds`_.
 Those domain generalization algorithms includes:
 
@@ -68,24 +68,6 @@ VREx     70.2  66.9  54.9  78.2  80.9
 GroupDRO 70.0  66.7  55.2  78.8  79.9
 CORAL    70.9  68.3  55.4  78.8  81.0
 ======== ===== ===== ===== ===== =====
-
-.. _DomainNet:
-
------------------------------------
-DomainNet accuracy on ResNet-50
------------------------------------
-
-======== ===== ========= =========== ========== =========== ====== ========
-Methods   avg   clipart   infograph   painting   quickdraw   real   sketch
-ERM
-IBN
-MixStyle
-MLDG
-IRM
-VREx
-GroupDRO
-CORAL
-======== ===== ========= =========== ========== =========== ====== ========
 
 .. _iWildCam-Wilds:
 
