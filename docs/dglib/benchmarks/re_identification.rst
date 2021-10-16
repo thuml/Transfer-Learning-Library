@@ -1,5 +1,5 @@
 ===============================
-Person Re-Identification
+Re-Identification
 ===============================
 
 We provide benchmarks of different domain generalization algorithms. Currently three datasets are supported:

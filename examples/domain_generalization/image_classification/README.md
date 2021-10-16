@@ -40,7 +40,7 @@ Following datasets can be downloaded automatically:
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/classification.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/image_classification.rst) with specified hyper-parameters.
 For example, if you want to reproduce IRM on Office-Home, use the following script
 
 ```shell script
@@ -57,47 +57,47 @@ If you use these methods in your research, please consider citing.
 
 ```
 @inproceedings{IBN-Net,  
-  author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
-  title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle = {ECCV},  
-  year = {2018}  
+    author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
+    title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+    booktitle = {ECCV},  
+    year = {2018}  
 }
 
 @inproceedings{mixstyle,
-  title={Domain Generalization with MixStyle},
-  author={Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
-  booktitle={ICLR},
-  year={2021}
+    title={Domain Generalization with MixStyle},
+    author={Zhou, Kaiyang and Yang, Yongxin and Qiao, Yu and Xiang, Tao},
+    booktitle={ICLR},
+    year={2021}
 }
 
- @inproceedings{MLDG,
-   title={Learning to Generalize: Meta-Learning for Domain Generalization},
-   author={Li, Da and Yang, Yongxin and Song, Yi-Zhe and Hospedales, Timothy},
+@inproceedings{MLDG,
+    title={Learning to Generalize: Meta-Learning for Domain Generalization},
+    author={Li, Da and Yang, Yongxin and Song, Yi-Zhe and Hospedales, Timothy},
   	booktitle={AAAI Conference on Artificial Intelligence},
   	year={2018}
- }
+}
  
- @misc{IRM,
-      title={Invariant Risk Minimization}, 
-      author={Martin Arjovsky and Léon Bottou and Ishaan Gulrajani and David Lopez-Paz},
-      year={2020},
-      eprint={1907.02893},
-      archivePrefix={arXiv},
-      primaryClass={stat.ML}
+@misc{IRM,
+    title={Invariant Risk Minimization}, 
+    author={Martin Arjovsky and Léon Bottou and Ishaan Gulrajani and David Lopez-Paz},
+    year={2020},
+    eprint={1907.02893},
+    archivePrefix={arXiv},
+    primaryClass={stat.ML}
 }
 
 @inproceedings{VREx,
-      title={Out-of-Distribution Generalization via Risk Extrapolation (REx)}, 
-      author={David Krueger and Ethan Caballero and Joern-Henrik Jacobsen and Amy Zhang and Jonathan Binas and Dinghuai Zhang and Remi Le Priol and Aaron Courville},
-      year={2021},
-      booktitle={ICML},
+    title={Out-of-Distribution Generalization via Risk Extrapolation (REx)}, 
+    author={David Krueger and Ethan Caballero and Joern-Henrik Jacobsen and Amy Zhang and Jonathan Binas and Dinghuai Zhang and Remi Le Priol and Aaron Courville},
+    year={2021},
+    booktitle={ICML},
 }
 
 @inproceedings{GroupDRO,
-      title={Distributionally Robust Neural Networks for Group Shifts: On the Importance of Regularization for Worst-Case Generalization}, 
-      author={Shiori Sagawa and Pang Wei Koh and Tatsunori B. Hashimoto and Percy Liang},
-      year={2020},
-      booktitle={ICLR}
+    title={Distributionally Robust Neural Networks for Group Shifts: On the Importance of Regularization for Worst-Case Generalization}, 
+    author={Shiori Sagawa and Pang Wei Koh and Tatsunori B. Hashimoto and Percy Liang},
+    year={2020},
+    booktitle={ICLR}
 }
 
 @inproceedings{deep_coral,

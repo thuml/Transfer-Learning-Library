@@ -55,18 +55,17 @@ If you use these methods in your research, please consider citing.
 
 ```
 @inproceedings{IBN-Net,  
-  author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
-  title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle = {ECCV},  
-  year = {2018}  
+    author = {Xingang Pan, Ping Luo, Jianping Shi, and Xiaoou Tang},  
+    title = {Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
+    booktitle = {ECCV},  
+    year = {2018}  
 }
 
 @inproceedings{
-  MMT,
-  title={Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification},
-  author={Yixiao Ge and Dapeng Chen and Hongsheng Li},
-  booktitle={International Conference on Learning Representations},
-  year={2020},
-  url={https://openreview.net/forum?id=rJlnOhVYPS}
+    MMT,
+    title={Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification},
+    author={Yixiao Ge and Dapeng Chen and Hongsheng Li},
+    booktitle={ICLR},
+    year={2020},
 }
 ```

@@ -41,8 +41,8 @@ Transfer Learning
     :caption: Domain Generalization Settings
     :titlesonly:
 
-    dglib/benchmarks/classification
-    dglib/benchmarks/reid
+    dglib/benchmarks/image_classification
+    dglib/benchmarks/re_identification
 
 
 .. toctree::
