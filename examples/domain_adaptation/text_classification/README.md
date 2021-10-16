@@ -39,9 +39,6 @@ CUDA_VISIBLE_DEVICES=0 python ldd.py -s goemtions.csv -t SemEval-2018.csv \
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
-## TODO
-Support methods: TBD
-
 ## Citation
 If you use these methods in your research, please consider citing.
 
