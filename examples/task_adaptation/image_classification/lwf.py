@@ -54,7 +54,7 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate, args.sample_size)
+                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False,
                               num_workers=args.workers, drop_last=False)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
@@ -167,7 +167,8 @@ if __name__ == '__main__':
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
-    parser.add_argument('-ss', '--sample-size', default=None, type=int)
+    parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
+                        help='number of samples per classes.')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')

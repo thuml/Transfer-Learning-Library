@@ -9,7 +9,9 @@ from ._util import download as download_data, check_exits
 
 
 class CUB200(ImageList):
-    """`Caltech-UCSD Birds-200-2011 <http://www.vision.caltech.edu/visipedia/CUB-200-2011.html>`_ Dataset.
+    """`Caltech-UCSD Birds-200-2011 <http://www.vision.caltech.edu/visipedia/CUB-200-2011.html>`_  \
+    is a dataset for fine-grained visual recognition with 11,788 images in 200 bird species. \
+    It is an extended version of the CUB-200 dataset, roughly doubling the number of images.
 
     Args:
         root (str): Root directory of dataset

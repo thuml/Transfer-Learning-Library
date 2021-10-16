@@ -18,23 +18,26 @@ CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/aircraft -d Aircraft -sr 50 --se
 CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/aircraft -d Aircraft -sr 30 --seed 0 --log logs/bi_tuning/aircraft_30
 CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/aircraft -d Aircraft -sr 15 --seed 0 --log logs/bi_tuning/aircraft_15
 
-# Stanford Dogs
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/stanford_dogs -d StanfordDogs -sr 100 --seed 0 --log logs/bi_tuning/dogs_100 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/stanford_dogs -d StanfordDogs -sr 50 --seed 0 --log logs/bi_tuning/dogs_50 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/stanford_dogs -d StanfordDogs -sr 30 --seed 0 --log logs/bi_tuning/dogs_30 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/stanford_dogs -d StanfordDogs -sr 15 --seed 0 --log logs/bi_tuning/dogs_15 --lr 0.001
+# Resisc45
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/resisc45 -d Resisc45 -sc 10 --finetune --seed 0 \
+  --log logs/bi_tuning/resisc45_10
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/resisc45 -d Resisc45 -sc 20 --finetune --seed 0 \
+  --log logs/bi_tuning/resisc45_20
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/resisc45 -d Resisc45 -sc 40 --finetune --seed 0 \
+  --log logs/bi_tuning/resisc45_40
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/resisc45 -d Resisc45 -sc 80 --finetune --seed 0 \
+  --log logs/bi_tuning/resisc45_80
 
-# Oxford-III pet
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/oxford_pet -d OxfordIIITPet -sr 100 --seed 0 --log logs/bi_tuning/pet_100 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/oxford_pet -d OxfordIIITPet -sr 50 --seed 0 --log logs/bi_tuning/pet_50 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/oxford_pet -d OxfordIIITPet -sr 30 --seed 0 --log logs/bi_tuning/pet_30 --lr 0.001
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/oxford_pet -d OxfordIIITPet -sr 15 --seed 0 --log logs/bi_tuning/pet_15 --lr 0.001
+# Patch Camelyon
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/patch_camelyon -d PatchCamelyon -sc 40 --finetune \
+  --seed 0 --log logs/bi_tuning/patch_camelyon_40
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/patch_camelyon -d PatchCamelyon -sc 80 --finetune \
+  --seed 0 --log logs/bi_tuning/patch_camelyon_80
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/patch_camelyon -d PatchCamelyon -sc 160 --finetune \
+  --seed 0 --log logs/bi_tuning/patch_camelyon_160
+CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/vtab/patch_camelyon -d PatchCamelyon -sc 320 --finetune \
+  --seed 0 --log logs/bi_tuning/patch_camelyon_320
 
-# COCO-70
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/coco70 -d COCO70 -sr 100 --seed 0 --log logs/bi_tuning/coco_100
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/coco70 -d COCO70 -sr 50 --seed 0 --log logs/bi_tuning/coco_50
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/coco70 -d COCO70 -sr 30 --seed 0 --log logs/bi_tuning/coco_30
-CUDA_VISIBLE_DEVICES=0 python bi_tuning.py data/coco70 -d COCO70 -sr 15 --seed 0 --log logs/bi_tuning/coco_15
 
 # MoCo (Unsupervised Pretraining)
 # CUB-200-2011
