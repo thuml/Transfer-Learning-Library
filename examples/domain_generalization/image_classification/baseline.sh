@@ -21,10 +21,10 @@ CUDA_VISIBLE_DEVICES=0 python baseline.py data/domainnet -d DomainNet -s c i p q
 
 # ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
--a resnet50 -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/baseline/iwildcam
+  -a resnet50 -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/baseline/iwildcam
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/wilds -d camelyon17 -a resnet50 -b 36 --epochs 20 -i 1000 --lr 0.01 \
---seed 0 --log logs/baseline/camelyon17
+  --seed 0 --log logs/baseline/camelyon17
 
 # DenseNet121, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/wilds -d fmow --train-resizing 'cen.crop' -a densenet121 \
--b 36 --epochs 60 -i 1000 --lr 0.003 --seed 0 --log logs/baseline/fmow
+  -b 36 --epochs 60 -i 1000 --lr 0.003 --seed 0 --log logs/baseline/fmow

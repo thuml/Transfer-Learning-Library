@@ -2,7 +2,7 @@
 # IBN_ResNet50_b, PACS
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/PACS -d PACS -s A C S -t P -a resnet50_ibn_b --freeze-bn --seed 0 --log logs/baseline/PACS_P
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/PACS -d PACS -s P C S -t A -a resnet50_ibn_b --freeze-bn --seed 0 --log logs/baseline/PACS_A
-CUDA_VISIBLE_DEVICES=0 python baseline.py data/PACS -d PACS -s P A S -t C -a resnet50_ibn_b --freeze-bn --seed 0 --log logs/baseline/PACS_C
+CUDA_VISIBLE_DEVICES=2 python baseline.py data/PACS -d PACS -s P A S -t C -a resnet50_ibn_b --freeze-bn --seed 0 --log logs/baseline/PACS_C
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/PACS -d PACS -s P A C -t S -a resnet50_ibn_b --freeze-bn --seed 0 --log logs/baseline/PACS_S
 
 # IBN_ResNet50_b, Office-Home
@@ -21,6 +21,6 @@ CUDA_VISIBLE_DEVICES=0 python baseline.py data/domainnet -d DomainNet -s c i p q
 
 # IBN_ResNet50_b, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
--a resnet50_ibn_b -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/baseline/iwildcam
+  -a resnet50_ibn_b -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/baseline/iwildcam
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/wilds -d camelyon17 -a resnet50_ibn_b -b 36 --epochs 20 -i 1000 --lr 0.01 \
---seed 0 --log logs/baseline/camelyon17
+  --seed 0 --log logs/baseline/camelyon17

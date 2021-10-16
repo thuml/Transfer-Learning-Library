@@ -21,11 +21,11 @@ CUDA_VISIBLE_DEVICES=0 python coral.py data/domainnet -d DomainNet -s c i p q r 
 
 # ResNet50, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python coral.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
--a resnet50 -b 16 --n-domains-per-batch 2 --epochs 60 -i 1000 --lr 0.001 --finetune --trade-off 10 \
---seed 0 --log logs/coral/iwildcam
+  -a resnet50 -b 16 --n-domains-per-batch 2 --epochs 60 -i 1000 --lr 0.001 --finetune --trade-off 10 \
+  --seed 0 --log logs/coral/iwildcam
 CUDA_VISIBLE_DEVICES=0 python coral.py data/wilds -d camelyon17 -a resnet50 -b 36 --n-domains-per-batch 3 \
---epochs 20 -i 1000 --lr 0.01 --trade-off 0.1 --seed 0 --log logs/coral/camelyon17
+  --epochs 20 -i 1000 --lr 0.01 --trade-off 0.1 --seed 0 --log logs/coral/camelyon17
 
 # DenseNet121, Wilds Dataset
 CUDA_VISIBLE_DEVICES=0 python coral.py data/wilds -d fmow --train-resizing 'cen.crop' -a densenet121 \
--b 36 --n-domains-per-batch 4 --epochs 60 -i 1000 --lr 0.003 --trade-off 0.1 --seed 0 --log logs/coral/fmow
+  -b 36 --n-domains-per-batch 4 --epochs 60 -i 1000 --lr 0.003 --trade-off 0.1 --seed 0 --log logs/coral/fmow
