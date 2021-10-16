@@ -1,3 +1,7 @@
+=======================================
+Architecture Design
+=======================================
+
 .. _IBN:
 
 Instance-Batch Normalization Network (IBN-Net)

@@ -13,15 +13,15 @@ and prepare them following [Documentations for Cityscapes](/common/vision/datase
 
 Supported methods include:
 
-- Cycle-Consistent Adversarial Networks (CycleGAN)
-- CyCADA: Cycle-Consistent Adversarial Domain Adaptation
-- Adversarial Entropy Minimization (ADVENT)
-- Fourier Domain Adaptation (FDA)
+- [Cycle-Consistent Adversarial Networks (CycleGAN)](https://arxiv.org/pdf/1703.10593.pdf)
+- [CyCADA: Cycle-Consistent Adversarial Domain Adaptation](https://arxiv.org/abs/1711.03213)
+- [Adversarial Entropy Minimization (ADVENT)](https://arxiv.org/abs/1811.12833)
+- [Fourier Domain Adaptation (FDA)](https://arxiv.org/abs/2004.05498)
 
 ## Experiment and Results
 
 The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/semantic_segmentation.rst) with specified hyper-parameters.
-For example, if you want to train DANN on Office31, use the following script
+For example, if you want to train ADVENT on Office31, use the following script
 
 ```shell script
 # Train a ADVENT on GTA5 to Cityscapes.

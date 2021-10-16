@@ -3,9 +3,9 @@
 ## Dataset
 3 time-series classification dataset is provided,
 
-- UCIHAR
-- UCIHHAR
-- WISDM_AR
+- [UCIHAR](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones#)
+- [UCIHHAR](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones#)
+- [WISDM_AR](https://www.cis.fordham.edu/wisdm/dataset.php)
 
 Following scripts will download the dataset and preprocess them in directory ``data``.
 
@@ -20,9 +20,9 @@ The data preparation code is modified from [https://github.com/floft/codats](htt
 
 Supported methods include:
 
-- Domain Adversarial Neural Network (DANN)
-- Deep Adaptation Network (DAN)
-- Margin Disparity Discrepancy (MDD)
+- [Domain Adversarial Neural Network (DANN)](https://arxiv.org/abs/1505.07818)
+- [Deep Adaptation Network (DAN)](https://arxiv.org/pdf/1502.02791)
+- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 
 ## Experiment and Results
 
@@ -30,11 +30,13 @@ The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchm
 For example, if you want to train DANN on UCIHHAR, use the following script
 
 ```shell script
-CUDA_VISIBLE_DEVICES=1 python dann.py data -d UCIHHAR -s 1 -t 3 -a fcn --epochs 10 --seed 0 --log logs/dann/UCIHHAR_1to3
+CUDA_VISIBLE_DEVICES=0 python dann.py data -d UCIHHAR -s 1 -t 3 -a fcn --epochs 10 --seed 0 --log logs/dann/UCIHHAR_1to3
 ```
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
+## TODO
+Support methods: TBD
 
 ## Citation
 If you use these methods in your research, please consider citing.

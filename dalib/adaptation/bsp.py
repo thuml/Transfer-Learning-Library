@@ -25,7 +25,7 @@ class BatchSpectralPenalizationLoss(nn.Module):
     Then batch spectral penalization loss is calculated as
 
     .. math::
-        L_{bsp}=\sum_{i=1}^k(\sigma_{s,i}^2+\sigma_{t,i}^2)
+        loss=\sum_{i=1}^k(\sigma_{s,i}^2+\sigma_{t,i}^2)
 
     where :math:`\sigma_{s,i},\sigma_{t,i}` refer to the :math:`i-th` largest singular value of source features
     and target features respectively. We empirically set :math:`k=1`.

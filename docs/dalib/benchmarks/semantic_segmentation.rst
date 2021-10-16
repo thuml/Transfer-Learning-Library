@@ -1,4 +1,5 @@
-Segmentation Domain Adaptation
+==========================================
+Semantic Segmentation
 ==========================================
 
 We provide benchmarks of different segmentation domain adaptation algorithms on `GTA5->Cityscapes`_ and `Synthia->Cityscapes`_ as follows.

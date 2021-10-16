@@ -20,7 +20,7 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
     loss is defined as
 
     .. math::
-        L_{adv}(x_t) = -t log(p(y=C+1|x_t)) - (1-t)log(1-p(y=C+1|x_t))
+        L_{\text{adv}}(x_t) = -t \text{log}(p(y=C+1|x_t)) - (1-t)\text{log}(1-p(y=C+1|x_t))
 
     where t is a hyper-parameter and C is the number of known classes.
 

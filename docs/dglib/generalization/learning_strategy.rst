@@ -1,3 +1,22 @@
+=======================================
+Learning Strategy
+=======================================
+
+.. _GroupDRO:
+
+Group Distributionally robust optimization (GroupDRO)
+------------------------------------------------------
+
+.. autoclass:: dglib.generalization.groupdro.AutomaticUpdateDomainWeightModule
+    :members:
+
+.. _IRM:
+
+Invariant Risk Minimization (IRM)
+----------------------------------
+
+.. autoclass:: dglib.generalization.irm.InvariancePenaltyLoss
+
 .. _MLDG:
 
 Meta Learning for Domain Generalization (MLDG)
@@ -27,3 +46,29 @@ also improve testing domain performance.
     Because we need to compute second-order gradient, this full optimization process may take a long time and have
     heavy budget on GPU resource. A first order approximation implementation can be found at
     `DomainBed <https://github.com/facebookresearch/DomainBed>`_.
+
+.. _VREX:
+
+Variance Risk Extrapolation (VREx)
+------------------------------------------------
+`Out-of-Distribution Generalization via Risk Extrapolation (ICML 2021) <https://arxiv.org/pdf/2003.00688.pdf>`_
+
+VREx shows that reducing differences in risk across training domains can reduce a model’s sensitivity to a wide range
+of extreme distributional shifts. Consider there are :math:`S` source domains. At each learning iteration VREx first
+computes cross entropy loss on each source domain separately, producing a loss vector :math:`l \in R^S`. The `ERM`
+(vanilla cross entropy) loss can be computed as
+
+.. math::
+    l_{\text{ERM}} = \frac{1}{S}\sum_{i=1}^S l_i
+
+And the penalty loss is
+
+.. math::
+    penalty = \frac{1}{S} \sum_{i=1}^S {(l_i - l_{\text{ERM}})}^2
+
+The final objective is then
+
+.. math::
+    objective = l_{\text{ERM}} + \beta * penalty
+
+where :math:`\beta` is the trade off hyper parameter.

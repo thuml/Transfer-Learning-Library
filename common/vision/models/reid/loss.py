@@ -177,14 +177,14 @@ class SoftTripletLoss(nn.Module):
     defined as
 
     .. math::
-        loss = \mathcal{L}_{bce}(\frac{exp(f^Tf_p)}{exp(f^Tf_p)+exp(f^Tf_n)}, 1)
+        loss = \mathcal{L}_{\text{bce}}(\frac{\text{exp}(f^Tf_p)}{\text{exp}(f^Tf_p)+\text{exp}(f^Tf_n)}, 1)
 
-    where :math:`\mathcal{L}_{bce}` means binary cross entropy loss. We denote the first term in above loss function
+    where :math:`\mathcal{L}_{\text{bce}}` means binary cross entropy loss. We denote the first term in above loss function
     as :math:`T`. When features from another teacher network can be obtained, we can calculate :math:`T_{teacher}` as
     labels, resulting in the following soft version
 
     .. math::
-        loss = \mathcal{L}_{bce}(T, T_{teacher})
+        loss = \mathcal{L}_{\text{bce}}(T, T_{teacher})
 
     Args:
         margin (float, optional): margin of triplet loss. If None, soft labels from another network will be adopted when
@@ -229,20 +229,20 @@ class SoftTripletLoss(nn.Module):
 
 
 class CrossEntropyLoss(nn.Module):
-    r"""We use :math:`C` to denote the number of classes, :math:`minibatch` to denote mini-batch
-    size, this criterion expects unnormalized predictions :math:`y` of shape :math:`(minibatch, C)` and
-    :math:`labels` of the same shape :math:`(minibatch, C)`. Then we first normalize them into probability distributions
-    among classes
+    r"""We use :math:`C` to denote the number of classes, :math:`N` to denote mini-batch
+    size, this criterion expects unnormalized predictions :math:`y\_{logits}` of shape :math:`(N, C)` and
+    :math:`target\_{logits}` of the same shape :math:`(N, C)`. Then we first normalize them into
+    probability distributions among classes
 
     .. math::
-        y\_softmax = softmax(y)
+        y = \text{softmax}(y\_{logits})
     .. math::
-        labels\_softmax = softmax(labels)
+        target = \text{softmax}(target\_{logits})
 
     Final objective is calculated as
 
     .. math::
-        loss = \frac{1}{minibatch} \sum_{i=1}^{minibatch} \sum_{j=1}^C -labels\_softmax_i^j \times log (y\_softmax_i^j)
+        \text{loss} = \frac{1}{N} \sum_{i=1}^{N} \sum_{j=1}^C -target_i^j \times \text{log} (y_i^j)
     """
 
     def __init__(self):

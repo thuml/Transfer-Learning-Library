@@ -1,5 +1,5 @@
 ===========================================
-Person Re-Identification Domain Adaptation
+Re-Identification
 ===========================================
 
 We provide benchmarks of different domain adaptation algorithms. Currently three datasets are supported:

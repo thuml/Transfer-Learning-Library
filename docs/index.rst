@@ -73,14 +73,12 @@ Transfer Learning
     :caption: Domain Generalization Methods
     :titlesonly:
 
-    dglib/generalization/coral
-    dglib/generalization/groupdro
-    dglib/generalization/irm
-    dglib/generalization/vrex
-    dglib/generalization/mldg
-    dglib/generalization/ibn
-    dglib/generalization/mixstyle
+    dglib/generalization/data_manipulation.rst
+    dglib/generalization/architecture_design.rst
+    dglib/generalization/representation_learning.rst
+    dglib/generalization/learning_strategy.rst
     dglib/modules.rst
+
 
 
 .. toctree::

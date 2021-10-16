@@ -1,3 +1,7 @@
+=======================================
+Representation Learning
+=======================================
+
 .. _CORAL:
 
 Correlation Alignment for Deep Domain Adaptation (Deep CORAL)

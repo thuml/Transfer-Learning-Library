@@ -1,4 +1,5 @@
-Regression Domain Adaptation
+===============================================
+Image Regression
 ===============================================
 
 We provide benchmarks of different domain adaptation algorithms on `dSprites`_.

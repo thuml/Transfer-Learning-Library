@@ -40,9 +40,9 @@ class SPRegularization(nn.Module):
     The SP regularization of parameters :math:`w` can be described as:
 
     .. math::
-        {\Omega} (w) = \dfrac{1}{2}  \Vert w-w^0\Vert_2^2 ,
+        {\Omega} (w) = \dfrac{1}{2}  \Vert w-w_0\Vert_2^2 ,
 
-    where :math:`w^0` is the parameter vector of the model pretrained on the source problem, acting as the starting point (SP) in fine-tuning.
+    where :math:`w_0` is the parameter vector of the model pretrained on the source problem, acting as the starting point (SP) in fine-tuning.
 
 
     Args:

@@ -4,20 +4,20 @@
 
 Following datasets can be downloaded automatically:
 
-- DSprites
-- MPI3D
+- [DSprites](https://github.com/deepmind/dsprites-dataset)
+- [MPI3D](https://github.com/rr-learning/disentanglement_dataset)
 
 ## Supported Methods
 
 Supported methods include:
 
-- Disparity Discrepancy (DD)
-- Representation Subspace Distance (RSD)
+- [Disparity Discrepancy (DD)](https://arxiv.org/abs/1904.05801)
+- [Representation Subspace Distance (RSD)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Representation-Subspace-Distance-for-Domain-Adaptation-Regression-icml21.pdf)
 
 ## Experiment and Results
 
 The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/image_regression.rst) with specified hyper-parameters.
-For example, if you want to train DANN on Office31, use the following script
+For example, if you want to train DD on Office31, use the following script
 
 ```shell script
 # Train a DD on DSprites C->N task using ResNet 18.
@@ -40,9 +40,9 @@ If you use these methods in your research, please consider citing.
 }
 
 @inproceedings{RSD,
-  title={Representation Subspace Distance for Domain Adaptation Regression},  
-  author={Chen, Xinyang and Wang, Sinan and Wang, Jianmin and Long, Mingsheng}, 
-  booktitle={ICML}, 
-  year={2021} 
+    title={Representation Subspace Distance for Domain Adaptation Regression},  
+    author={Chen, Xinyang and Wang, Sinan and Wang, Jianmin and Long, Mingsheng}, 
+    booktitle={ICML}, 
+    year={2021} 
 }
 ```
