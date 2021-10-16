@@ -20,7 +20,7 @@ CUDA_VISIBLE_DEVICES=0 python mixstyle.py data/domainnet -d DomainNet -s c i p q
 CUDA_VISIBLE_DEVICES=0 python mixstyle.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet50 -i 2500 --lr 0.01 --seed 0 --log logs/mixstyle/DomainNet_s
 
 # ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python mixstyle.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
--a resnet50 --mix-layers layer1 layer2 -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/mixstyle/iwildcam
+CUDA_VISIBLE_DEVICES=3 python mixstyle.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
+  -a resnet50 --mix-layers layer1 layer2 -b 16 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/mixstyle/iwildcam
 CUDA_VISIBLE_DEVICES=0 python mixstyle.py data/wilds -d camelyon17 -a resnet50 --mix-layers layer1 layer2 \
--b 36 --epochs 20 -i 1000 --lr 0.01 --seed 0 --log logs/mixstyle/camelyon17
+  -b 36 --epochs 20 -i 1000 --lr 0.01 --seed 0 --log logs/mixstyle/camelyon17

@@ -16,3 +16,23 @@ CUDA_VISIBLE_DEVICES=0 python lwf.py data/aircraft -d Aircraft -sr 100 --seed 0 
 CUDA_VISIBLE_DEVICES=0 python lwf.py data/aircraft -d Aircraft -sr 50 --seed 0 --finetune --log logs/lwf/aircraft_50 --lr 0.001
 CUDA_VISIBLE_DEVICES=0 python lwf.py data/aircraft -d Aircraft -sr 30 --seed 0 --finetune --log logs/lwf/aircraft_30 --lr 0.001
 CUDA_VISIBLE_DEVICES=0 python lwf.py data/aircraft -d Aircraft -sr 15 --seed 0 --finetune --log logs/lwf/aircraft_15 --lr 0.001
+
+# Resisc45
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/resisc45 -d Resisc45 -sc 10 --finetune --seed 0 \
+  --log logs/lwf/resisc45_10
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/resisc45 -d Resisc45 -sc 20 --finetune --seed 0 \
+  --log logs/lwf/resisc45_20
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/resisc45 -d Resisc45 -sc 40 --finetune --seed 0 \
+  --log logs/lwf/resisc45_40
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/resisc45 -d Resisc45 -sc 80 --finetune --seed 0 \
+  --log logs/lwf/resisc45_80
+
+# Patch Camelyon
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/patch_camelyon -d PatchCamelyon -sc 40 --finetune \
+  --seed 0 --log logs/lwf/patch_camelyon_40
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/patch_camelyon -d PatchCamelyon -sc 80 --finetune \
+  --seed 0 --log logs/lwf/patch_camelyon_80
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/patch_camelyon -d PatchCamelyon -sc 160 --finetune \
+  --seed 0 --log logs/lwf/patch_camelyon_160
+CUDA_VISIBLE_DEVICES=0 python lwf.py data/vtab/patch_camelyon -d PatchCamelyon -sc 320 --finetune \
+  --seed 0 --log logs/lwf/patch_camelyon_320

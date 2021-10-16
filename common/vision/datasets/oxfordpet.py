@@ -9,7 +9,8 @@ from ._util import download as download_data, check_exits
 
 
 class OxfordIIITPet(ImageList):
-    """`The Oxford-IIIT Pet <https://www.robots.ox.ac.uk/~vgg/data/pets/>`_ Dataset.
+    """`The Oxford-IIIT Pet <https://www.robots.ox.ac.uk/~vgg/data/pets/>`_ \
+    is a 37-category pet dataset with roughly 200 images for each class.
 
     Args:
         root (str): Root directory of dataset

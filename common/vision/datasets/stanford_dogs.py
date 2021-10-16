@@ -9,7 +9,9 @@ from ._util import download as download_data, check_exits
 
 
 class StanfordDogs(ImageList):
-    """`The Stanford Dogs <http://vision.stanford.edu/aditya86/ImageNetDogs/>`_ Dataset.
+    """`The Stanford Dogs <http://vision.stanford.edu/aditya86/ImageNetDogs/>`_ \
+    contains 20,580 images of 120 breeds of dogs from around the world. \
+    Each category is composed of exactly 100 training examples and around 72 testing examples.
 
     Args:
         root (str): Root directory of dataset

@@ -1,6 +1,6 @@
 """
-@author: Yifei Ji
-@contact: jiyf990330@163.com
+@author: Yifei Ji, Junguang Jiang
+@contact: jiyf990330@163.com, JiangJunguang1123@outlook.com
 """
 import random
 import time
@@ -16,6 +16,7 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torch.utils.data import Subset
 
 sys.path.append('../../..')
 from talib.finetune.co_tuning import CoTuningLoss, Relationship, Classifier
@@ -23,11 +24,33 @@ from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.data import ForeverDataIterator
+import common.vision.datasets as datasets
 
 sys.path.append('.')
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, num_samples_per_classes=None):
+    dataset = datasets.__dict__[dataset_name]
+    if sample_rate < 100:
+        train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=train_transform)
+        determin_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=val_transform)
+        test_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
+        num_classes = train_dataset.num_classes
+    else:
+        train_dataset = dataset(root=root, split='train', transform=train_transform)
+        determin_train_dataset = dataset(root=root, split='train', transform=val_transform)
+        test_dataset = dataset(root=root, split='test', transform=val_transform)
+        num_classes = train_dataset.num_classes
+        if num_samples_per_classes is not None:
+            samples = list(range(len(train_dataset)))
+            random.shuffle(samples)
+            samples_len = min(num_samples_per_classes * num_classes, len(train_dataset))
+            train_dataset = Subset(train_dataset, samples[:samples_len])
+            determin_train_dataset = Subset(determin_train_dataset, samples[:samples_len])
+    return train_dataset, determin_train_dataset, test_dataset, num_classes
 
 
 def main(args: argparse.Namespace):
@@ -52,18 +75,16 @@ def main(args: argparse.Namespace):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate, args.sample_size)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=args.workers, drop_last=True)
-    train_iter = ForeverDataIterator(train_loader)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    train_dataset, determin_train_dataset, val_dataset, num_classes = get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
     print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
 
-    determin_train_dataset, _, _ = utils.get_dataset(args.data, args.root, val_transform,
-                                                     val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
     determin_train_loader = DataLoader(determin_train_dataset, batch_size=args.batch_size,
-                                     shuffle=False, num_workers=args.workers, drop_last=False)
+                                       shuffle=False, num_workers=args.workers, drop_last=False)
+    train_iter = ForeverDataIterator(train_loader)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
@@ -166,7 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
-    parser.add_argument('-ss', '--sample-size', default=None, type=int)
+    parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
+                        help='number of samples per classes.')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
