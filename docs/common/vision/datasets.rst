@@ -1,7 +1,7 @@
 Vision Datasets
 =============================
 
-Unsupervised DA for Classification
+Cross-Domain Classification
 ---------------------------------------------------------
 
 
@@ -84,7 +84,7 @@ SVHN
    :members:
 
 
-Partial DA for Classification
+Partial Cross-Domain Classification
 ----------------------------------------------------
 
 ---------------------------------------
@@ -112,7 +112,7 @@ ImageNet-1k->Caltech-256
    :members:
 
 
-Open Set DA for Classification
+Open Set Cross-Domain Classification
 ------------------------------------------------------
 
 ---------------------------------------
@@ -124,7 +124,7 @@ Open Set Wrapper
 .. autofunction:: common.vision.datasets.openset.default_open_set
 
 
-Unsupervised DA for Regression
+Cross-Domain Regression
 ------------------------------------------------------
 
 ---------------------------------------
@@ -147,7 +147,7 @@ MPI3D
    :members:
 
 
-Unsupervised DA for Segmentation
+Cross-Domain Segmentation
 -----------------------------------------------
 
 ---------------------------------------
@@ -178,7 +178,7 @@ Foggy Cityscapes
 .. autoclass:: common.vision.datasets.segmentation.cityscapes.FoggyCityscapes
 
 
-Unsupervised DA for Keypoint Detection
+Cross-Domain Keypoint Detection
 -----------------------------------------------
 
 ---------------------------------------
@@ -229,7 +229,7 @@ Human3.6M Dataset
 .. autoclass:: common.vision.datasets.keypoint_detection.human36m.Human36M
    :members:
 
-Unsupervised DA for ReID
+Cross-Domain ReID
 ------------------------------------------------------
 
 ---------------------------------------
@@ -253,7 +253,8 @@ MSMT17
 .. autoclass:: common.vision.datasets.reid.msmt17.MSMT17
    :members:
 
-Task Adaptation for Image Classification
+
+Natural Object Recognition
 ---------------------------------------------------------
 
 
@@ -312,6 +313,10 @@ OxfordFlowers102
 
 .. autoclass:: common.vision.datasets.oxfordflowers.OxfordFlowers102
    :members:
+
+
+Specialized Image Classification
+--------------------------------
 
 -------------------------------------
 PatchCamelyon
