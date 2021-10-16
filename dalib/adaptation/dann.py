@@ -15,7 +15,7 @@ __all__ = ['DomainAdversarialLoss']
 
 
 class DomainAdversarialLoss(nn.Module):
-    """
+    r"""
     The Domain Adversarial Loss proposed in
     `Domain-Adversarial Training of Neural Networks (ICML 2015) <https://arxiv.org/abs/1505.07818>`_
 
@@ -23,8 +23,8 @@ class DomainAdversarialLoss(nn.Module):
     Given domain discriminator :math:`D`, feature representation :math:`f`, the definition of DANN loss is
 
     .. math::
-        loss(\mathcal{D}_s, \mathcal{D}_t) = \mathbb{E}_{x_i^s \sim \mathcal{D}_s} log[D(f_i^s)]
-            + \mathbb{E}_{x_j^t \sim \mathcal{D}_t} log[1-D(f_j^t)].
+        loss(\mathcal{D}_s, \mathcal{D}_t) = \mathbb{E}_{x_i^s \sim \mathcal{D}_s} \text{log}[D(f_i^s)]
+            + \mathbb{E}_{x_j^t \sim \mathcal{D}_t} \text{log}[1-D(f_j^t)].
 
     Args:
         domain_discriminator (torch.nn.Module): A domain discriminator object, which predicts the domains of features. Its input shape is (N, F) and output shape is (N, 1)

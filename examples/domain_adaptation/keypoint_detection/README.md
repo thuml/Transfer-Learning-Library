@@ -36,22 +36,24 @@ CUDA_VISIBLE_DEVICES=0 python regda.py data/RHD data/H3D_crop \
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
 ## TODO
+
 Support methods:  CycleGAN
+
 
 ## Citation
 If you use these methods in your research, please consider citing.
 
 ```
 @InProceedings{RegDA,
-  author    = {Junguang Jiang and
-               Yifei Ji and
-               Ximei Wang and
-               Yufeng Liu and
-               Jianmin Wang and
-               Mingsheng Long},
-  title     = {Regressive Domain Adaptation for Unsupervised Keypoint Detection},
-  booktitle = {CVPR},
-  year = {2021}
+    author    = {Junguang Jiang and
+                Yifei Ji and
+                Ximei Wang and
+                Yufeng Liu and
+                Jianmin Wang and
+                Mingsheng Long},
+    title     = {Regressive Domain Adaptation for Unsupervised Keypoint Detection},
+    booktitle = {CVPR},
+    year = {2021}
 }
 
 ```

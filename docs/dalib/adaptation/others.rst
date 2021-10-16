@@ -39,7 +39,7 @@ domain, which are noisy and thus harmful for training. Inspired by the teacher-s
 provides robust soft pseudo labels in an on-line peer-teaching manner.
 
 We denote two networks as :math:`f_1,f_2`, their parameters as :math:`\theta_1,\theta_2`. The authors also
-propose to use the temporally average model of each network :math:`ensemble(f_1),ensemble(f_2)` to generate more reliable
+propose to use the temporally average model of each network :math:`\text{ensemble}(f_1),\text{ensemble}(f_2)` to generate more reliable
 soft pseudo labels for supervising the other network. Specifically, the parameters of the temporally
 average models of the two networks at current iteration :math:`T` are denoted as :math:`E^{(T)}[\theta_1]` and
 :math:`E^{(T)}[\theta_2]` respectively, which can be calculated as
@@ -55,11 +55,11 @@ the previous iteration :math:`(T-1)`, the initial temporal average parameters ar
 
 These two networks cooperate with each other in three ways:
 
-- When running clustering algorithm, we average features produced by :math:`ensemble(f_1)` and
-    :math:`ensemble(f_2)` instead of only considering one of them.
-- A **soft triplet loss** is optimized between :math:`f_1` and :math:`ensemble(f_2)` and vice versa
+- When running clustering algorithm, we average features produced by :math:`\text{ensemble}(f_1)` and
+    :math:`\text{ensemble}(f_2)` instead of only considering one of them.
+- A **soft triplet loss** is optimized between :math:`f_1` and :math:`\text{ensemble}(f_2)` and vice versa
     to force one network to learn from temporally average of another network.
-- A **cross entropy loss** is optimized between :math:`f_1` and :math:`ensemble(f_2)` and vice versa
+- A **cross entropy loss** is optimized between :math:`f_1` and :math:`\text{ensemble}(f_2)` and vice versa
     to force one network to learn from temporally average of another network.
 
 The above mentioned loss functions are listed below, more details can be found in training scripts.

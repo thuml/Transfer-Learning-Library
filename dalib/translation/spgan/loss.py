@@ -16,7 +16,7 @@ class ContrastiveLoss(torch.nn.Module):
     calculated as
 
     .. math::
-        (1 - Y)\frac{1}{2}D^2 + (Y)\frac{1}{2}\{max(0, m-D)^2\}
+        (1 - Y)\frac{1}{2}D^2 + (Y)\frac{1}{2}\{\text{max}(0, m-D)^2\}
 
     Args:
         margin (float, optional): margin for contrastive loss. Default: 2.0

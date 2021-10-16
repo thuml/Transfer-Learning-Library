@@ -16,7 +16,7 @@ class AutomaticUpdateDomainWeightModule(object):
     domains, resulting in :math:`loss\in R^N`. Then we update domain weight by
 
     .. math::
-        w_k = w_k * exp(loss_k ^{\eta}), \forall k \in [1, N]
+        w_k = w_k * \text{exp}(loss_k ^{\eta}), \forall k \in [1, N]
 
     where :math:`\eta` is the hyper parameter which ensures smoother change of weight.
     As :math:`w \in R^N` denotes a distribution, we `normalize`

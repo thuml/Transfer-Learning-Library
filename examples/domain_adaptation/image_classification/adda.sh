@@ -34,10 +34,10 @@ CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s p -t r -a r
 CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s p -t s -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_p2s
 CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s r -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_r2c
 CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s r -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_r2p
-CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s r -t s -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_r2s
-CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s s -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2c
-CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2p
-CUDA_VISIBLE_DEVICES=0 python adda.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2r
+CUDA_VISIBLE_DEVICES=1 python adda.py data/domainnet -d DomainNet -s r -t s -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_r2s
+CUDA_VISIBLE_DEVICES=2 python adda.py data/domainnet -d DomainNet -s s -t c -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2c
+CUDA_VISIBLE_DEVICES=3 python adda.py data/domainnet -d DomainNet -s s -t p -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2p
+CUDA_VISIBLE_DEVICES=4 python adda.py data/domainnet -d DomainNet -s s -t r -a resnet101 --bottleneck-dim 1024 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/DomainNet_s2r
 
 # ResNet50, ImageNet200 -> ImageNetR
 CUDA_VISIBLE_DEVICES=0 python adda.py data/ImageNetR -d ImageNetR -s IN -t INR -a resnet50 --epochs 30 -i 2500 -p 500 --seed 0 --log logs/adda/ImageNet_IN2INR

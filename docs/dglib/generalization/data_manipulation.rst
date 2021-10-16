@@ -1,3 +1,7 @@
+=======================================
+Data Manipulation
+=======================================
+
 .. _MIXSTYLE:
 
 Domain Generalization with MixStyle (MixStyle)

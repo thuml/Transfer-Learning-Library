@@ -8,7 +8,7 @@ import torch
 
 class RepresentationSubspaceDistance(nn.Module):
     """
-    `Representation Subspace Distance (ICML 2020) <http://ise.thss.tsinghua.edu.cn/~mlong/doc/Representation-Subspace-Distance-for-Domain-Adaptation-Regression-icml21.pdf>`_
+    `Representation Subspace Distance (ICML 2021) <http://ise.thss.tsinghua.edu.cn/~mlong/doc/Representation-Subspace-Distance-for-Domain-Adaptation-Regression-icml21.pdf>`_
 
     Args:
         trade_off (float):  The trade-off value between Representation Subspace Distance

@@ -1,4 +1,5 @@
-Open Set Domain Adaptation
+==========================================
+Openset Domain Adaptation
 ==========================================
 
 We provide benchmarks of different domain adaptation algorithms on `Office-31`_ , `Office-Home`_ and `VisDA-2017`_ as follows.

@@ -14,12 +14,12 @@ from dalib.translation.cyclegan.util import set_requires_grad
 
 class ConsistencyLoss(nn.Module):
     r"""
-    Consistency loss between student model output y and teacher output y_teacher
-    Given specific distance measure :math:`d`, student model output:math:`y`, teacher
-    model output :math:`y_{teacher}`, binary mask :math:`mask`, consistencyLoss is
+    Consistency loss between output of student model and output of teacher model.
+    Given distance measure :math:`D`, student model's output :math:`y`, teacher
+    model's output :math:`y_{teacher}`, binary mask :math:`mask`, consistency loss is
 
     .. math::
-        d(y, y_{teacher}) * mask
+        D(y, y_{teacher}) * mask
 
     Args:
         distance_measure (callable): Distance measure function.
@@ -54,12 +54,11 @@ class ConsistencyLoss(nn.Module):
 
 class L2ConsistencyLoss(ConsistencyLoss):
     r"""
-    L2 consistency loss.
-    Given student model predictions :math:`y`, teacher model predictions :math:`y_{teacher}`, binary mask :math:`mask`,
-    L2consistencyLoss is
+    L2 consistency loss. Given student model's output :math:`y`, teacher model's output :math:`y_{teacher}`
+    and binary mask :math:`mask`, L2 consistency loss is
 
     .. math::
-        (\mathbb{E}_{i}\Vert y^i - y_{teacher}^i \Vert_2^2) * mask
+        \text{MSELoss}(y, y_{teacher}) * mask
 
     """
 
@@ -83,7 +82,7 @@ class ClassBalanceLoss(nn.Module):
     the same dimension where :math:`u^j` = :math:`\frac{1}{C}`
 
     .. math::
-        loss = BCELoss(y_{mean}, u)
+        loss = \text{BCELoss}(y_{mean}, u)
 
     Args:
         num_classes (int): Number of classes

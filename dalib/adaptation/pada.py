@@ -96,7 +96,7 @@ class AutomaticUpdateClassWeightModule(object):
 
 
 class ClassWeightModule(nn.Module):
-    """
+    r"""
     Calculating class weight based on the output of classifier.
     Introduced by `Partial Adversarial Domain Adaptation (ECCV 2018) <https://arxiv.org/abs/1808.04205>`_
 
@@ -105,7 +105,7 @@ class ClassWeightModule(nn.Module):
     follows
 
     .. math::
-        \mathcal{\gamma} = \dfrac{1}{n} \sum_{i=1}^{n}softmax( \hat{y}_i / T),
+        \mathcal{\gamma} = \dfrac{1}{n} \sum_{i=1}^{n}\text{softmax}( \hat{y}_i / T),
 
     where :math:`\mathcal{\gamma}` is a :math:`|\mathcal{C}|`-dimensional weight vector quantifying the contribution
     of each class and T is a hyper-parameters called temperature.
