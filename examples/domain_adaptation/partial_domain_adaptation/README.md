@@ -44,9 +44,6 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
-## TODO
-Support methods: TBD
-
 ## Citation
 If you use these methods in your research, please consider citing.
 
