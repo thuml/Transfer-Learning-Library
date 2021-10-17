@@ -11,24 +11,16 @@ Those domain adaptation algorithms includes:
 - :ref:`SPGAN`
 - :ref:`MMT`
 
-.. note::
 
-    We adopt cross dataset setting (another one is cross camera setting). The model is first trained on source dataset,
-    then we evaluate it on target dataset and report `mAP` (mean average precision) on target dataset.
+We adopt cross dataset setting (another one is cross camera setting). The model is first trained on source dataset, then we evaluate it on target dataset and report `mAP` (mean average precision) on target dataset.
 
-.. note::
-    For a fair comparison, our model is trained with standard cross entropy loss and triplet loss. We adopt modified
-    resnet architecture from `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised
-    Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_.
+For a fair comparison, our model is trained with standard cross entropy loss and triplet loss. We adopt modified resnet architecture from `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_.
 
-.. note::
-    As we are given unlabelled samples from target domain, we can utilize clustering algorithms to produce pseudo labels
-    on target domain and then use them as supervision signals to perform self-training. This simple method turns out to
-    be a strong baseline. We use ``Baseline_Cluster`` to represent this baseline in our results.
+As we are given unlabelled samples from target domain, we can utilize clustering algorithms to produce pseudo labels on target domain and then use them as supervision signals to perform self-training. This simple method turns out to be a strong baseline. We use ``Baseline_Cluster`` to represent this baseline in our results.
 
 .. note::
 
-    - ``Avg`` means the average mAP across these tasks reported by DALIB.
+    - ``Avg`` means the average mAP across these tasks reported by Transfer-Learn.
 
 -----------------------------------
 Cross dataset mAP on ResNet-50

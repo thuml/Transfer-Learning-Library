@@ -9,10 +9,10 @@ Before going deeper, please **make sure** you have installed all the dependency.
 
 Step1: Find it
 ===================
-Our code for domain adaptation is in the directory ``examples-da``.
+Our code for domain adaptation is in the directory ``examples/domain_adaptation``.
 
 DANN is designed for close set domain adaptation tasks. You can find the training code in
-``examples-da/unsupervised``. This directory contains implementations for other algorithms such as ``CDAN``, ``MDD``.
+``examples/domain_adaptation/image_classification``. This directory contains implementations for other algorithms such as ``CDAN``, ``MDD``.
 For now, you only need to care about two files: ``dann.py`` and ``dann.sh``.
 
 Step2: Run it
@@ -31,7 +31,7 @@ and ``--log`` specifies where to store results.
 
 After running the above command, it will download ``Office-31`` datasets from the Internet if it's the
 first time you run the code. Directory that stores datasets will be named as
-``examples-da/unsupervised/data/<dataset name>``.
+``examples/domain_adaptation/image_classification/data/<dataset name>``.
 
 Step3: Analysis it
 ===================

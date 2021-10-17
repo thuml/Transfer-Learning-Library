@@ -1,5 +1,5 @@
-Modules
-=====================
+Common Generalization Modules
+==============================
 
 Classifier
 -----------------------------

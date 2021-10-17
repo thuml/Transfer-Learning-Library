@@ -18,9 +18,3 @@ JAN: Joint Adaptation Network
 .. autoclass:: dalib.adaptation.jan.JointMultipleKernelMaximumMeanDiscrepancy
 
 
-.. _RSD:
-
-RSD: Representation Subspace Distance
----------------------------------------
-
-.. autoclass:: dalib.adaptation.rsd.RepresentationSubspaceDistance
