@@ -47,8 +47,8 @@ Supported methods include:
 - [Conditional Domain Adversarial Network (CDAN)](https://arxiv.org/abs/1705.10667)
 - [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
 - [Adaptive Feature Norm (AFN)](https://arxiv.org/pdf/1811.07456v2.pdf)
-- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 - [Batch Spectral Penalization (BSP)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf)
+- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 - [Minimum Class Confusion (MCC)](https://arxiv.org/abs/1912.03699)
 
 ## Experiment and Results

@@ -15,18 +15,14 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
 from dalib.adaptation.afn import AdaptiveFeatureNorm, ImageClassifier
 from dalib.modules.entropy import entropy
-import common.vision.datasets.partial as datasets
-from common.vision.datasets.partial import default_partial as partial
 import common.vision.models as models
-from common.vision.transforms import ResizeImage
 from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
+from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.logger import CompleteLogger
 from common.utils.analysis import collect_feature, tsne, a_distance
@@ -218,7 +214,7 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain')
     parser.add_argument('-t', '--target', help='target domain')
-    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--train-resizing', type=str, default='ran.crop')
     parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',

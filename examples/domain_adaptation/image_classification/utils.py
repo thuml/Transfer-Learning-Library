@@ -171,6 +171,11 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
             ResizeImage(256),
             T.CenterCrop(224)
         ])
+    elif resizing == 'ran.crop':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.RandomCrop(224)
+        ])
     elif resizing == 'res.':
         transform = ResizeImage(resize_size)
     else:
