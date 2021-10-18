@@ -36,7 +36,6 @@ CUDA_VISIBLE_DEVICES=0 python regda.py data/RHD data/H3D_crop \
 For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
 
 ## TODO
-
 Support methods:  CycleGAN
 
 
