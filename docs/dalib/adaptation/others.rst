@@ -75,7 +75,7 @@ Other Methods
 
 .. _AFN:
 
-Adaptive Feature Norm (AFN)
+AFN: Adaptive Feature Norm
 -----------------------------
 
 .. autoclass:: dalib.adaptation.afn.AdaptiveFeatureNorm
