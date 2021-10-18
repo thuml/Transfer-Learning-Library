@@ -72,7 +72,14 @@ We are planning to add
 
 ## Installation
 
-For flexible use and modification, please git clone the library.
+To use ``dalib``, ``talib``, ``dglib``, and ``common`` in other places, you need to install Transfer-Learn,
+```shell
+python setup.py install
+```
+Note that we do not support *pip install* currently.
+
+For flexible use and modification of Transfer-Learn, please git clone the library.
+
 
 ## Documentation
 You can find the tutorial and API documentation on the website: [Documentation (please open in Firefox or Safari)](http://170.106.108.162/index.html). Note that this link is only for temporary use. You can also build the doc by yourself following the instructions in http://170.106.108.162/get_started/faq.html.

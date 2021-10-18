@@ -14,11 +14,12 @@ if __name__ == '__main__':
         version=version,
         author="THUML",
         author_email="JiangJunguang1123@outlook.com",
-        keywords="domain adaptation, transfer learning, deep learning, pytorch",
-        description="A Library for Deep Domain Adaptation",
+        keywords="domain adaptation, task adaptation, domain generalization, "
+                 "transfer learning, deep learning, pytorch",
+        description="A Transfer Learning Library for Domain Adaptation, Task Adaptation, and Domain Generalization",
         long_description=open('README.md', encoding='utf8').read(),
         long_description_content_type="text/markdown",
-        url="https://github.com/thuml/Domain-Adaptation-Lib",
+        url="https://github.com/thuml/Transfer-Learning-Library",
         packages=find_packages(exclude=['docs', 'examples']),
         classifiers=[
             # How mature is this project? Common values are
