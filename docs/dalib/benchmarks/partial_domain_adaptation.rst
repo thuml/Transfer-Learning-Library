@@ -13,7 +13,7 @@ Those domain adaptation algorithms includes:
 .. note::
 
     - ``Origin`` means the accuracy reported by the original paper.
-    - ``Avg`` is the accuracy reported by DALIB.
+    - ``Avg`` is the accuracy reported by Transfer-Learn.
     - ``Source Only`` refers to the model trained with data from the source domain.
 
 .. note::

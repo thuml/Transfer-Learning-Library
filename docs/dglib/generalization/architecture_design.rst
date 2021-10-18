@@ -4,7 +4,7 @@ Architecture Design
 
 .. _IBN:
 
-Instance-Batch Normalization Network (IBN-Net)
+IBN-Net: Instance-Batch Normalization Network
 ------------------------------------------------
 
 .. autoclass:: common.vision.models.ibn.IBN

@@ -26,7 +26,7 @@ Transfer Learning
     dalib/benchmarks/re_identification
     dalib/benchmarks/partial_domain_adaptation
     dalib/benchmarks/openset_domain_adaptation
-    dalib/benchmarks/multi_source_da
+    dalib/benchmarks/multi_source_domain_adaptation
 
 .. toctree::
     :maxdepth: 2

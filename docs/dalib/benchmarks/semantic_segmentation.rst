@@ -14,7 +14,7 @@ Those domain adaptation algorithms includes:
 .. note::
 
     - ``Origin`` means the accuracy reported by the original paper.
-    - ``mIoU`` is the mean IoU reported by DALIB.
+    - ``mIoU`` is the mean IoU reported by Transfer-Learn.
     - ``Src Only`` refers to the model trained with data from the source domain.
     - ``Oracle`` refers to the model trained with data from the target domain.
 

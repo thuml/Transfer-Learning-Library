@@ -19,7 +19,7 @@ Those domain adaptation algorithms includes:
 .. note::
 
     - ``Origin`` means the accuracy reported by the original paper.
-    - ``Avg`` is the accuracy reported by DALIB.
+    - ``Avg`` is the accuracy reported by Trasnfer-Learn.
     - ``Source Only`` refers to the model trained with data from the source domain.
     - ``Oracle`` refers to the model trained with data from the target domain.
 
@@ -149,8 +149,8 @@ MDD         42.9    59.5    47.5    48.6    59.4    42.6    58.3    53.7    46.2
 MCC         37.7    55.7    42.6    45.4    59.8    39.9    54.4    53.1    37.0    58.1    46.3    56.2    48.9
 =========== ======  ======  ======  ======  ======  ======  ======  ======  ======  ======  ======  ======  ======
 
-Oracle
------------
+Oracle DomainNet accuracy on ResNet-101
+--------------------------------------------
 
 =========== ======  ======  ======  ======  ======  ======
 Oracle      clp	    inf	    pnt	    real    skt     Avg
