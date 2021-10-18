@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional, List, Dict, Tuple, Callable
 import torch.nn as nn
 import torch.nn.functional as F
@@ -202,7 +206,7 @@ class RegressionMarginDisparityDiscrepancy(MarginDisparityDiscrepancy):
 
     """
 
-    def __init__(self, margin: Optional[float] = 1, loss_function=F.mse_loss, **kwargs):
+    def __init__(self, margin: Optional[float] = 1, loss_function=F.l1_loss, **kwargs):
         def source_discrepancy(y: torch.Tensor, y_adv: torch.Tensor):
             return loss_function(y_adv, y.detach(), reduction='none')
 
@@ -234,8 +238,8 @@ def shift_log(x: torch.Tensor, offset: Optional[float] = 1e-6) -> torch.Tensor:
 
 class GeneralModule(nn.Module):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck: nn.Module,
-                head: nn.Module, adv_head: nn.Module,
-                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune: Optional[bool] = True):
+                 head: nn.Module, adv_head: nn.Module, grl: Optional[WarmStartGradientReverseLayer] = None,
+                 finetune: Optional[bool] = True):
         super(GeneralModule, self).__init__()
         self.backbone = backbone
         self.num_classes = num_classes
@@ -253,7 +257,10 @@ class GeneralModule(nn.Module):
         outputs = self.head(features)
         features_adv = self.grl_layer(features)
         outputs_adv = self.adv_head(features_adv)
-        return outputs, outputs_adv
+        if self.training:
+            return outputs, outputs_adv
+        else:
+            return outputs
 
     def step(self):
         """
@@ -313,20 +320,24 @@ class ImageClassifier(GeneralModule):
 
     def __init__(self, backbone: nn.Module, num_classes: int,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024,
-                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True):
+                 grl: Optional[WarmStartGradientReverseLayer] = None, finetune=True, pool_layer=None):
         grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000,
                                                        auto_step=False) if grl is None else grl
 
+        if pool_layer is None:
+            pool_layer = nn.Sequential(
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten()
+            )
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            pool_layer,
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        bottleneck[2].weight.data.normal_(0, 0.005)
-        bottleneck[2].bias.data.fill_(0.1)
+        bottleneck[1].weight.data.normal_(0, 0.005)
+        bottleneck[1].bias.data.fill_(0.1)
 
         # The classifier head used for final predictions.
         head = nn.Sequential(
@@ -386,49 +397,52 @@ class ImageRegressor(GeneralModule):
 
     """
 
-    def __init__(self, backbone: nn.Module, num_factors: int,
+    def __init__(self, backbone: nn.Module, num_factors: int, bottleneck = None, head=None, adv_head=None,
                  bottleneck_dim: Optional[int] = 1024, width: Optional[int] = 1024, finetune=True):
         grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=1000, auto_step=False)
-        bottleneck = nn.Sequential(
-            nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(bottleneck_dim),
-            nn.ReLU(),
-        )
+        if bottleneck is None:
+            bottleneck = nn.Sequential(
+                nn.Conv2d(backbone.out_features, bottleneck_dim, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(bottleneck_dim),
+                nn.ReLU(),
+            )
 
         # The regressor head used for final predictions.
-        head = nn.Sequential(
-            nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
-            nn.Linear(width, num_factors),
-            nn.Sigmoid()
-        )
-        for layer in head:
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                nn.init.normal_(layer.weight, 0, 0.01)
-                nn.init.constant_(layer.bias, 0)
+        if head is None:
+            head = nn.Sequential(
+                nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten(),
+                nn.Linear(width, num_factors),
+                nn.Sigmoid()
+            )
+            for layer in head:
+                if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, 0, 0.01)
+                    nn.init.constant_(layer.bias, 0)
         # The adversarial regressor head
-        adv_head = nn.Sequential(
-            nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
-            nn.Linear(width, num_factors),
-            nn.Sigmoid()
-        )
-        for layer in adv_head:
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                nn.init.normal_(layer.weight, 0, 0.01)
-                nn.init.constant_(layer.bias, 0)
+        if adv_head is None:
+            adv_head = nn.Sequential(
+                nn.Conv2d(bottleneck_dim, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.Conv2d(width, width, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(width),
+                nn.ReLU(),
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten(),
+                nn.Linear(width, num_factors),
+                nn.Sigmoid()
+            )
+            for layer in adv_head:
+                if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, 0, 0.01)
+                    nn.init.constant_(layer.bias, 0)
         super(ImageRegressor, self).__init__(backbone, num_factors, bottleneck,
                                               head, adv_head, grl_layer, finetune)
         self.num_factors = num_factors

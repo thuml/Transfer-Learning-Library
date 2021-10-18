@@ -1,7 +1,8 @@
-# ------------------------------------------------------------------------------
-# Modified from https://github.com/microsoft/human-pose-estimation.pytorch
-# ------------------------------------------------------------------------------
-
+"""
+Modified from https://github.com/microsoft/human-pose-estimation.pytorch
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import torch.nn as nn
 from ..resnet import _resnet, Bottleneck
 

@@ -1,8 +1,7 @@
 Vision Datasets
 =============================
 
-
-Unsupervised DA for Classification
+Cross-Domain Classification
 ---------------------------------------------------------
 
 
@@ -54,6 +53,14 @@ DomainNet
    :inherited-members:
 
 --------------------------------------
+PACS
+--------------------------------------
+
+.. autoclass:: common.vision.datasets.pacs.PACS
+   :members:
+
+
+--------------------------------------
 MNIST
 --------------------------------------
 
@@ -77,7 +84,7 @@ SVHN
    :members:
 
 
-Partial DA for Classification
+Partial Cross-Domain Classification
 ----------------------------------------------------
 
 ---------------------------------------
@@ -105,7 +112,7 @@ ImageNet-1k->Caltech-256
    :members:
 
 
-Open Set DA for Classification
+Open Set Cross-Domain Classification
 ------------------------------------------------------
 
 ---------------------------------------
@@ -117,7 +124,7 @@ Open Set Wrapper
 .. autofunction:: common.vision.datasets.openset.default_open_set
 
 
-Unsupervised DA for Regression
+Cross-Domain Regression
 ------------------------------------------------------
 
 ---------------------------------------
@@ -140,7 +147,7 @@ MPI3D
    :members:
 
 
-Unsupervised DA for Segmentation
+Cross-Domain Segmentation
 -----------------------------------------------
 
 ---------------------------------------
@@ -171,7 +178,7 @@ Foggy Cityscapes
 .. autoclass:: common.vision.datasets.segmentation.cityscapes.FoggyCityscapes
 
 
-Unsupervised DA for Keypoint Detection
+Cross-Domain Keypoint Detection
 -----------------------------------------------
 
 ---------------------------------------
@@ -222,8 +229,32 @@ Human3.6M Dataset
 .. autoclass:: common.vision.datasets.keypoint_detection.human36m.Human36M
    :members:
 
+Cross-Domain ReID
+------------------------------------------------------
 
-Finetune for Classification
+---------------------------------------
+Market1501
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.market1501.Market1501
+   :members:
+
+---------------------------------------
+DukeMTMC-reID
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.dukemtmc.DukeMTMC
+   :members:
+
+---------------------------------------
+MSMT17
+---------------------------------------
+
+.. autoclass:: common.vision.datasets.reid.msmt17.MSMT17
+   :members:
+
+
+Natural Object Recognition
 ---------------------------------------------------------
 
 
@@ -267,4 +298,50 @@ COCO-70
 -------------------------------------
 
 .. autoclass:: common.vision.datasets.coco70.COCO70
+   :members:
+
+-------------------------------------
+DTD
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.dtd.DTD
+   :members:
+
+-------------------------------------
+OxfordFlowers102
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.oxfordflowers.OxfordFlowers102
+   :members:
+
+
+Specialized Image Classification
+--------------------------------
+
+-------------------------------------
+PatchCamelyon
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.patchcamelyon.PatchCamelyon
+   :members:
+
+-------------------------------------
+Retinopathy
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.retinopathy.Retinopathy
+   :members:
+
+-------------------------------------
+EuroSAT
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.eurosat.EuroSAT
+   :members:
+
+-------------------------------------
+Resisc45
+-------------------------------------
+
+.. autoclass:: common.vision.datasets.resisc45.Resisc45
    :members:

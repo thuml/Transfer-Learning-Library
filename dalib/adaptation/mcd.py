@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional
 import torch.nn as nn
 import torch
@@ -52,12 +56,17 @@ class ImageClassifierHead(nn.Module):
         - Output: :math:`(minibatch, C)` where C = `num_classes`.
     """
 
-    def __init__(self, in_features: int, num_classes: int, bottleneck_dim: Optional[int] = 1024):
+    def __init__(self, in_features: int, num_classes: int, bottleneck_dim: Optional[int] = 1024, pool_layer=None):
         super(ImageClassifierHead, self).__init__()
         self.num_classes = num_classes
+        if pool_layer is None:
+            self.pool_layer = nn.Sequential(
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+                nn.Flatten()
+            )
+        else:
+            self.pool_layer = pool_layer
         self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
             nn.Dropout(0.5),
             nn.Linear(in_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
@@ -70,4 +79,4 @@ class ImageClassifierHead(nn.Module):
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        return self.head(inputs)
+        return self.head(self.pool_layer(inputs))

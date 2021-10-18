@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import List, Dict
 import torch.nn as nn
 
@@ -6,7 +10,7 @@ __all__ = ['DomainDiscriminator']
 
 class DomainDiscriminator(nn.Sequential):
     r"""Domain discriminator model from
-    `"Domain-Adversarial Training of Neural Networks" (ICML 2015) <https://arxiv.org/abs/1505.07818>`_
+    `Domain-Adversarial Training of Neural Networks (ICML 2015) <https://arxiv.org/abs/1505.07818>`_
 
     Distinguish whether the input features come from the source domain or the target domain.
     The source domain label is 1 and the target domain label is 0.

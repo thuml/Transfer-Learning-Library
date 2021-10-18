@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional
 import torch
 import torch.nn as nn
@@ -11,7 +15,7 @@ __all__ = ['DomainAdversarialLoss']
 
 
 class DomainAdversarialLoss(nn.Module):
-    """
+    r"""
     The Domain Adversarial Loss proposed in
     `Domain-Adversarial Training of Neural Networks (ICML 2015) <https://arxiv.org/abs/1505.07818>`_
 
@@ -19,8 +23,8 @@ class DomainAdversarialLoss(nn.Module):
     Given domain discriminator :math:`D`, feature representation :math:`f`, the definition of DANN loss is
 
     .. math::
-        loss(\mathcal{D}_s, \mathcal{D}_t) = \mathbb{E}_{x_i^s \sim \mathcal{D}_s} log[D(f_i^s)]
-            + \mathbb{E}_{x_j^t \sim \mathcal{D}_t} log[1-D(f_j^t)].
+        loss(\mathcal{D}_s, \mathcal{D}_t) = \mathbb{E}_{x_i^s \sim \mathcal{D}_s} \text{log}[D(f_i^s)]
+            + \mathbb{E}_{x_j^t \sim \mathcal{D}_t} \text{log}[1-D(f_j^t)].
 
     Args:
         domain_discriminator (torch.nn.Module): A domain discriminator object, which predicts the domains of features. Its input shape is (N, F) and output shape is (N, 1)
@@ -80,8 +84,8 @@ class DomainAdversarialLoss(nn.Module):
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            # nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            # nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU()

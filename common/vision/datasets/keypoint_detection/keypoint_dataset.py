@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from abc import ABC
 import numpy as np
 from torch.utils.data.dataset import Dataset

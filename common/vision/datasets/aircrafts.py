@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 import os
 from typing import Optional
 from .imagelist import ImageList
@@ -5,7 +9,10 @@ from ._util import download as download_data, check_exits
 
 
 class Aircraft(ImageList):
-    """`FVGC-Aircraft <https://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/>`_ Dataset.
+    """`FVGC-Aircraft <https://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/>`_ \
+        is a benchmark for the fine-grained visual categorization of aircraft.  \
+        The dataset contains 10,200 images of aircraft, with 100 images for each \
+        of the 102 different aircraft variants.
 
     Args:
         root (str): Root directory of dataset

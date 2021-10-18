@@ -1,3 +1,8 @@
+"""
+Modified from https://github.com/jihanyang/AFN
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from typing import Optional, List, Dict
 import torch
 import torch.nn as nn
@@ -108,8 +113,6 @@ class ImageClassifier(ClassfierBase):
                  bottleneck_dim: Optional[int] = 1000, dropout_p: Optional[float] = 0.5, **kwargs):
         assert num_blocks >= 1
         layers = [nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
             Block(backbone.out_features, bottleneck_dim, dropout_p)
         )]
         for _ in range(num_blocks - 1):

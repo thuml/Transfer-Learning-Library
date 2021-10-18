@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import os
 from typing import Sequence, Optional, Dict, Callable
 from PIL import Image

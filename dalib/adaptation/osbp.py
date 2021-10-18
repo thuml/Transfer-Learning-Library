@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional
 import torch
 import torch.nn as nn
@@ -16,7 +20,7 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
     loss is defined as
 
     .. math::
-        L_{adv}(x_t) = -t log(p(y=C+1|x_t)) - (1-t)log(1-p(y=C+1|x_t))
+        L_{\text{adv}}(x_t) = -t \text{log}(p(y=C+1|x_t)) - (1-t)\text{log}(1-p(y=C+1|x_t))
 
     where t is a hyper-parameter and C is the number of known classes.
 
@@ -50,8 +54,8 @@ class UnknownClassBinaryCrossEntropy(nn.Module):
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            # nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            # nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU(),
@@ -65,12 +69,14 @@ class ImageClassifier(ClassifierBase):
         self.grl = GradientReverseLayer()
 
     def forward(self, x: torch.Tensor, grad_reverse: Optional[bool] = False):
-        features = self.backbone(x)
+        features = self.pool_layer(self.backbone(x))
         features = self.bottleneck(features)
         if grad_reverse:
             features = self.grl(features)
         outputs = self.head(features)
-        return outputs, features
-
+        if self.training:
+            return outputs, features
+        else:
+            return outputs
 
 

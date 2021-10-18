@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import torch
 import torch.nn as nn
 import torchvision.transforms as T

@@ -1,3 +1,7 @@
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from typing import Optional, Callable
 import copy
 import torch
@@ -10,12 +14,12 @@ from dalib.translation.cyclegan.util import set_requires_grad
 
 class ConsistencyLoss(nn.Module):
     r"""
-    Consistency loss between student model output y and teacher output y_teacher
-    Given specific distance measure :math:`d`, student model output:math:`y`, teacher
-    model output :math:`y_{teacher}`, binary mask :math:`mask`, consistencyLoss is
+    Consistency loss between output of student model and output of teacher model.
+    Given distance measure :math:`D`, student model's output :math:`y`, teacher
+    model's output :math:`y_{teacher}`, binary mask :math:`mask`, consistency loss is
 
     .. math::
-        d(y, y_{teacher}) * mask
+        D(y, y_{teacher}) * mask
 
     Args:
         distance_measure (callable): Distance measure function.
@@ -50,12 +54,11 @@ class ConsistencyLoss(nn.Module):
 
 class L2ConsistencyLoss(ConsistencyLoss):
     r"""
-    L2 consistency loss.
-    Given student model predictions :math:`y`, teacher model predictions :math:`y_{teacher}`, binary mask :math:`mask`,
-    L2consistencyLoss is
+    L2 consistency loss. Given student model's output :math:`y`, teacher model's output :math:`y_{teacher}`
+    and binary mask :math:`mask`, L2 consistency loss is
 
     .. math::
-        (\mathbb{E}_{i}\Vert y^i - y_{teacher}^i \Vert_2^2) * mask
+        \text{MSELoss}(y, y_{teacher}) * mask
 
     """
 
@@ -79,7 +82,7 @@ class ClassBalanceLoss(nn.Module):
     the same dimension where :math:`u^j` = :math:`\frac{1}{C}`
 
     .. math::
-        loss = BCELoss(y_{mean}, u)
+        loss = \text{BCELoss}(y_{mean}, u)
 
     Args:
         num_classes (int): Number of classes
@@ -137,6 +140,10 @@ class EmaTeacher(object):
         self.teacher = copy.deepcopy(model)
         set_requires_grad(self.teacher, False)
 
+    def set_alpha(self, alpha: float):
+        assert alpha >= 0
+        self.alpha = alpha
+
     def update(self):
         for teacher_param, param in zip(self.teacher.parameters(), self.model.parameters()):
             teacher_param.data = self.alpha * teacher_param + (1 - self.alpha) * param
@@ -147,12 +154,25 @@ class EmaTeacher(object):
     def train(self, mode: Optional[bool] = True):
         self.teacher.train(mode)
 
+    def eval(self):
+        self.train(False)
+
+    def state_dict(self):
+        return self.teacher.state_dict()
+
+    def load_state_dict(self, state_dict):
+        self.teacher.load_state_dict(state_dict)
+
+    @property
+    def module(self):
+        return self.teacher.module
+
 
 class ImageClassifier(ClassifierBase):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
         bottleneck = nn.Sequential(
-            nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-            nn.Flatten(),
+            # nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            # nn.Flatten(),
             nn.Linear(backbone.out_features, bottleneck_dim),
             nn.BatchNorm1d(bottleneck_dim),
             nn.ReLU()

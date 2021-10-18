@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional, List, Tuple
 
 from torch.utils.data.dataloader import DataLoader
@@ -92,7 +96,7 @@ class AutomaticUpdateClassWeightModule(object):
 
 
 class ClassWeightModule(nn.Module):
-    """
+    r"""
     Calculating class weight based on the output of classifier.
     Introduced by `Partial Adversarial Domain Adaptation (ECCV 2018) <https://arxiv.org/abs/1808.04205>`_
 
@@ -101,7 +105,7 @@ class ClassWeightModule(nn.Module):
     follows
 
     .. math::
-        \mathcal{\gamma} = \dfrac{1}{n} \sum_{i=1}^{n}softmax( \hat{y}_i / T),
+        \mathcal{\gamma} = \dfrac{1}{n} \sum_{i=1}^{n}\text{softmax}( \hat{y}_i / T),
 
     where :math:`\mathcal{\gamma}` is a :math:`|\mathcal{C}|`-dimensional weight vector quantifying the contribution
     of each class and T is a hyper-parameters called temperature.
@@ -143,11 +147,13 @@ def collect_classification_results(data_loader: DataLoader, classifier: nn.Modul
     Returns:
         Classification results in shape (len(data_loader), :math:`|\mathcal{C}|`).
     """
+    training = classifier.training
     classifier.eval()
     all_outputs = []
     with torch.no_grad():
         for i, (images, target) in enumerate(data_loader):
             images = images.to(device)
-            output, _ = classifier(images)
+            output = classifier(images)
             all_outputs.append(output)
+    classifier.train(training)
     return torch.cat(all_outputs, dim=0)

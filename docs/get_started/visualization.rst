@@ -8,7 +8,7 @@ How to visualize the representations using t-SNE?
 Many algorithms aim at aligning feature representations between ``source`` and ``target`` domain.
 Through visualization, you can find and analysis the mis-alignment between different domains. 
 
-After training `DANN`, in directory ``examples-da/unsupervised``, run the following command
+After training `DANN`, in directory ``examples/domain_adaptation/image_classification``, run the following command
 
 .. code-block:: shell
 
@@ -31,7 +31,7 @@ It may take a while, then in directory ``logs/dann/Office31_A2W/visualize``, you
 How to visualize the segmentation predictions?
 ===================================================================
 For each segmentation algorithms, we've implemented the visualization code. All you need to do is set ``--debug`` during training.
-For instance, in the directory ``examples-da/segmentation``,
+For instance, in the directory ``examples/domain_adaptation/semantic_segmentation``,
 
 .. code-block:: shell
 
@@ -73,7 +73,7 @@ Translation model such as CycleGAN will save images by default. Here is the tran
 How to visualize the keypoint detection predictions?
 ===================================================================
 For each keypoint detection algorithms, we've implemented the visualization code. All you need to do is set ``--debug`` during training.
-For instance, in the directory ``examples-da/keypoint_detection``,
+For instance, in the directory ``examples/domain_adaptation/keypoint_detection``,
 
 .. code-block:: shell
 

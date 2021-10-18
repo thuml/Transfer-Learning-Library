@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 import os
 from typing import Optional
 from .imagelist import ImageList
@@ -5,7 +9,10 @@ from ._util import download as download_data, check_exits
 
 
 class StanfordCars(ImageList):
-    """`The Stanford Cars <https://ai.stanford.edu/~jkrause/cars/car_dataset.html>`_ Dataset.
+    """`The Stanford Cars <https://ai.stanford.edu/~jkrause/cars/car_dataset.html>`_ \
+    contains 16,185 images of 196 classes of cars. \
+    Each category has been split roughly in a 50-50 split. \
+    There are 8,144 images for training and 8,041 images for testing.
 
     Args:
         root (str): Root directory of dataset
