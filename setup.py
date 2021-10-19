@@ -41,10 +41,14 @@ if __name__ == '__main__':
         ],
         python_requires='>=3.6',
         install_requires=[
-            'torch>=1.4.0',
+            'torch>=1.7.0',
             'torchvision>=0.5.0',
             'numpy',
-            'qpsolvers>=1.4.0'
+            'prettytable',
+            'tqdm',
+            'scikit-learn',
+            'webcolors',
+            'matplotlib'
         ],
         extras_require={
             'dev': [

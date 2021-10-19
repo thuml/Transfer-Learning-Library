@@ -1,6 +1,5 @@
 torch>=1.7.0
 torchvision
-qpsolvers
 numpy
 prettytable
 tqdm
