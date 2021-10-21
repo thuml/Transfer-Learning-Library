@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji, Baixu Chen
+@contact: jiyf990330@163.com, cbx_99_hasta@outlook.com
+"""
 import random
 import time
 import warnings
@@ -18,7 +22,6 @@ from ssllib.mean_teacher import update_ema_variables
 from ssllib.rand_augment import RandAugment
 from ssllib.fix_match import update_bn, FixMatchConsistencyLoss
 from common.modules.classifier import Classifier
-import common.vision.models as models
 from common.vision.transforms import ResizeImage, MultipleApply
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -27,6 +30,7 @@ from common.utils.logger import CompleteLogger
 
 sys.path.append('.')
 import datasets
+import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -100,13 +104,13 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
-    backbone = models.__dict__[args.arch](pretrained=True)
+    backbone = utils.get_model(args.arch)
     num_classes = labeled_train_dataset.num_classes
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=not args.scratch).to(device)
     classifier = torch.nn.DataParallel(classifier)
 
-    ema_backbone = models.__dict__[args.arch](pretrained=True)
+    ema_backbone = utils.get_model(args.arch)
     ema_pool_layer = nn.Identity() if args.no_pool else None
     ema_classifier = Classifier(ema_backbone, num_classes, pool_layer=ema_pool_layer).to(device)
     ema_classifier = torch.nn.DataParallel(ema_classifier)
@@ -119,7 +123,7 @@ def main(args: argparse.Namespace):
     if args.phase == 'test':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         ema_classifier.load_state_dict(checkpoint)
-        acc1 = validate(val_loader, ema_classifier, args)
+        acc1 = utils.validate(val_loader, ema_classifier, args, device)
         print(acc1)
         return
 
@@ -130,7 +134,7 @@ def main(args: argparse.Namespace):
         train(labeled_train_iter, unlabeled_train_iter, classifier, ema_classifier, optimizer, epoch, args)
         # evaluate on validation set
         with torch.no_grad():
-            acc1_ema = validate(val_loader, ema_classifier, args)
+            acc1_ema = utils.validate(val_loader, ema_classifier, args, device)
 
         # remember best acc@1 and save checkpoint
         torch.save(ema_classifier.state_dict(), logger.get_checkpoint_path('latest'))
@@ -206,54 +210,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
             progress.display(i)
 
 
-def validate(val_loader: DataLoader, model: nn.DataParallel, args: argparse.Namespace) -> float:
-    batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':.4e')
-    top1 = AverageMeter('Acc@1', ':6.2f')
-    top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(
-        len(val_loader),
-        [batch_time, losses, top1, top5],
-        prefix='Test: ')
-
-    # switch to evaluate mode
-    model.eval()
-
-    with torch.no_grad():
-        end = time.time()
-        for i, (images, target) in enumerate(val_loader):
-            images = images.to(device)
-            target = target.to(device)
-
-            # compute output
-            output = model(images)
-            loss = F.cross_entropy(output, target)
-
-            # measure accuracy and record loss
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), images.size(0))
-            top1.update(acc1.item(), images.size(0))
-            top5.update(acc5.item(), images.size(0))
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-        print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
-
-    return top1.avg
-
-
 if __name__ == '__main__':
-    architecture_names = sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    )
     dataset_names = sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
@@ -270,9 +227,9 @@ if __name__ == '__main__':
                         help='sample rate of training dataset (default: 100)')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
-                        choices=architecture_names,
+                        choices=utils.get_model_names(),
                         help='backbone architecture: ' +
-                             ' | '.join(architecture_names) +
+                             ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
