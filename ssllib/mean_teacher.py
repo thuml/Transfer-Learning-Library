@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 from typing import Tuple, Optional, List, Dict
 import torch.nn as nn
 import torch

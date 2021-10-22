@@ -29,7 +29,6 @@ from common.utils.data import ForeverDataIterator
 from common.utils.logger import CompleteLogger
 
 sys.path.append('.')
-import datasets
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -83,23 +82,16 @@ def main(args: argparse.Namespace):
         normalize
     ])
 
-    dataset = datasets.__dict__[args.data]
-
-    # labeled dataset
-    labeled_train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate,
-                                    download=True, transform=train_transform)
+    labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
+                                                                                    args.sample_rate, train_transform,
+                                                                                    val_transform,
+                                                                                    unlabeled_train_transform)
     labeled_train_loader = DataLoader(labeled_train_dataset, batch_size=args.batch_size, shuffle=True,
                                       num_workers=args.workers, drop_last=True)
     labeled_train_iter = ForeverDataIterator(labeled_train_loader)
-
-    # unlabeled dataset
-    unlabeled_train_dataset = dataset(root=args.root, split='train', sample_rate=args.sample_rate,
-                                      download=True, transform=unlabeled_train_transform, unlabeled=True)
     unlabeled_train_loader = DataLoader(unlabeled_train_dataset, batch_size=args.batch_size * args.mu, shuffle=True,
                                         num_workers=args.workers, drop_last=True)
     unlabeled_train_iter = ForeverDataIterator(unlabeled_train_loader)
-
-    val_dataset = dataset(root=args.root, split='test', sample_rate=100, download=True, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     # create model
@@ -211,17 +203,12 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
 
 
 if __name__ == '__main__':
-    dataset_names = sorted(
-        name for name in datasets.__dict__
-        if not name.startswith("__") and callable(datasets.__dict__[name])
-    )
-
     parser = argparse.ArgumentParser(description='Baseline for Finetuning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA',
-                        help='dataset: ' + ' | '.join(dataset_names))
+                        help='dataset: ' + ' | '.join(utils.get_dataset_names()))
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
@@ -262,7 +249,7 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--log", type=str, default='baseline',
+    parser.add_argument("--log", type=str, default='fix_match',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model.")

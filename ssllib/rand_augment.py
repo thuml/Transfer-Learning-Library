@@ -1,3 +1,7 @@
+"""
+@author: Yifei Ji
+@contact: jiyf990330@163.com
+"""
 import random
 
 import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
