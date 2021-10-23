@@ -19,8 +19,7 @@ Following datasets can be downloaded automatically:
 
 Supported methods include:
 
-- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
 
 ## Experiment and Results

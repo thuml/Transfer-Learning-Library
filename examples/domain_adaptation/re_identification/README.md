@@ -19,10 +19,9 @@ Following datasets can be downloaded automatically:
 
 Supported methods include:
 
-- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - [Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (MMT, 2020 ICLR)](https://arxiv.org/abs/2001.01526)
-- [Similarity Preserving Generative Adversarial Network (SPGAN)](https://arxiv.org/pdf/1811.10551.pdf)
+- [Similarity Preserving Generative Adversarial Network (SPGAN, 2018 CVPR)](https://arxiv.org/pdf/1811.10551.pdf)
 
 ## Experiment and Results
 
