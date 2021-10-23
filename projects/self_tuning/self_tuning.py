@@ -51,7 +51,8 @@ def main(args: argparse.Namespace):
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     strong_augmentation = T.Compose([
-        T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        ResizeImage(256),
+        T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
         RandAugment(n=2, m=10),
         T.ToTensor(),
@@ -235,16 +236,16 @@ if __name__ == '__main__':
                         help="dimension of the projection head. (default: 1024)")
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int, help='mini-batch size (default: 48)')
-    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
-                        metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--lr', '--learning-rate', default=0.02, type=float,
+                        metavar='LR', help='initial learning rate (default: 0.02)', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--milestones', type=int, default=[12, 24, 36, 48], nargs='+', help='epochs to decay lr')
+    parser.add_argument('--milestones', type=int, default=[6, 12, 18, 24], nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
-                        metavar='W', help='weight decay (default: 5e-4)')
+    parser.add_argument('--wd', '--weight-decay', default=0.0001, type=float,
+                        metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=60, type=int, metavar='N',
+    parser.add_argument('--epochs', default=30, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')

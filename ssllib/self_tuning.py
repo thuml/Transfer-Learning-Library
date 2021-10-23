@@ -13,10 +13,7 @@ class Classifier(ClassifierBase):
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, projection_dim=1024, finetune=True, pool_layer=None):
-        # TODO: different head initialization
         head = nn.Linear(backbone.out_features, num_classes)
-        head.weight.data.normal_(0, 0.01)
-        head.bias.data.fill_(0.0)
         super(Classifier, self).__init__(backbone, num_classes=num_classes, head=head, finetune=finetune,
                                          pool_layer=pool_layer)
         self.projector = nn.Linear(backbone.out_features, projection_dim)
