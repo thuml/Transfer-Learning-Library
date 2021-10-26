@@ -93,7 +93,7 @@ def main(args: argparse.Namespace):
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.module.get_parameters(args.lr), args.lr, momentum=0.9, weight_decay=args.wd,
                     nesterov=True)
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
     if args.phase == 'test':
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(12,), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--milestones', type=int, default=[12], nargs='+', help='epochs to decay lr')
     parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',

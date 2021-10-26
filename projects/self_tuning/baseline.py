@@ -83,8 +83,9 @@ def main(args: argparse.Namespace):
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=not args.scratch).to(device)
 
-    # define optimizer
+    # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), args.lr, momentum=0.9, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
     if args.phase == 'test':
@@ -97,8 +98,15 @@ def main(args: argparse.Namespace):
     # start training
     best_acc1 = 0.0
     for epoch in range(args.epochs):
+        # print lr
+        print(lr_scheduler.get_lr())
+
         # train for one epoch
         train(labeled_train_iter, classifier, optimizer, epoch, args)
+
+        # update lr
+        lr_scheduler.step()
+
         # evaluate on validation set
         with torch.no_grad():
             acc1 = utils.validate(val_loader, classifier, args, device)
@@ -188,6 +196,8 @@ if __name__ == '__main__':
                         help='mini-batch size (default: 48)')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
+    parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--milestones', type=int, default=[5], nargs='+', help='epochs to decay lr')
     parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                         metavar='W', help='weight decay (default:1e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',

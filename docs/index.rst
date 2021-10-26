@@ -35,13 +35,6 @@ Transfer Learning
 
     talib/benchmarks/image_classification
 
-.. toctree::
-    :maxdepth: 2
-    :caption: Semi Supervised Learning Settings
-    :titlesonly:
-
-    ssllib/benchmarks/image_classification
-
 
 .. toctree::
     :maxdepth: 2
@@ -80,7 +73,10 @@ Transfer Learning
     :caption: Semi Supervised Learning Methods
     :titlesonly:
 
-    ssllib/semi_supervised_learning.rst
+    ssllib/consistency_regularization.rst
+    ssllib/contrastive_learning.rst
+    ssllib/holistic_methods.rst
+    ssllib/proxy_label.rst
 
 
 
