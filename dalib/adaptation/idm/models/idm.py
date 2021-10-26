@@ -1,8 +1,17 @@
+"""
+Modified from https://github.com/SikaStar/IDM
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 import torch
 import torch.nn as nn
 
 
 class IDM(nn.Module):
+    """IDM module in `IDM: An Intermediate Domain Module for Domain Adaptive Person Re-ID (ICCV 2021)
+    <https://arxiv.org/pdf/2108.02413v1.pdf>`_. This module automatically generates mixed features
+    with source and target features.
+    """
     def __init__(self, channel=64):
         super(IDM, self).__init__()
         self.channel = channel

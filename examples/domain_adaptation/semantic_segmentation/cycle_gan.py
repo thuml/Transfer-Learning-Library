@@ -269,7 +269,7 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description='CycleGAN for Segmentation')
+    parser = argparse.ArgumentParser(description='CycleGAN for Segmentation Domain Adaptation')
     # dataset parameters
     parser.add_argument('source_root', help='root path of the source dataset')
     parser.add_argument('target_root', help='root path of the target dataset')
