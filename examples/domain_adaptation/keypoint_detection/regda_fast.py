@@ -431,7 +431,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
 
-    parser = argparse.ArgumentParser(description='RegDA (fast) for Keypoint Detection Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Source Only for Keypoint Detection Domain Adaptation')
     # dataset parameters
     parser.add_argument('source_root', help='root path of the source dataset')
     parser.add_argument('target_root', help='root path of the target dataset')
@@ -485,7 +485,7 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--log", type=str, default='regda_fast',
+    parser.add_argument("--log", type=str, default='src_only',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test'],
                         help="When phase is 'test', only test the model.")

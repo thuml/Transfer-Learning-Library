@@ -74,7 +74,7 @@ Adaptive Fine-tuning
 Bi-Tuning
 ------------------------------------------
 
-.. autoclass:: talib.finetune.bi_tuning.BiTuning
+.. autoclass:: talib.finetune.bi_tuning.Bituning
 
 
 

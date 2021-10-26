@@ -21,7 +21,7 @@ from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.data import ForeverDataIterator
 from common.utils.logger import CompleteLogger
-from talib.finetune.bi_tuning import Classifier, BiTuning
+from talib.finetune.bi_tuning import Classifier, Bituning
 
 sys.path.append('.')
 import utils
@@ -53,8 +53,7 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate,
-                                                                args.num_samples_per_classes)
+                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
@@ -65,8 +64,7 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone_q = utils.get_model(args.arch, args.pretrained)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier_q = Classifier(backbone_q, num_classes, pool_layer=pool_layer, projection_dim=args.projection_dim,
-                              finetune=args.finetune)
+    classifier_q = Classifier(backbone_q, num_classes, pool_layer=pool_layer, projection_dim=args.projection_dim, finetune=args.finetune)
     if args.pretrained_fc:
         print("=> loading pre-trained fc from '{}'".format(args.pretrained_fc))
         pretrained_fc_dict = torch.load(args.pretrained_fc)
@@ -75,11 +73,10 @@ def main(args: argparse.Namespace):
     backbone_k = utils.get_model(args.arch)
     classifier_k = Classifier(backbone_k, num_classes, pool_layer=pool_layer).to(device)
 
-    bituning = BiTuning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier_q.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd,
-                    nesterov=True)
+    optimizer = SGD(classifier_q.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
@@ -111,7 +108,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, bituning: BiTuning, optimizer: SGD, epoch: int, args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, bituning, optimizer: SGD, epoch:int, args:argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
@@ -207,6 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--projection-dim', type=int, default=128,
                         help="dimension of the projection head. (default: 128)")
     parser.add_argument('--trade-off', type=float, default=1.0, help="trade-off parameters. (default: 1.0)")
+
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',

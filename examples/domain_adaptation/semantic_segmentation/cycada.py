@@ -322,7 +322,7 @@ if __name__ == '__main__':
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
     # dataset parameters
-    parser = argparse.ArgumentParser(description='Cycada for Segmentation Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Cycada for Segmentation')
     parser.add_argument('source_root', help='root path of the source dataset')
     parser.add_argument('target_root', help='root path of the target dataset')
     parser.add_argument('-s', '--source', help='source domain(s)')
