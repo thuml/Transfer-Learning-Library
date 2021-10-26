@@ -305,7 +305,7 @@ class ImageClassifier(GeneralModule):
         - outputs: logits outputs by the main classifier
         - outputs_adv: logits outputs by the adversarial classifier
 
-    Shapes:
+    Shape:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, C)`, where C means the number of classes.
 
@@ -384,7 +384,7 @@ class ImageRegressor(GeneralModule):
         - outputs: outputs by the main regressor
         - outputs_adv: outputs by the adversarial regressor
 
-    Shapes:
+    Shape:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, F)`, where F means the number of factors.
 
