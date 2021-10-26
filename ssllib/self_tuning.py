@@ -10,6 +10,32 @@ from common.modules.classifier import Classifier as ClassifierBase
 
 class Classifier(ClassifierBase):
     """Classifier class for Self-Tuning.
+
+    Args:
+        backbone (torch.nn.Module): Any backbone to extract 2-d features from data
+        num_classes (int): Number of classes
+        projection_dim (int, optional): Dimension of the projector head. Default: 128
+        finetune (bool): Whether finetune the classifier or train from scratch. Default: True
+
+    .. note::
+        The learning rate of this classifier is set 10 times to that of the feature extractor for better accuracy
+        by default. If you have other optimization strategies, please over-ride :meth:`~Classifier.get_parameters`.
+
+    Inputs:
+        - x (tensor): input data fed to `backbone`
+
+    Outputs:
+        In the training mode,
+            - h: projections
+            - y: classifier's predictions
+        In the eval mode,
+            - y: classifier's predictions
+
+    Shape:
+        - Inputs: (minibatch, *) where * means, any number of additional dimensions
+        - y: (minibatch, `num_classes`)
+        - h: (minibatch, `projection_dim`)
+
     """
 
     def __init__(self, backbone: nn.Module, num_classes: int, projection_dim=1024, finetune=True, pool_layer=None):
@@ -44,10 +70,36 @@ class Classifier(ClassifierBase):
 
 
 class SelfTuning(nn.Module):
-    """Self-Tuning module
+    """Self-Tuning module in `Self-Tuning for Data-Efficient Deep Learning (self-tuning, ICML 2021)
+    <http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf>`_.
+
+    Args:
+        encoder_q (Classifier): Query encoder.
+        encoder_k (Classifier): Key encoder.
+        num_classes (int): Number of classes
+        K (int): Queue size. Default: 32
+        m (float): Momentum coefficient. Default: 0.999
+        T (float): Temperature. Default: 0.07
+
+    Inputs:
+        - im_q (tensor): input data fed to `encoder_q`
+        - im_k (tensor): input data fed to `encoder_k`
+        - labels (tensor): classification labels of input data
+
+    Outputs: pgc_logits, pgc_labels, y_q
+        - pgc_logits: projector's predictions on both positive and negative samples
+        - pgc_labels: contrastive labels
+        - y_q: query classifier's predictions
+
+    Shape:
+        - im_q, im_k: (minibatch, *) where * means, any number of additional dimensions
+        - labels: (minibatch, )
+        - y_q: (minibatch, `num_classes`)
+        - pgc_logits: (minibatch, 1 + `num_classes` x `K`, `projection_dim`)
+        - pgc_labels: (minibatch, 1 + `num_classes` x `K`)
     """
 
-    def __init__(self, encoder_q: nn.DataParallel, encoder_k: nn.DataParallel, num_classes, K=32, m=0.999, T=0.07):
+    def __init__(self, encoder_q, encoder_k, num_classes, K=32, m=0.999, T=0.07):
         super(SelfTuning, self).__init__()
         self.K = K
         self.m = m

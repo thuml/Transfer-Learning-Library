@@ -160,6 +160,9 @@ def augment_list():
 
 
 class RandAugment(object):
+    r"""Augmentation in `RandAugment: Practical automated data augmentation with a reduced search space
+    (NIPS 2020) <https://arxiv.org/pdf/1909.13719.pdf>`_.
+    """
     def __init__(self, n, m):
         assert n >= 1
         assert 1 <= m <= 10

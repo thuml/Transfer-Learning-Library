@@ -1,6 +1,6 @@
 """
-@author: Yifei Ji
-@contact: jiyf990330@163.com
+@author: Yifei Ji, Baixu Chen
+@contact: jiyf990330@163.comcom, cbx_99_hasta@outlook.com
 """
 import numpy as np
 import torch
@@ -9,7 +9,9 @@ import torch.nn.functional as F
 
 
 def sigmoid_rampup(current, rampup_length):
-    """Exponential rampup from https://arxiv.org/abs/1610.02242"""
+    """Exponential rampup from `Temporal Ensembling for Semi-Supervised Learning
+    (ICLR 2017) <https://arxiv.org/abs/1610.02242>`_.
+    """
     if rampup_length == 0:
         return 1.0
     else:
@@ -19,8 +21,9 @@ def sigmoid_rampup(current, rampup_length):
 
 
 def softmax_mse_loss(input_logits, target_logits):
-    """Takes softmax on both sides and returns MSE loss
-    Note:
+    """Takes softmax on both sides and returns MSE loss.
+
+    .. note::
     - Returns the sum over all examples. Divide by the batch size afterwards
       if you want the mean.
     - Sends gradients to inputs but not the targets.
@@ -32,8 +35,9 @@ def softmax_mse_loss(input_logits, target_logits):
 
 
 def symmetric_mse_loss(input1, input2):
-    """Like F.mse_loss but sends gradients to both directions
-    Note:
+    """Like F.mse_loss but sends gradients to both directions.
+
+    .. note::
     - Returns the sum over all examples. Divide by the batch size afterwards
       if you want the mean.
     - Sends gradients to both input1 and input2.
@@ -46,15 +50,19 @@ def symmetric_mse_loss(input1, input2):
 class SoftmaxMSELoss(nn.Module):
     r"""
     The Softmax MSE Loss of two predictions :math:`z, z'` can be described as:
+
     .. math::
         p_i(c) = \dfrac{\exp z(c)}{\sum_{k=1}^{C}\exp(z(k))},\ c=1,..,C\\
         p'_i(c) = \dfrac{\exp z'(c)}{\sum_{k=1}^{C}\exp(z'_i(k))},\ c=1,..,C\\
         L = \sum_{i=1}^{b}\sum_{c=1}^{C}[p_i(c) - p'_i(c)]^2
+
     where :math:`C` is the number of classes, :math:`p, p'` are probability distribution calculated from the predictions :math:`z, z'`.
+
     Inputs:
         - input1 (tensor): The prediction of the input with a random data augmentation.
         - input2 (tensor): Another prediction of the input with a random data augmentation.
         - reduction: string. Default: 'sum'.
+
     Shape:
         - input1: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
         - input2: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
@@ -73,15 +81,19 @@ class SoftmaxMSELoss(nn.Module):
 
 class SoftmaxKLLoss(nn.Module):
     r"""
-    The Softmax KL Loss of two predictions :math:`z, z'` can be described as:
+    The Softmax KL Loss of two predictions :math:`z, z'` can be described as
+
     .. math::
         p_i(c) = \dfrac{\exp z(c)}{\sum_{k=1}^{C}\exp(z(k))},\ c=1,..,C \\
         p'_i(c) = \dfrac{\exp z'(c)}{\sum_{k=1}^{C}\exp(z'_i(k))},\ c=1,..,C\\
-        L = \sum_{i=1}^{b}\sum_{c=1}^{C}[p_i(c)\log\frac{p_i(c)}{p'_i(c)}]^2
+        L = \sum_{i=1}^{b}\sum_{c=1}^{C}p_i(c)\log\frac{p_i(c)}{p'_i(c)}
+
     where :math:`C` is the number of classes, :math:`p, p'` are probability distribution calculated from the predictions :math:`z, z'`.
+
     Inputs:
         - input1 (tensor): The prediction of the input with a random data augmentation.
         - input2 (tensor): Another prediction of the input with a random data augmentation.
+
     Shape:
         - input1: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
         - input2: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.

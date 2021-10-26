@@ -70,6 +70,10 @@ def main(args: argparse.Namespace):
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
                                                                                     val_transform)
+    print("labeled_dataset_size: ", len(labeled_train_dataset))
+    print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
+    print("val_dataset_size: ", len(val_dataset))
+
     labeled_train_loader = DataLoader(labeled_train_dataset, batch_size=args.batch_size, shuffle=True,
                                       num_workers=args.workers, drop_last=True)
     labeled_train_iter = ForeverDataIterator(labeled_train_loader)
@@ -235,17 +239,17 @@ if __name__ == '__main__':
     parser.add_argument('--projection-dim', type=int, default=1024,
                         help="dimension of the projection head. (default: 1024)")
     # training parameters
-    parser.add_argument('-b', '--batch-size', default=48, type=int, help='mini-batch size (default: 48)')
-    parser.add_argument('--lr', '--learning-rate', default=0.02, type=float,
-                        metavar='LR', help='initial learning rate (default: 0.02)', dest='lr')
+    parser.add_argument('-b', '--batch-size', default=24, type=int, help='mini-batch size (default: 24)')
+    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+                        metavar='LR', help='initial learning rate (default: 0.01)', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--milestones', type=int, default=[6, 12, 18, 24], nargs='+', help='epochs to decay lr')
+    parser.add_argument('--milestones', type=int, default=[12, 24, 36, 48], nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0001, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=30, type=int, metavar='N',
+    parser.add_argument('--epochs', default=60, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')

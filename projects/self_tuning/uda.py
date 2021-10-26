@@ -52,20 +52,23 @@ def main(args: argparse.Namespace):
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     train_transform = T.Compose([
-        T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        ResizeImage(256),
+        T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
         T.ToTensor(),
         normalize
     ])
 
     weak_augmentation = [
-        T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        ResizeImage(256),
+        T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
         T.ToTensor(),
         normalize
     ]
     strong_augmentation = [
-        T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        ResizeImage(256),
+        T.RandomResizedCrop(224),
         T.RandomHorizontalFlip(),
         RandAugment(n=2, m=10),
         T.ToTensor(),
@@ -82,7 +85,12 @@ def main(args: argparse.Namespace):
 
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
-                                                                                    val_transform)
+                                                                                    val_transform,
+                                                                                    unlabeled_train_transform)
+    print("labeled_dataset_size: ", len(labeled_train_dataset))
+    print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
+    print("val_dataset_size: ", len(val_dataset))
+
     labeled_train_loader = DataLoader(labeled_train_dataset, batch_size=args.batch_size, shuffle=True,
                                       num_workers=args.workers, drop_last=True)
     labeled_train_iter = ForeverDataIterator(labeled_train_loader)
@@ -232,8 +240,8 @@ if __name__ == '__main__':
     parser.add_argument('--threshold-epoch', default=2, type=int)
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
-    parser.add_argument('--wd', '--weight-decay', default=5e-4, type=float,
-                        metavar='W', help='weight decay (default:5e-4)')
+    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
+                        metavar='W', help='weight decay (default:1e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',

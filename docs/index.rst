@@ -35,6 +35,13 @@ Transfer Learning
 
     talib/benchmarks/image_classification
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Semi Supervised Learning Settings
+    :titlesonly:
+
+    ssllib/benchmarks/image_classification
+
 
 .. toctree::
     :maxdepth: 2
@@ -65,6 +72,15 @@ Transfer Learning
     :titlesonly:
 
     talib/finetune.rst
+
+
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Semi Supervised Learning Methods
+    :titlesonly:
+
+    ssllib/semi_supervised_learning.rst
 
 
 

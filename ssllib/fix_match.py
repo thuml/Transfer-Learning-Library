@@ -17,9 +17,9 @@ def update_bn(model, ema_model):
 
 
 class FixMatchConsistencyLoss(nn.Module):
-    r"""
-    The consistency loss from `FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (NeurIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/f7ac67a9aa8d255282de7d11391e1b69-Paper.pdf>`_
-    It can be described as:
+    r"""The consistency loss from `FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (NIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/f7ac67a9aa8d255282de7d11391e1b69-Paper.pdf>`_.
+    It can be described as
+
     .. math::
         p^{weak}_i(c) = \dfrac{\exp (z^{weak}_i(c)/\tau)}{\sum_{k=1}^{C}\exp(z^{weak}_i(k)/\tau)}, \ c=1,..,C
         \\
@@ -28,14 +28,18 @@ class FixMatchConsistencyLoss(nn.Module):
         p^{strong}_i(c) = \dfrac{\exp z^{strong}_i(c)}{\sum_{k=1}^{C}\exp(z^{strong}_i(k))},\ c=1,..,C
         \\
         L = -\dfrac{1}{b} \sum_{i=1}^{b}\mathbf{1}(p^{weak}(y'_i) \ge \tau) \cdot \log p^{strong}_i(y'_i)
+
     where :math:`z^{weak},z^{strong}` are the predictions of inputs with weak augmentation and strong augmentation respectively, and :math:`p^{weak},p^{strong}` are the probability distribution calculated from them. :math:`y'` is pseudo labels calculated from the predictions of inputs with weak augmentation.
+
     Args:
         threshold (float): The confidence threshold to accept pseudo_labels.
         t (float): The temperature used to sharpen the predictions.
         device(torch.torch.device): The device to put the result on.
+
     Inputs:
         - unlabeled_y_weak (tensor): The predictions of inputs with weak augmentation.
         - unlabeled_y_strong (tensor): The predictions of inputs with strong augmentation.
+
     Shape:
         - unlabeled_y_weak: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
         - unlabeled_y_strong: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.

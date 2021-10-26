@@ -23,20 +23,26 @@ def get_tsa_thresh(schedule, global_step, num_train_steps, start, end):
 
 class SupervisedUDALoss(nn.Module):
     r"""
-    The supervised loss from `Unsupervised Data Augmentation for Consistency Training (NeurIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/44feb0096faa8326192570788b38c1d1-Paper.pdf>`_
-    It can be described as:
+    The supervised loss from `Unsupervised Data Augmentation for Consistency Training (NIPS 2020)
+    <https://proceedings.neurips.cc/paper/2020/file/44feb0096faa8326192570788b38c1d1-Paper.pdf>`_.
+    It can be described as
+
     .. math::
         p_i(c) = \dfrac{\exp (z_i(c))}{\sum_{k=1}^{C}\exp(z_i(k))}, \ c=1,..,C
         \\ \mathrm{mask}_i = \mathbf{1}[\max_c p_i(c) < \mathrm{threshold}]
         \\ L = - \dfrac{1}{\max(1,\sum_{i=1}^{b} \mathrm{mask}_i)}\sum_{i=1}^{b} \mathrm{mask}_i \cdot \log p_i(y_i)
+
     where :math:`z` is the predictions of labeled samples, :math:`p` is the probability distribution and :math:`y` is the ground truth labels.
+
     Args:
         model (torch.nn.Module): The model to calculate the loss.
         device(torch.torch.device): The device to put the result on.
+
     Inputs:
         - labeled_y (tensor): The predictions of labeled inputs.
         - label (tensor): The ground truth labels.
         - tsa_thresh (float): the threshold to discard the samples.
+
     Shape:
         - labeled_y: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
         - label: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
@@ -64,8 +70,9 @@ class SupervisedUDALoss(nn.Module):
 
 class UnsupervisedUDALoss(nn.Module):
     r"""
-    The unsupervised loss from `Unsupervised Data Augmentation for Consistency Training (NeurIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/44feb0096faa8326192570788b38c1d1-Paper.pdf>`_
-    It can be described as:
+    The unsupervised loss from `Unsupervised Data Augmentation for Consistency Training (NIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/44feb0096faa8326192570788b38c1d1-Paper.pdf>`_.
+    It can be described as
+
     .. math::
         p^{weak}_i(c) = \dfrac{\exp (z^{weak}_i(c)/\tau)}{\sum_{k=1}^{C}\exp(z^{weak}_i(k)/\tau)}, \ c=1,..,C
         \\z^{ori}_i = f(x^{ori})_i, \ c=1,..,C
@@ -74,15 +81,19 @@ class UnsupervisedUDALoss(nn.Module):
         \\p^{aug}_i(c) = \dfrac{\exp (z^{aug}_i(c)/\tau)}{\sum_{k=1}^{C}\exp(z^{aug}_i(k)/\tau)}, \ c=1,..,C
         \\ L = \dfrac{1}{\max(1,\sum_{i=1}^{b} \mathrm{mask}_i)}
         \sum_{i=1}^{b}\mathrm{mask}_i \cdot \sum_{c=1}^{C} \ p^{ori}_i(c)\log \dfrac{p^{ori}_i(c)}{p^{aug}_i(c)}
+
     where :math:`f` is the model to calculate the loss, :math:`x^{ori}` is the original input without data augmentation, :math:`z^{aug}` is the predictions of inputs with data augmentation, and :math:`p^{ori},p^{aug}` are the probability distribution.
+
     Args:
         model (torch.nn.Module): The model to calculate the loss.
         uda_confidence_thresh (float): The confidence threshold to accept samples.
         t (float): The temperature used to sharpen the predictions.
         device(torch.torch.device): The device to put the result on.
+
     Inputs:
         - unlabeled_x_original (tensor): The input without augmentation fed to the model.
         - unlabeled_y_augmentation (tensor): The predictions of inputs with data augmentation.
+
     Shape:
         - unlabeled_x_original: :math:`(b, *)` where :math:`b` is the batch size, :math:`C` is the number of classes and * means any number of additional dimensions.
         - unlabeled_y_augmentation: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.

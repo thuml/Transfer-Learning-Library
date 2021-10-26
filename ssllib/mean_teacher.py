@@ -1,6 +1,6 @@
 """
-@author: Yifei Ji
-@contact: jiyf990330@163.com
+@author: Yifei Ji, Baixu Chen
+@contact: jiyf990330@163.com, cbx_99_hasta@outlook.com
 """
 from typing import Tuple, Optional, List, Dict
 import torch.nn as nn
@@ -9,13 +9,17 @@ import torch
 
 class SymmetricMSELoss(nn.Module):
     r"""
-    The Symmetric MSE Loss of two predictions :math:`z, z'` can be described as:
+    The Symmetric MSE Loss of two predictions :math:`z, z'` can be described as
+
     .. math::
         L = \dfrac{1}{C}\cdot \sum_{i=1}^{b}\sum_{c=1}^{C}[z_i(c) - z'_i(c)]^2
+
     where :math:`C` is the number of classes.
+
     Inputs:
         - input1 (tensor): The prediction of the input with a random data augmentation.
         - input2 (tensor): Another prediction of the input with a random data augmentation.
+
     Shape:
         - input1: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
         - input2: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
@@ -32,14 +36,15 @@ class SymmetricMSELoss(nn.Module):
 
 
 def update_ema_variables(model, ema_model, alpha, global_step):
-    # Use the true average until the exponential average is more correct
+    """Update ema_model with current model's parameters."""
     alpha = min(1 - 1 / (global_step + 1), alpha)
     for ema_param, param in zip(ema_model.parameters(), model.parameters()):
-        ema_param.data.mul_(alpha).add_(1 - alpha, param.data)
+        ema_param.data = ema_param.data * alpha + param.data * (1 - alpha)
 
 
 class MeanTeacher(nn.Module):
-    r"""A class for the architecture from `Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results (ICLR 2017) <https://openreview.net/references/pdf?id=ry8u21rtl>`_.
+    r"""A class for the architecture from `Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results (NIPS 2017) <https://openreview.net/references/pdf?id=ry8u21rtl>`_.
+
     Args:
         backbone (torch.nn.Module): Any backbone to extract 2-d features from data
         num_classes (int): Number of classes
@@ -48,12 +53,15 @@ class MeanTeacher(nn.Module):
         head_1 (torch.nn.Module, optional): Any head layer. Use one fully-connected linear layer by default
         head_2 (torch.nn.Module, optional): Any head layer. Use one fully-connected linear layer by default
         finetune (bool): Whether finetune the classifier or train from scratch. Default: True
+
     Inputs:
         - x (tensor): input data fed to `backbone`
+
     Outputs:
         - predictions_1 (tensor): predictions of head_1
         - predictions_2 (tensor): predictions of head_2
         - features (tensor): features after `bottleneck` layer and before `head` layer
+
     Shape:
         - Inputs: :math:`(minibatch, *)` where * means, any number of additional dimensions
         - predictions_1: :math:`(b, C)` where :math:`b` is the batch size and :math:`C` is the number of classes.
