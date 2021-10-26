@@ -1,8 +1,3 @@
-"""
-Modified from https://github.com/SikaStar/IDM
-@author: Baixu Chen
-@contact: cbx_99_hasta@outlook.com
-"""
 import torch.nn as nn
 from .models.dsbn import DSBN1d, DSBN2d, DSBN1d_idm, DSBN2d_idm
 

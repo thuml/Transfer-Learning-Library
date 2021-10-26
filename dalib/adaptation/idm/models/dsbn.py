@@ -1,16 +1,8 @@
-"""
-Modified from https://github.com/SikaStar/IDM
-@author: Baixu Chen
-@contact: cbx_99_hasta@outlook.com
-"""
 import torch
 import torch.nn as nn
 
 
 class DSBN2d(nn.Module):
-    """Domain-Specific BatchNorm2d layer in `Domain-Specific Batch Normalization for Unsupervised Domain Adaptation (CVPR 2019)
-    <https://arxiv.org/pdf/1906.03950.pdf>`_.
-    """
     def __init__(self, planes):
         super(DSBN2d, self).__init__()
         self.num_features = planes
@@ -31,9 +23,6 @@ class DSBN2d(nn.Module):
 
 
 class DSBN1d(nn.Module):
-    """Domain-Specific BatchNorm1d layer in `Domain-Specific Batch Normalization for Unsupervised Domain Adaptation (CVPR 2019)
-    <https://arxiv.org/pdf/1906.03950.pdf>`_.
-    """
     def __init__(self, planes):
         super(DSBN1d, self).__init__()
         self.num_features = planes
@@ -54,10 +43,6 @@ class DSBN1d(nn.Module):
 
 
 class DSBN2d_idm(nn.Module):
-    """Domain-Specific BatchNorm2d layer with `IDM` module
-    in `IDM: An Intermediate Domain Module for Domain Adaptive Person Re-ID (ICCV 2021)
-    <https://arxiv.org/pdf/2108.02413v1.pdf>`_.
-    """
     def __init__(self, planes):
         super(DSBN2d_idm, self).__init__()
         self.num_features = planes
@@ -80,10 +65,6 @@ class DSBN2d_idm(nn.Module):
 
 
 class DSBN1d_idm(nn.Module):
-    """Domain-Specific BatchNorm1d layer with `IDM` module
-    in `IDM: An Intermediate Domain Module for Domain Adaptive Person Re-ID (ICCV 2021)
-    <https://arxiv.org/pdf/2108.02413v1.pdf>`_.
-    """
     def __init__(self, planes):
         super(DSBN1d_idm, self).__init__()
         self.num_features = planes

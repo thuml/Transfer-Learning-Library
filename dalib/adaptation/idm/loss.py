@@ -1,15 +1,8 @@
-"""
-Modified from https://github.com/SikaStar/IDM
-@author: Baixu Chen
-@contact: cbx_99_hasta@outlook.com
-"""
 import torch
 import torch.nn as nn
 
 
 class DivLoss(nn.Module):
-    """Diversity loss, which is defined as negative of standard deviation.
-    """
     def __init__(self, ):
         super(DivLoss, self).__init__()
 
@@ -21,8 +14,6 @@ class DivLoss(nn.Module):
 
 
 class BridgeFeatLoss(nn.Module):
-    """Bridge loss on feature space.
-    """
     def __init__(self):
         super(BridgeFeatLoss, self).__init__()
 
@@ -41,8 +32,7 @@ class BridgeFeatLoss(nn.Module):
 
 
 class BridgeProbLoss(nn.Module):
-    """Bridge loss on prediction space.
-    """
+
     def __init__(self, num_classes, epsilon=0.1):
         super(BridgeProbLoss, self).__init__()
         self.num_classes = num_classes

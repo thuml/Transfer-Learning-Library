@@ -178,7 +178,7 @@ class PoseResNet2d(nn.Module):
         - outputs: logits outputs by the main regressor
         - outputs_adv: logits outputs by the adversarial regressor
 
-    Shape:
+    Shapes:
         - x: :math:`(minibatch, *)`, same shape as the input of the `backbone`.
         - outputs, outputs_adv: :math:`(minibatch, K, H, W)`, where K means the number of keypoints.
 

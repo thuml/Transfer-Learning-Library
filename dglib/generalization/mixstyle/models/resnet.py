@@ -13,8 +13,8 @@ def _resnet_with_mix_style(arch, block, layers, pretrained, progress, mix_layers
                            resnet_class=ResNet, **kwargs):
     """Construct `ResNet` with MixStyle modules. Given any resnet architecture **resnet_class** that contains conv1,
     bn1, relu, maxpool, layer1-4, this function define a new class that inherits from **resnet_class** and inserts
-    MixStyle module during forward pass. Although MixStyle Module can be inserted anywhere, original paper finds it
-    better to place MixStyle after layer1-3. Our implementation follows this idea, but you are free to modify this
+    MixStyle module during forward pass. Although MixStyle Module can be inserted anywhere, origin paper finds it
+    better to place MixStyle after layer1-3. Our implementation follow this idea, but you are free to modify this
     function to try other possibilities.
 
     Args:
