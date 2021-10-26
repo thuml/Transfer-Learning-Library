@@ -16,7 +16,7 @@ We adopt cross dataset setting (another one is cross camera setting). The model 
 
 For a fair comparison, our model is trained with standard cross entropy loss and triplet loss. We adopt modified resnet architecture from `Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (ICLR 2020) <https://arxiv.org/pdf/2001.01526.pdf>`_.
 
-As we are given unlabeled samples from target domain, we can utilize clustering algorithms to produce pseudo labels on target domain and then use them as supervision signals to perform self-training. This simple method turns out to be a strong baseline. We use ``Baseline_Cluster`` to represent this baseline in our results.
+As we are given unlabelled samples from target domain, we can utilize clustering algorithms to produce pseudo labels on target domain and then use them as supervision signals to perform self-training. This simple method turns out to be a strong baseline. We use ``Baseline_Cluster`` to represent this baseline in our results.
 
 .. note::
 
