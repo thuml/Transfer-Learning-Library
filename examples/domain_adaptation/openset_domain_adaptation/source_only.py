@@ -218,7 +218,7 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='PyTorch Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Source Only for Openset Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')

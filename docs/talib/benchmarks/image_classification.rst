@@ -2,7 +2,7 @@
 Image Classification
 ========================================================
 
-We provide benchmarks of different task algorithms on fine-grained classiffcation datasets `CUB-200-2011`_, `StanfordCars`_,
+We provide benchmarks of different task adaptation algorithms on fine-grained classification datasets `CUB-200-2011`_, `StanfordCars`_,
 `Aircraft`_, and specialized datasets `Resisc45`_,  `PatchCamelyon`_.
 
 Those task adaptation algorithms includes:

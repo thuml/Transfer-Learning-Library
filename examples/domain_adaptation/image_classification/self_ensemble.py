@@ -251,7 +251,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DANN for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Self Ensemble for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')

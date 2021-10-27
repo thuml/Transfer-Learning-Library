@@ -306,7 +306,7 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description="Cluster Baseline for Domain Adaptive ReID")
+    parser = argparse.ArgumentParser(description="Cluster Baseline for Domain Adaptative ReID")
     # dataset parameters
     parser.add_argument('source_root', help='root path of the source dataset')
     parser.add_argument('target_root', help='root path of the target dataset')
@@ -351,7 +351,7 @@ if __name__ == '__main__':
     parser.add_argument('--print-freq', type=int, default=40)
     parser.add_argument('--seed', default=None, type=int, help='seed for initializing training.')
     parser.add_argument('--rerank', action='store_true', help="evaluation only")
-    parser.add_argument("--log", type=str, default='baseline',
+    parser.add_argument("--log", type=str, default='baseline_cluster',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

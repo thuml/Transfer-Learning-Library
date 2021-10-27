@@ -1,3 +1,8 @@
+"""
+Modified from https://github.com/SikaStar/IDM
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from .idm import IDM
 import torch.nn as nn
 from collections import OrderedDict
@@ -10,6 +15,11 @@ __all__ = ['reid_resnet18', 'reid_resnet34', 'reid_resnet50', 'reid_resnet101']
 
 
 class ReidResNet(ResNetBase):
+    r"""Modified `ResNet` architecture with `IDM` module from `IDM: An Intermediate Domain Module for Domain Adaptive
+    Person Re-ID (ICCV 2021) <https://arxiv.org/pdf/2108.02413v1.pdf>`_. Although `IDM` Module can be inserted anywhere,
+    original paper places `IDM` after layer0-4. Our implementation follows this idea, but you are free to modify this
+    function to try other possibilities.
+    """
     def __init__(self, *args, **kwargs):
         super(ReidResNet, self).__init__(*args, **kwargs)
         self.conv = nn.Sequential(
