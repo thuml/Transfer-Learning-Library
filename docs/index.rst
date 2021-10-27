@@ -80,10 +80,7 @@ Transfer Learning
     :caption: Semi Supervised Learning Methods
     :titlesonly:
 
-    ssllib/consistency_regularization.rst
-    ssllib/contrastive_learning.rst
-    ssllib/holistic_methods.rst
-    ssllib/proxy_label.rst
+    ssllib/semi_supervised_learning.rst
 
 
 
