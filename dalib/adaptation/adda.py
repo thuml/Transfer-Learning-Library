@@ -14,7 +14,8 @@ class DomainAdversarialLoss(nn.Module):
     <https://arxiv.org/pdf/1702.05464.pdf>`_.
     Similar to the original `GAN <https://arxiv.org/pdf/1406.2661.pdf>`_ paper, ADDA argues that replacing
     :math:`\text{log}(1-p)` with :math:`-\text{log}(p)` in the adversarial loss provides better gradient qualities. Detailed
-    optimization process can be found at `examples/domain_adaptation/image_classification/adda.py`.
+    optimization process can be found `here
+    <https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/adda.py>`_.
 
     Inputs:
         - domain_pred (tensor): predictions of domain discriminator
