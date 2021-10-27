@@ -32,13 +32,12 @@ and prepare them following [Documentation for Retinopathy](/common/vision/datase
 
 Supported methods include:
 
-- [Explicit inductive bias for transfer learning with convolutional networks
-    (L2-SP, ICML 2018)](https://arxiv.org/abs/1802.01483)
+- [Learning Without Forgetting (LWF, ECCV 2016)](https://arxiv.org/abs/1606.09282)
+- [Explicit inductive bias for transfer learning with convolutional networks (L2-SP, ICML 2018)](https://arxiv.org/abs/1802.01483)
 - [Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)](https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf)
 - [DEep Learning Transfer using Fea- ture Map with Attention for convolutional networks (DELTA, ICLR 2019)](https://openreview.net/pdf?id=rkgbwsAcYm)
 - [Co-Tuning for Transfer Learning (Co-Tuning, NIPS 2020)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf)
 - [Stochastic Normalization (StochNorm, NIPS 2020)](https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf)
-- [Learning Without Forgetting (LWF, ECCV 2016)](https://arxiv.org/abs/1606.09282)
 - [Bi-tuning of Pre-trained Representations (Bi-Tuning)](https://arxiv.org/abs/2011.06182?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+arxiv%2FQSXk+%28ExcitingAds%21+cs+updates+on+arXiv.org%29)
 
 ## Experiment and Results
@@ -78,52 +77,52 @@ If you use these methods in your research, please consider citing.
 
 ```
 @inproceedings{LWF,
-  author    = {Zhizhong Li and
+    author    = {Zhizhong Li and
                Derek Hoiem},
-  title     = {Learning without Forgetting},
-  booktitle={ECCV},
-  year      = {2016},
+    title     = {Learning without Forgetting},
+    booktitle={ECCV},
+    year      = {2016},
 }
 
 @inproceedings{L2SP,
-  title={Explicit inductive bias for transfer learning with convolutional networks},
-  author={Xuhong, LI and Grandvalet, Yves and Davoine, Franck},
-  booktitle={ICML},
-  year={2018},
+    title={Explicit inductive bias for transfer learning with convolutional networks},
+    author={Xuhong, LI and Grandvalet, Yves and Davoine, Franck},
+    booktitle={ICML},
+    year={2018},
 }
 
 @inproceedings{BSS,
-  title={Catastrophic forgetting meets negative transfer: Batch spectral shrinkage for safe transfer learning},
-  author={Chen, Xinyang and Wang, Sinan and Fu, Bo and Long, Mingsheng and Wang, Jianmin},
-  booktitle={NeurIPS},
-  year={2019}
+    title={Catastrophic forgetting meets negative transfer: Batch spectral shrinkage for safe transfer learning},
+    author={Chen, Xinyang and Wang, Sinan and Fu, Bo and Long, Mingsheng and Wang, Jianmin},
+    booktitle={NeurIPS},
+    year={2019}
 }
 
 @inproceedings{DELTA,
-  title={Delta: Deep learning transfer using feature map with attention for convolutional networks},
-  author={Li, Xingjian and Xiong, Haoyi and Wang, Hanchao and Rao, Yuxuan and Liu, Liping and Chen, Zeyu and Huan, Jun},
-  booktitle={ICLR},
-  year={2019}
+    title={Delta: Deep learning transfer using feature map with attention for convolutional networks},
+    author={Li, Xingjian and Xiong, Haoyi and Wang, Hanchao and Rao, Yuxuan and Liu, Liping and Chen, Zeyu and Huan, Jun},
+    booktitle={ICLR},
+    year={2019}
 }
 
 @inproceedings{StocNorm,
-  title={Stochastic Normalization},
-  author={Kou, Zhi and You, Kaichao and Long, Mingsheng and Wang, Jianmin},
-  booktitle={NeurIPS},
-  year={2020}
+    title={Stochastic Normalization},
+    author={Kou, Zhi and You, Kaichao and Long, Mingsheng and Wang, Jianmin},
+    booktitle={NeurIPS},
+    year={2020}
 }
 
 @inproceedings{CoTuning,
-  title={Co-Tuning for Transfer Learning},
-  author={You, Kaichao and Kou, Zhi and Long, Mingsheng and Wang, Jianmin},
-  booktitle={NeurIPS},
-  year={2020}
+    title={Co-Tuning for Transfer Learning},
+    author={You, Kaichao and Kou, Zhi and Long, Mingsheng and Wang, Jianmin},
+    booktitle={NeurIPS},
+    year={2020}
 }
 
 @article{BiTuning,
-  title={Bi-tuning of Pre-trained Representations},
-  author={Zhong, Jincheng and Wang, Ximei and Kou, Zhi and Wang, Jianmin and Long, Mingsheng},
-  journal={arXiv preprint arXiv:2011.06182},
-  year={2020}
+    title={Bi-tuning of Pre-trained Representations},
+    author={Zhong, Jincheng and Wang, Ximei and Kou, Zhi and Wang, Jianmin and Long, Mingsheng},
+    journal={arXiv preprint arXiv:2011.06182},
+    year={2020}
 }
 ```
