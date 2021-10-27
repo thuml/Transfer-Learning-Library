@@ -52,7 +52,7 @@ The currently supported algorithms include:
 
 ##### [Domain Generalization for Classification](/examples/domain_generalization/image_classification/)
 - [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, ECCV 2018)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
-- [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
+- [Domain Generalization with MixStyle (MixStyle, ICLR 2021)](https://arxiv.org/abs/2104.02008)
 - [Learning to Generalize: Meta-Learning for Domain Generalization (MLDG, AAAI 2018)](https://arxiv.org/pdf/1710.03463.pdf)
 - [Invariant Risk Minimization (IRM)](https://arxiv.org/abs/1907.02893)
 - [Out-of-Distribution Generalization via Risk Extrapolation (VREx, ICML 2021)](https://arxiv.org/abs/2003.00688)
