@@ -33,8 +33,9 @@ Supported methods include:
 ## Experiments and Results
 
 ### SSL with supervised pre-trained model
-The shell files give the script to reproduce our [results](/docs/ssllib/benchmarks/image_classification.rst#) with specified hyper-parameters.
-For example, if you want to run baseline on CUB200 with 15% labeled samples, use the following script
+
+The shell files give the script to reproduce our [results](benchmark.md) with specified hyper-parameters. For example,
+if you want to run baseline on CUB200 with 15% labeled samples, use the following script
 
 ```shell script
 # SSL with ResNet50 backbone on CUB200.
@@ -44,24 +45,32 @@ CUDA_VISIBLE_DEVICES=0 python baseline.py data/cub200 -d CUB200 -sr 15 --seed 0 
 ```
 
 ### SSL with unsupervised pre-trained model
-Take MoCo as an example. 
+
+Take MoCo as an example.
+
 1. Download MoCo pretrained checkpoints from https://github.com/facebookresearch/moco
-2. Convert  the format of the MoCo checkpoints to the standard format of pytorch
+2. Convert the format of the MoCo checkpoints to the standard format of pytorch
+
 ```shell
 mkdir checkpoints
 python convert_moco_to_pretrained.py checkpoints/moco_v1_200ep_pretrain.pth.tar checkpoints/moco_v1_200ep_backbone.pth checkpoints/moco_v1_200ep_fc.pth
 ```
+
 3. Start training
+
 ```shell
 CUDA_VISIBLE_DEVICES=0 python baseline.py data/cub200 -d CUB200 -sr 15 --seed 0 --log logs/baseline_moco/cub200_15 \
   --pretrained checkpoints/moco_v1_200ep_backbone.pth
 ```
 
 ## TODO
+
 Support datasets: CIFAR10, CIFAR100, ImageNet
 
 ## Citation
+
 If you use these methods in your research, please consider citing.
+
 ```
 @inproceedings{pi-model,
     title={Temporal ensembling for semi-supervised learning},

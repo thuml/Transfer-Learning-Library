@@ -1,5 +1,5 @@
-Here are a few projects that are built on Trans-Learn. 
-They are examples of how to use Trans-Learn as a library, to facilitate your own research.
+Here are a few projects that are built on Trans-Learn. They are examples of how to use Trans-Learn as a library, to
+facilitate your own research.
 
 ## Projects by [THUML](https://github.com/thuml)
 
