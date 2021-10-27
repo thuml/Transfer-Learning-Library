@@ -230,7 +230,7 @@ if __name__ == '__main__':
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
     )
-    parser = argparse.ArgumentParser(description="Baseline for Domain Generalization ReID")
+    parser = argparse.ArgumentParser(description="Baseline for Domain Generalizable ReID")
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
