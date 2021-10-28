@@ -15,6 +15,7 @@ class CIFAR100(datasets.CIFAR100):
         if idxes is not None:
             self.data = self.data[idxes]
             self.targets = np.array(self.targets)[idxes]
+        self.num_classes = 100
 
     def __getitem__(self, index):
         img, target = self.data[index], self.targets[index]

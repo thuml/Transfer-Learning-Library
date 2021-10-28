@@ -58,7 +58,8 @@ def main(args: argparse.Namespace):
 
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
-                                                                                    val_transform)
+                                                                                    val_transform,
+                                                                                    args.num_samples)
     print("labeled_dataset_size: ", len(labeled_train_dataset))
     print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
     print("val_dataset_size: ", len(val_dataset))
@@ -197,6 +198,8 @@ if __name__ == '__main__':
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
+    parser.add_argument('--num-samples', default=None, type=int,
+                        help='number of labeled samples (only for cifar100 dataset). Default: None')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--norm-mean', type=float, nargs='+',

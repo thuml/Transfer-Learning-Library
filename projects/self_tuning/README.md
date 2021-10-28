@@ -65,7 +65,7 @@ CUDA_VISIBLE_DEVICES=0 python baseline.py data/cub200 -d CUB200 -sr 15 --seed 0 
 
 ## TODO
 
-Support datasets: CIFAR10, CIFAR100, ImageNet
+Support datasets: CIFAR10, ImageNet
 
 ## Citation
 

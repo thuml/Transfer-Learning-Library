@@ -5,9 +5,11 @@
 import sys
 import time
 import timm
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 import torchvision.transforms as T
 
 sys.path.append('../..')
@@ -56,16 +58,42 @@ def get_dataset_names():
     )
 
 
-def get_dataset(dataset_name, root, sample_rate, train_transform, val_transform, unlabeled_train_transform=None):
+def get_dataset(dataset_name, root, sample_rate, train_transform, val_transform, unlabeled_train_transform=None,
+                num_samples=None):
     if unlabeled_train_transform is None:
         unlabeled_train_transform = train_transform
-    dataset = datasets.__dict__[dataset_name]
-    labeled_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate,
-                                    download=True, transform=train_transform)
-    unlabeled_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate,
-                                      download=True, transform=unlabeled_train_transform, unlabeled=True)
-    val_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
+    if dataset_name == 'CIFAR100':
+        assert num_samples is not None
+        base_dataset = torchvision.datasets.CIFAR100(root, train=True, download=True)
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples, 100, base_dataset.targets)
+        labeled_train_dataset = datasets.CIFAR100(root, labeled_idxes, train=True,
+                                                  transform=train_transform)
+        unlabeled_train_dataset = datasets.CIFAR100(root, unlabeled_idxes, train=True,
+                                                    transform=unlabeled_train_transform)
+        val_dataset = torchvision.datasets.CIFAR100(root, train=False, transform=val_transform, download=False)
+    else:
+        dataset = datasets.__dict__[dataset_name]
+        labeled_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate,
+                                        download=True, transform=train_transform)
+        unlabeled_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate,
+                                          download=True, transform=unlabeled_train_transform, unlabeled=True)
+        val_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
     return labeled_train_dataset, unlabeled_train_dataset, val_dataset
+
+
+def x_u_split(num_samples, num_classes, labels):
+    assert num_samples % num_classes == 0
+    n_samples_per_class = int(num_samples / num_classes)
+    labels = np.array(labels)
+
+    labeled_idxes = []
+    for i in range(num_classes):
+        ith_class_idxes = np.where(labels == i)[0]
+        ith_class_idxes = np.random.choice(ith_class_idxes, n_samples_per_class, False)
+        labeled_idxes.extend(ith_class_idxes)
+
+    unlabeled_idxes = [i for i in range(len(labels)) if i not in labeled_idxes]
+    return labeled_idxes, unlabeled_idxes
 
 
 def validate(val_loader, model, args, device) -> float:
@@ -117,6 +145,11 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, rand_au
             ResizeImage(256),
             T.RandomResizedCrop(224),
         ])
+    elif resizing == 'cifar':
+        transform = T.Compose([
+            T.RandomCrop(size=32, padding=4, padding_mode='reflect'),
+            ResizeImage(224)
+        ])
     else:
         raise NotImplementedError(resizing)
     transforms = [transform]
@@ -137,6 +170,8 @@ def get_val_transform(resizing='default', norm_mean=(0.485, 0.456, 0.406), norm_
             ResizeImage(256),
             T.CenterCrop(224),
         ])
+    elif resizing == 'cifar':
+        transform = ResizeImage(224)
     else:
         raise NotImplementedError(resizing)
     return T.Compose([
