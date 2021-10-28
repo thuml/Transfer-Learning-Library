@@ -163,6 +163,7 @@ class RandAugment(object):
     r"""Augmentation in `RandAugment: Practical automated data augmentation with a reduced search space
     (NIPS 2020) <https://arxiv.org/pdf/1909.13719.pdf>`_.
     """
+
     def __init__(self, n, m):
         assert n >= 1
         assert 1 <= m <= 10
@@ -178,3 +179,6 @@ class RandAugment(object):
                 img = op(img, v=v, max_v=max_v, bias=bias)
         img = CutoutAbs(img, int(32 * 0.5))
         return img
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(number of transformations={}, magnitude={})'.format(self.n, self.m)

@@ -53,6 +53,8 @@ def main(args: argparse.Namespace):
 
     train_transform = MultipleApply([train_augmentation, train_augmentation])
     val_transform = utils.get_val_transform(args.val_resizing, norm_mean=args.norm_mean, norm_std=args.norm_std)
+    print('train_transform: ', train_transform)
+    print('val_transform:', val_transform)
 
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
