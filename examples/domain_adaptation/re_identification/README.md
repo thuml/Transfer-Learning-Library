@@ -60,6 +60,13 @@ If you use these methods in your research, please consider citing.
     year = {2018}  
 }
 
+@inproceedings{SPGAN,
+    title={Image-image domain adaptation with preserved self-similarity and domain-dissimilarity for person re-identification},
+    author={Deng, Weijian and Zheng, Liang and Ye, Qixiang and Kang, Guoliang and Yang, Yi and Jiao, Jianbin},
+    booktitle={CVPR},
+    year={2018}
+}
+
 @inproceedings{
     MMT,
     title={Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification},

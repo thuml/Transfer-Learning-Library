@@ -34,8 +34,8 @@ ADDA: Adversarial Discriminative Domain Adaptation
 .. autoclass:: dalib.adaptation.adda.DomainAdversarialLoss
 
 .. note::
-    ADDAgrl is also implemented and benchmarked. You can find code at
-    `examples/domain_adaptation/image_classification/addagrl.py`.
+    ADDAgrl is also implemented and benchmarked. You can find code
+    `here <https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/addagrl.py>`_.
 
 
 .. _BSP:

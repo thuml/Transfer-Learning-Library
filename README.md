@@ -36,10 +36,9 @@ The currently supported algorithms include:
 - [Regressive Domain Adaptation for Unsupervised Keypoint Detection (RegDA, CVPR 2021)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/regressive-domain-adaptation-cvpr21.pdf)
 
 ##### [Domain Adaptation for Person Re-identification](/examples/domain_adaptation/re_identification/)
-- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
-- [Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (MMT, 2020 ICLR)](https://arxiv.org/abs/2001.01526)
-- [Similarity Preserving Generative Adversarial Network (SPGAN)](https://arxiv.org/pdf/1811.10551.pdf)
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, ECCV 2018)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification (MMT, ICLR 2020)](https://arxiv.org/abs/2001.01526)
+- [Similarity Preserving Generative Adversarial Network (SPGAN, CVPR 2018)](https://arxiv.org/pdf/1811.10551.pdf)
 
 ##### [Task Adaptation for Image Classification](/examples/task_adaptation/image_classification/)
 - [Explicit inductive bias for transfer learning with convolutional networks
@@ -52,19 +51,17 @@ The currently supported algorithms include:
 - [Bi-tuning of Pre-trained Representations (Bi-Tuning)](https://arxiv.org/abs/2011.06182?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+arxiv%2FQSXk+%28ExcitingAds%21+cs+updates+on+arXiv.org%29)
 
 ##### [Domain Generalization for Classification](/examples/domain_generalization/image_classification/)
-- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
-- [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
-- [Learning to Generalize: Meta-Learning for Domain Generalization (MLDG, 2018 AAAI)](https://arxiv.org/pdf/1710.03463.pdf)
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, ECCV 2018)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Domain Generalization with MixStyle (MixStyle, ICLR 2021)](https://arxiv.org/abs/2104.02008)
+- [Learning to Generalize: Meta-Learning for Domain Generalization (MLDG, AAAI 2018)](https://arxiv.org/pdf/1710.03463.pdf)
 - [Invariant Risk Minimization (IRM)](https://arxiv.org/abs/1907.02893)
-- [Out-of-Distribution Generalization via Risk Extrapolation (REx) (VREx, ICML 2021)](https://arxiv.org/abs/2003.00688)
+- [Out-of-Distribution Generalization via Risk Extrapolation (VREx, ICML 2021)](https://arxiv.org/abs/2003.00688)
 - [Distributionally Robust Neural Networks for Group Shifts: On the Importance of Regularization for Worst-Case Generalization(GroupDRO)](https://arxiv.org/abs/1911.08731)
-- [Deep CORAL: Correlation Alignment for Deep Domain Adaptation (Deep Coral, 2016 ECCV)](https://arxiv.org/abs/1607.01719)
+- [Deep CORAL: Correlation Alignment for Deep Domain Adaptation (Deep Coral, ECCV 2016)](https://arxiv.org/abs/1607.01719)
 
 ##### [Domain Generalization for Person Re-identification](/examples/domain_generalization/re_identification/)
-- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net},  
-  booktitle (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
-- [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
+- [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, ECCV 2018)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
+- [Domain Generalization with MixStyle (MixStyle, ICLR 2021)](https://arxiv.org/abs/2104.02008)
 
 We are planning to add
 - DA for Object Detection

@@ -72,8 +72,8 @@ If you use these methods in your research, please consider citing.
 @inproceedings{MLDG,
     title={Learning to Generalize: Meta-Learning for Domain Generalization},
     author={Li, Da and Yang, Yongxin and Song, Yi-Zhe and Hospedales, Timothy},
-  	booktitle={AAAI Conference on Artificial Intelligence},
-  	year={2018}
+    booktitle={AAAI},
+    year={2018}
 }
  
 @misc{IRM,
