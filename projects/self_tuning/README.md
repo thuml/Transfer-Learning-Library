@@ -27,7 +27,7 @@ Supported methods include:
 - [Temporal Ensembling for Semi-Supervised Learning (pi model, ICLR 2017)](https://arxiv.org/abs/1610.02242)
 - [Weight-averaged consistency targets improve semi-supervised deep learning results (mean teacher, NIPS 2017)](https://openreview.net/references/pdf?id=ry8u21rtl)
 - [Unsupervised Data Augmentation for Consistency Training (uda, NIPS 2020)](https://proceedings.neurips.cc/paper/2020/file/44feb0096faa8326192570788b38c1d1-Paper.pdf)
-- [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (FixMatch, NIPS 2020)](https://proceedings.neurips.cc/paper/2020/file/f7ac67a9aa8d255282de7d11391e1b69-Paper.pdf)
+- [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (FixMatch, NIPS 2020)](https://arxiv.org/ftp/arxiv/papers/2001/2001.07685.pdf)
 - [Self-Tuning for Data-Efficient Deep Learning (self-tuning, ICML 2021)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf)
 
 ## Experiments and Results

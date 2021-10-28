@@ -17,7 +17,7 @@ def update_bn(model, ema_model):
 
 
 class FixMatchConsistencyLoss(nn.Module):
-    r"""The consistency loss from `FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (NIPS 2020) <https://proceedings.neurips.cc/paper/2020/file/f7ac67a9aa8d255282de7d11391e1b69-Paper.pdf>`_.
+    r"""The consistency loss from `FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (NIPS 2020) <https://arxiv.org/ftp/arxiv/papers/2001/2001.07685.pdf>`_.
     It can be described as
 
     .. math::
