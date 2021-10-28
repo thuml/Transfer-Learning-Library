@@ -14,15 +14,13 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../..')
 from ssllib.mean_teacher import update_ema_variables
-from ssllib.rand_augment import RandAugment
 from ssllib.fix_match import update_bn, FixMatchConsistencyLoss
 from common.modules.classifier import Classifier
-from common.vision.transforms import ResizeImage, MultipleApply
+from common.vision.transforms import MultipleApply
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 from common.utils.data import ForeverDataIterator
@@ -51,39 +49,17 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, rand_augment=False,
+                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
+    # weak augmentation
+    weak_augmentation = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, rand_augment=False,
+                                                  norm_mean=args.norm_mean, norm_std=args.norm_std)
+    # strong augmentation with rand_augment
+    strong_augmentation = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, rand_augment=True,
+                                                    norm_mean=args.norm_mean, norm_std=args.norm_std)
+    unlabeled_train_transform = MultipleApply([weak_augmentation, strong_augmentation])
 
-    train_transform = T.Compose([
-        ResizeImage(256),
-        T.RandomResizedCrop(224),
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        normalize
-    ])
-
-    weak_augmentation = [
-        ResizeImage(256),
-        T.RandomResizedCrop(224),
-        T.RandomHorizontalFlip(),
-        T.ToTensor(),
-        normalize
-    ]
-    strong_augmentation = [
-        ResizeImage(256),
-        T.RandomResizedCrop(224),
-        T.RandomHorizontalFlip(),
-        RandAugment(n=2, m=10),
-        T.ToTensor(),
-        normalize
-    ]
-    unlabeled_train_transform = MultipleApply([T.Compose(weak_augmentation), T.Compose(strong_augmentation)])
-
-    val_transform = T.Compose([
-        ResizeImage(256),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        normalize
-    ])
+    val_transform = utils.get_val_transform(args.val_resizing, norm_mean=args.norm_mean, norm_std=args.norm_std)
 
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
@@ -227,6 +203,12 @@ if __name__ == '__main__':
     parser.add_argument('-sr', '--sample-rate', default=100, type=int,
                         metavar='N',
                         help='sample rate of training dataset (default: 100)')
+    parser.add_argument('--train-resizing', type=str, default='default')
+    parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--norm-mean', type=float, nargs='+',
+                        default=(0.485, 0.456, 0.406), help='normalization mean')
+    parser.add_argument('--norm-std', type=float, nargs='+',
+                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),

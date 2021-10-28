@@ -8,9 +8,12 @@ import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as T
 
 sys.path.append('../..')
+from ssllib.rand_augment import RandAugment
 import common.vision.models as models
+from common.vision.transforms import ResizeImage
 from common.utils.metric import accuracy
 from common.utils.meter import AverageMeter, ProgressMeter
 
@@ -105,3 +108,39 @@ def validate(val_loader, model, args, device) -> float:
               .format(top1=top1, top5=top5))
 
     return top1.avg
+
+
+def get_train_transform(resizing='default', random_horizontal_flip=True, rand_augment=False,
+                        norm_mean=(0.485, 0.456, 0.406), norm_std=(0.229, 0.224, 0.225)):
+    if resizing == 'default':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.RandomResizedCrop(224),
+        ])
+    else:
+        raise NotImplementedError(resizing)
+    transforms = [transform]
+    if random_horizontal_flip:
+        transforms.append(T.RandomHorizontalFlip())
+    if rand_augment:
+        transforms.append(RandAugment(n=2, m=10))
+    transforms.extend([
+        T.ToTensor(),
+        T.Normalize(mean=norm_mean, std=norm_std)
+    ])
+    return T.Compose(transforms)
+
+
+def get_val_transform(resizing='default', norm_mean=(0.485, 0.456, 0.406), norm_std=(0.229, 0.224, 0.225)):
+    if resizing == 'default':
+        transform = T.Compose([
+            ResizeImage(256),
+            T.CenterCrop(224),
+        ])
+    else:
+        raise NotImplementedError(resizing)
+    return T.Compose([
+        transform,
+        T.ToTensor(),
+        T.Normalize(mean=norm_mean, std=norm_std)
+    ])
