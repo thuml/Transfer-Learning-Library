@@ -59,7 +59,7 @@ def main(args: argparse.Namespace):
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = utils.get_dataset(args.data, args.root,
                                                                                     args.sample_rate, train_transform,
                                                                                     val_transform,
-                                                                                    args.num_samples)
+                                                                                    num_samples=args.num_samples)
     print("labeled_dataset_size: ", len(labeled_train_dataset))
     print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
     print("val_dataset_size: ", len(val_dataset))
