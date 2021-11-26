@@ -203,9 +203,10 @@ if __name__ == '__main__':
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
-                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
-                             ' (default: Office31)')
+    # parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
+    #                     help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
+    #                          ' (default: Office31)')
+    parser.add_argument('-d', '--data', default='default') # -chh
     parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')

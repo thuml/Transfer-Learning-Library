@@ -20,7 +20,8 @@ from .patchcamelyon import PatchCamelyon
 from .retinopathy import Retinopathy
 from .eurosat import EuroSAT
 from .resisc45 import Resisc45
+from .rareplanes import Rareplanes
 
 __all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "ImageNetR", "ImageNetSketch",
            "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPet", "PACS", "DTD",
-           "OxfordFlowers102", "PatchCamelyon", "Retinopathy", "EuroSAT", "Resisc45"]
+           "OxfordFlowers102", "PatchCamelyon", "Retinopathy", "EuroSAT", "Resisc45", "Rareplanes"]

@@ -1,6 +1,6 @@
 """
-@author: Junguang Jiang
-@contact: JiangJunguang1123@outlook.com
+@author: Hao Chen
+@contact: chanhal@outlook.com
 """
 import os
 from typing import Optional
@@ -23,17 +23,13 @@ class Rareplanes(ImageList):
 
     .. note:: In `root`, there will exist following files after downloading.
         ::
-            Art/
+            rareplanes/
                 Alarm_Clock/*.jpg
                 ...
-            Clipart/
-            Product/
-            Real_World/
+            fgvc/
             image_list/
-                Art.txt
-                Clipart.txt
-                Product.txt
-                Real_World.txt
+                rareplanes.txt
+                fgvc.txt
     """
     download_list = [       
     ]
@@ -41,13 +37,9 @@ class Rareplanes(ImageList):
         "rareplanes": "image_list/rareplanes.txt",
         "fgvc": "image_list/fgvc.txt",
     }
-    CLASSES = ['Drill', 'Exit_Sign', 'Bottle', 'Glasses', 'Computer', 'File_Cabinet', 'Shelf', 'Toys', 'Sink',
-               'Laptop', 'Kettle', 'Folder', 'Keyboard', 'Flipflops', 'Pencil', 'Bed', 'Hammer', 'ToothBrush', 'Couch',
-               'Bike', 'Postit_Notes', 'Mug', 'Webcam', 'Desk_Lamp', 'Telephone', 'Helmet', 'Mouse', 'Pen', 'Monitor',
-               'Mop', 'Sneakers', 'Notebook', 'Backpack', 'Alarm_Clock', 'Push_Pin', 'Paper_Clip', 'Batteries', 'Radio',
-               'Fan', 'Ruler', 'Pan', 'Screwdriver', 'Trash_Can', 'Printer', 'Speaker', 'Eraser', 'Bucket', 'Chair',
-               'Calendar', 'Calculator', 'Flowers', 'Lamp_Shade', 'Spoon', 'Candles', 'Clipboards', 'Scissors', 'TV',
-               'Curtains', 'Fork', 'Soda', 'Table', 'Knives', 'Oven', 'Refrigerator', 'Marker']
+    CLASSES = ['707-320','Boeing_717','727-200','737-200','737-300','747-200','757-300','767-200',
+                '767-400','777-300','A300B4','A319','A320','A330-300','A340-300','A380','Cessna_172',
+                'BAE_146-300','Fokker_100','MD-11']
 
     def __init__(self, root: str, task: str, download: Optional[bool] = False, **kwargs):
         assert task in self.image_list
