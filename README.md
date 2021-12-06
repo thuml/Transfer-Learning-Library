@@ -79,7 +79,7 @@ For flexible use and modification of Transfer-Learn, please git clone the librar
 
 
 ## Documentation
-You can find the tutorial and API documentation on the website: [Documentation (please open in Firefox or Safari)](http://170.106.108.162/index.html). Note that this link is only for temporary use. You can also build the doc by yourself following the instructions in http://170.106.108.162/get_started/faq.html.
+You can find the tutorial and API documentation on the website: [Documentation](http://tl.thuml.ai/). You can also build the doc by yourself following the instructions in http://tl.thuml.ai/get_started/faq.html.
 
 Also, we have examples in the directory `examples`. A typical usage is 
 ```shell script
