@@ -21,7 +21,7 @@ from detectron2.data import (
 from detectron2.utils.events import EventStorage
 
 sys.path.append('../../..')
-import common.vision.models.object_detection as models
+import common.vision.models.object_detection.meta_arch as models
 
 sys.path.append('.')
 import utils
@@ -81,7 +81,8 @@ def train(model, logger, cfg, args):
         for data_s, iteration in zip(train_source_loader, range(start_iter, max_iter)):
             storage.iter = iteration
 
-            loss_dict_s = model(data_s)
+            # compute output
+            _, loss_dict_s = model(data_s)
             losses_s = sum(loss_dict_s.values())
             assert torch.isfinite(losses_s).all(), loss_dict_s
 
@@ -143,14 +144,20 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
-    # training parameters
+    # dataset parameters
+    parser.add_argument('-s', '--source', nargs='+', help='source domain(s)')
+    parser.add_argument('-t', '--target', nargs='+', help='target domain(s)')
+    parser.add_argument('--test', nargs='+', help='test domain(s)')
+    # model parameters
+    parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller learning rate for backbone')
     parser.add_argument(
         "--resume",
         action="store_true",
         help="Whether to attempt to resume from the checkpoint directory. "
              "See documentation of `DefaultTrainer.resume_or_load()` for what it means.",
     )
+    # training parameters
+    parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
     parser.add_argument("--eval-only", action="store_true", help="perform evaluation only")
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
     parser.add_argument("--num-machines", type=int, default=1, help="total number of machines")
@@ -173,12 +180,6 @@ if __name__ == "__main__":
         default=None,
         nargs=argparse.REMAINDER,
     )
-    # dataset parameters
-    parser.add_argument('-s', '--source', nargs='+', help='source domain(s)')
-    parser.add_argument('-t', '--target', nargs='+', help='target domain(s)')
-    parser.add_argument('--test', nargs='+', help='test domain(s)')
-    # model parameters
-    parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller learning rate for backbone')
     args = parser.parse_args()
     print("Command Line Args:", args)
 
