@@ -241,6 +241,7 @@ class PersistentProposalList(list):
     def __init__(self, filename=None):
         super(PersistentProposalList, self).__init__()
         self.filename = filename
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
 
     def load(self):
         """
@@ -261,7 +262,6 @@ class PersistentProposalList(list):
         """
         Flush to cache.
         """
-        os.makedirs(os.path.basename(self.filename), exist_ok=True)
         with open(self.filename, "w") as f:
             json.dump(self, f, cls=ProposalEncoder)
         print("Write to cache: {}".format(self.filename))
