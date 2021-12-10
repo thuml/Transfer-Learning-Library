@@ -98,3 +98,18 @@ ADVENT: Adversarial Entropy Minimization
 
 .. autoclass:: dalib.adaptation.advent.DomainAdversarialEntropyLoss
     :members:
+
+
+Domain Adversarial Training in Object Detection
+================================================
+
+.. _DADAPT:
+
+D-adapt: Decoupled Adaptation for Cross-Domain Object Detection
+----------------------------------------------------------------
+
+.. autoclass:: dalib.adaptation.d_adapt.modeling.meta_arch.DecoupledGeneralizedRCNN
+
+.. autoclass:: dalib.adaptation.d_adapt.modeling.roi_heads.DecoupledRes5ROIHeads
+    :members:
+

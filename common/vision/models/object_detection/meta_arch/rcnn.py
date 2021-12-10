@@ -11,10 +11,15 @@ from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 @META_ARCH_REGISTRY.register()
 class TLGeneralizedRCNN(GeneralizedRCNNBase):
     """
-    Generalized R-CNN. Any models that contains the following three components:
+    Generalized R-CNN for Transfer Learning.
+    Similar to that in in Supervised Learning, TLGeneralizedRCNN has the following three components:
     1. Per-image feature extraction (aka backbone)
     2. Region proposal generation
     3. Per-region feature extraction and prediction
+
+    Different from that in Supervised Learning, TLGeneralizedRCNN
+    1. accepts unlabeled images during training (return no losses)
+    2. return both detection outputs, features, and losses during training
 
     Args:
         backbone: a backbone module, must follow detectron2's backbone interface
@@ -40,7 +45,8 @@ class TLGeneralizedRCNN(GeneralizedRCNNBase):
 
     Outputs:
         - outputs: A list of dict where each dict is the output for one input image.
-          The dict contains one key "instances" whose value is a :class:`Instances`.
+          The dict contains a key "instances" whose value is a :class:`Instances`
+          and a key "features" whose value is the features of middle layers.
           The :class:`Instances` object has the following keys:
           "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         - losses: A dict of different losses

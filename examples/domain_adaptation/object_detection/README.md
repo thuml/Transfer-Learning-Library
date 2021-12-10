@@ -1,5 +1,8 @@
 # Unsupervised Domain Adaptation for Object Detection
 
+## Installation
+Our code is based on [Detectron latest(v0.6)](https://detectron2.readthedocs.io/en/latest/tutorials/install.html), please install it before usage.
+
 ## Dataset
 
 You need to prepare following datasets manually if you want to use them:

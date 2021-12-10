@@ -8,18 +8,27 @@ import prettytable
 from typing import *
 from collections import OrderedDict, defaultdict
 import tempfile
+import logging
 
-from detectron2.data import (
-    build_detection_test_loader,
-)
+import torch
+import torch.nn as nn
+import torchvision.transforms as T
 import detectron2.utils.comm as comm
 from detectron2.evaluation import PascalVOCDetectionEvaluator, inference_on_dataset
 from detectron2.evaluation.pascal_voc_evaluation import voc_eval
-from detectron2.config import get_cfg
+from detectron2.config import get_cfg, CfgNode
 from detectron2.engine import default_setup
-
+from detectron2.data import (
+    build_detection_test_loader,
+)
+from detectron2.data.transforms.augmentation import Augmentation
+from detectron2.data.transforms import BlendTransform, ColorTransform
+from detectron2.solver.lr_scheduler import LRMultiplier, WarmupParamScheduler
+from fvcore.common.param_scheduler import *
+import timm
 
 import common.vision.datasets.object_detection as datasets
+import common.vision.models as models
 
 
 class PascalVOCDetectionPerClassEvaluator(PascalVOCDetectionEvaluator):
@@ -112,6 +121,61 @@ def build_dataset(dataset_categories, dataset_roots):
     return dataset_lists
 
 
+def rgb2gray(rgb):
+    return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])[:, :, np.newaxis].repeat(3, axis=2).astype(rgb.dtype)
+
+
+class Grayscale(Augmentation):
+    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
+        super().__init__()
+        self._init(locals())
+        self._transform = T.Grayscale()
+
+    def get_transform(self, image):
+        return ColorTransform(lambda x: rgb2gray(x))
+
+
+def build_augmentation(cfg, is_train):
+    """
+    Create a list of default :class:`Augmentation` from config.
+    Now it includes resizing and flipping.
+
+    Returns:
+        list[Augmentation]
+    """
+    import detectron2.data.transforms as T
+    if is_train:
+        min_size = cfg.INPUT.MIN_SIZE_TRAIN
+        max_size = cfg.INPUT.MAX_SIZE_TRAIN
+        sample_style = cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING
+    else:
+        min_size = cfg.INPUT.MIN_SIZE_TEST
+        max_size = cfg.INPUT.MAX_SIZE_TEST
+        sample_style = "choice"
+    augmentation = [T.ResizeShortestEdge(min_size, max_size, sample_style)]
+    if is_train and cfg.INPUT.RANDOM_FLIP != "none":
+        augmentation.append(
+            T.RandomFlip(
+                horizontal=cfg.INPUT.RANDOM_FLIP == "horizontal",
+                vertical=cfg.INPUT.RANDOM_FLIP == "vertical",
+            )
+        )
+        augmentation.append(
+            T.RandomApply(T.AugmentationList(
+                [
+                    T.RandomContrast(0.6, 1.4),
+                    T.RandomBrightness(0.6, 1.4),
+                    T.RandomSaturation(0.6, 1.4),
+                    T.RandomLighting(0.1)
+                ]
+            ), prob=0.8)
+        )
+        augmentation.append(
+            T.RandomApply(Grayscale(), prob=0.2)
+        )
+    return augmentation
+
+
 def setup(args):
     """
     Create configs and perform basic setups.
@@ -124,3 +188,65 @@ def setup(args):
         cfg, args
     )  # if you don't like any of the default setup, write your own setup code
     return cfg
+
+
+def build_lr_scheduler(
+        cfg: CfgNode, optimizer: torch.optim.Optimizer
+) -> torch.optim.lr_scheduler._LRScheduler:
+    """
+    Build a LR scheduler from config.
+    """
+    name = cfg.SOLVER.LR_SCHEDULER_NAME
+
+    if name == "WarmupMultiStepLR":
+        steps = [x for x in cfg.SOLVER.STEPS if x <= cfg.SOLVER.MAX_ITER]
+        if len(steps) != len(cfg.SOLVER.STEPS):
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "SOLVER.STEPS contains values larger than SOLVER.MAX_ITER. "
+                "These values will be ignored."
+            )
+        sched = MultiStepParamScheduler(
+            values=[cfg.SOLVER.GAMMA ** k for k in range(len(steps) + 1)],
+            milestones=steps,
+            num_updates=cfg.SOLVER.MAX_ITER,
+        )
+    elif name == "WarmupCosineLR":
+        sched = CosineParamScheduler(1, 0)
+    elif name == "ExponentialLR":
+        sched = ExponentialParamScheduler(1, cfg.SOLVER.GAMMA)
+        return LRMultiplier(optimizer, multiplier=sched, max_iter=cfg.SOLVER.MAX_ITER)
+    else:
+        raise ValueError("Unknown LR scheduler: {}".format(name))
+
+    sched = WarmupParamScheduler(
+        sched,
+        cfg.SOLVER.WARMUP_FACTOR,
+        cfg.SOLVER.WARMUP_ITERS / cfg.SOLVER.MAX_ITER,
+        cfg.SOLVER.WARMUP_METHOD,
+    )
+    return LRMultiplier(optimizer, multiplier=sched, max_iter=cfg.SOLVER.MAX_ITER)
+
+
+def get_model_names():
+    return sorted(
+        name for name in models.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(models.__dict__[name])
+    ) + timm.list_models()
+
+
+def get_model(model_name, pretrain=True):
+    if model_name in models.__dict__:
+        # load models from common.vision.models
+        backbone = models.__dict__[model_name](pretrained=pretrain)
+    else:
+        # load models from pytorch-image-models
+        backbone = timm.create_model(model_name, pretrained=pretrain)
+        try:
+            backbone.out_features = backbone.get_classifier().in_features
+            backbone.reset_classifier(0, '')
+        except:
+            backbone.out_features = backbone.head.in_features
+            backbone.head = nn.Identity()
+    return backbone
