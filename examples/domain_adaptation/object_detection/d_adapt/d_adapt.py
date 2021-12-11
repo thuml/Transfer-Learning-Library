@@ -111,6 +111,7 @@ def train(model, logger, cfg, args, args_cls):
     cache_proposal_root = os.path.join(cfg.OUTPUT_DIR, "cache", "proposal")
     prop_s_fg, prop_s_bg = generate_proposals(model, len(classes), args.sources, cache_proposal_root, cfg)
     prop_t_fg, prop_t_bg = generate_proposals(model, len(classes), args.targets, cache_proposal_root, cfg)
+    model = model.to(torch.device('cpu'))
 
     # train the category adaptor
     category_adaptor = category_adaptation.CategoryAdaptor(classes, os.path.join(cfg.OUTPUT_DIR, "cls"), args_cls)
@@ -128,7 +129,9 @@ def train(model, logger, cfg, args, args_cls):
     prop_t_bg_w_category = generate_cateogry_labels(
         prop_t_bg, category_adaptor, os.path.join(cache_feedback_root, "{}_bg.json".format(args.targets[0]))
     )
+    category_adaptor.model.to(torch.device("cpu"))
 
+    model = model.to(torch.device(cfg.MODEL.DEVICE))
     # Data loading code
     train_source_dataset = get_detection_dataset_dicts(args.sources)
     train_source_loader = build_detection_train_loader(dataset=train_source_dataset, cfg=cfg)

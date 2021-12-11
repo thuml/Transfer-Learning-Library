@@ -235,6 +235,7 @@ class CategoryAdaptor:
 
         print("best_acc1 = {:3.1f}".format(best_acc1))
         self.model = classifier
+        domain_adv.to(torch.device("cpu"))
 
     def predict(self, data_loader):
         # switch to evaluate mode
