@@ -8,7 +8,6 @@ import argparse
 import sys
 import pprint
 import numpy as np
-import copy
 
 import torch
 from torch.nn.parallel import DistributedDataParallel
@@ -34,6 +33,7 @@ import utils
 
 sys.path.append('.')
 import category_adaptation
+import bbox_adaptation
 
 
 def generate_proposals(model, num_classes, dataset_names, cache_root, cfg):
@@ -51,19 +51,45 @@ def generate_proposals(model, num_classes, dataset_names, cache_root, cfg):
     return fg_proposals_list, bg_proposals_list
 
 
-def generate_cateogry_labels(prop, category_adaptor, cache_filename):
-    prop_w_category = copy.deepcopy(prop)
-    prop_w_category.filename = cache_filename
+def generate_category_labels(prop, category_adaptor, cache_filename):
+    prop_w_category = PersistentProposalList(cache_filename)
     if not prop_w_category.load():
+        for p in prop:
+            prop_w_category.append(p)
+            # if ignored_scores_test is not None:
+            #     assert len(ignored_scores_test) == 2 and ignored_scores_test[0] <= ignored_scores_test[1], \
+            #         "Please provide a range for ignored_scores!"
+            #     keep_indices = ~((ignored_scores_test[0] < p.pred_scores)
+            #                      & (p.pred_scores < ignored_scores_test[1]))
+            #     prop_w_category.append(p[keep_indices])
+            # else:
+            #     prop_w_category.append(p)
+
         data_loader_test = category_adaptor.prepare_test_data(flatten(prop_w_category))
         predictions = category_adaptor.predict(data_loader_test)
         for p in prop_w_category:
             p.pred_classes = np.array([predictions.popleft() for _ in range(len(p))])
-        prop.flush()
+        prop_w_category.flush()
     return prop_w_category
 
 
-def train(model, logger, cfg, args, args_cls):
+def generate_bounding_box_labels(prop, bbox_adaptor, class_names, cache_filename):
+    prop_w_bbox = PersistentProposalList(cache_filename)
+    if not prop_w_bbox.load():
+        # remove (predicted) background proposals
+        for p in prop:
+            keep_indices = (0 <= p.pred_classes) & (p.pred_classes < len(class_names))
+            prop_w_bbox.append(p[keep_indices])
+
+        data_loader_test = bbox_adaptor.prepare_test_data(flatten(prop_w_bbox))
+        predictions = bbox_adaptor.predict(data_loader_test)
+        for p in prop_w_bbox:
+            p.pred_boxes = np.array([predictions.popleft() for _ in range(len(p))])
+        prop_w_bbox.flush()
+    return prop_w_bbox
+
+
+def train(model, logger, cfg, args, args_cls, args_box):
     model.train()
     distributed = comm.get_world_size() > 1
     if distributed:
@@ -109,8 +135,8 @@ def train(model, logger, cfg, args, args_cls):
     # generate proposals from detector
     classes = MetadataCatalog.get(args.targets[0]).thing_classes
     cache_proposal_root = os.path.join(cfg.OUTPUT_DIR, "cache", "proposal")
-    prop_s_fg, prop_s_bg = generate_proposals(model, len(classes), args.sources, cache_proposal_root, cfg)
     prop_t_fg, prop_t_bg = generate_proposals(model, len(classes), args.targets, cache_proposal_root, cfg)
+    prop_s_fg, prop_s_bg = generate_proposals(model, len(classes), args.sources, cache_proposal_root, cfg)
     model = model.to(torch.device('cpu'))
 
     # train the category adaptor
@@ -118,24 +144,51 @@ def train(model, logger, cfg, args, args_cls):
     if not category_adaptor.load_checkpoint():
         data_loader_source = category_adaptor.prepare_training_data(prop_s_fg + prop_s_bg, True)
         data_loader_target = category_adaptor.prepare_training_data(prop_t_fg + prop_t_bg, False)
-        data_loader_validation = category_adaptor.prepare_validation_data(prop_s_fg + prop_t_bg)
+        data_loader_validation = category_adaptor.prepare_validation_data(prop_t_fg + prop_t_bg)
         category_adaptor.fit(data_loader_source, data_loader_target, data_loader_validation)
+
+    # data_loader_validation = category_adaptor.prepare_validation_data(prop_t_fg + prop_t_bg)
+    # category_adaptor.validate(data_loader_validation, category_adaptor.model, category_adaptor.class_names, category_adaptor.args)
 
     # generate category labels for each proposals
     cache_feedback_root = os.path.join(cfg.OUTPUT_DIR, "cache", "feedback")
-    prop_t_fg_w_category = generate_cateogry_labels(
+    prop_t_fg = generate_category_labels(
         prop_t_fg, category_adaptor, os.path.join(cache_feedback_root, "{}_fg.json".format(args.targets[0]))
     )
-    prop_t_bg_w_category = generate_cateogry_labels(
+    prop_t_bg = generate_category_labels(
         prop_t_bg, category_adaptor, os.path.join(cache_feedback_root, "{}_bg.json".format(args.targets[0]))
     )
     category_adaptor.model.to(torch.device("cpu"))
+
+    if args.bbox_refine:
+        # train the bbox adaptor
+        bbox_adaptor = bbox_adaptation.BoundingBoxAdaptor(classes, os.path.join(cfg.OUTPUT_DIR, "bbox"), args_box)
+        if not bbox_adaptor.load_checkpoint():
+            data_loader_source = bbox_adaptor.prepare_training_data(prop_s_fg, True)
+            data_loader_target = bbox_adaptor.prepare_training_data(prop_t_fg, False)
+            data_loader_validation = bbox_adaptor.prepare_validation_data(prop_t_fg)
+            bbox_adaptor.validate_baseline(data_loader_validation)
+            bbox_adaptor.fit(data_loader_source, data_loader_target, data_loader_validation)
+
+        # generate bounding box labels for each proposals
+        cache_feedback_root = os.path.join(cfg.OUTPUT_DIR, "cache", "feedback_bbox")
+        prop_t_fg_refined = generate_bounding_box_labels(
+            prop_t_fg, bbox_adaptor, classes,
+            os.path.join(cache_feedback_root, "{}_fg.json".format(args.targets[0]))
+        )
+        prop_t_bg_refined = generate_bounding_box_labels(
+            prop_t_bg, bbox_adaptor, classes,
+            os.path.join(cache_feedback_root, "{}_bg.json".format(args.targets[0]))
+        )
+        prop_t_fg += prop_t_fg_refined
+        prop_t_bg += prop_t_bg_refined
+        bbox_adaptor.model.to(torch.device("cpu"))
 
     model = model.to(torch.device(cfg.MODEL.DEVICE))
     # Data loading code
     train_source_dataset = get_detection_dataset_dicts(args.sources)
     train_source_loader = build_detection_train_loader(dataset=train_source_dataset, cfg=cfg)
-    train_target_dataset = get_detection_dataset_dicts(args.targets, proposals_list=prop_t_fg_w_category+prop_t_bg_w_category)
+    train_target_dataset = get_detection_dataset_dicts(args.targets, proposals_list=prop_t_fg+prop_t_bg)
 
     mapper = DatasetMapper(cfg, precomputed_proposal_topk=1000, augmentations=utils.build_augmentation(cfg, True))
     train_target_loader = build_detection_train_loader(dataset=train_target_dataset, cfg=cfg, mapper=mapper,
@@ -159,8 +212,8 @@ def train(model, logger, cfg, args, args_cls):
 
             # compute losses and gradient on target domain
             loss_dict_t = model(data_t, labeled=False)
-            # losses_t = sum(loss_dict_t.values())
-            losses_t = loss_dict_t['loss_cls']
+            losses_t = sum(loss_dict_t.values())
+            # losses_t = loss_dict_t['loss_cls']
             assert torch.isfinite(losses_t).all()
 
             loss_dict_reduced_t = {"{}_t".format(k): v.item() for k, v in comm.reduce_dict(loss_dict_t).items()}
@@ -191,7 +244,7 @@ def train(model, logger, cfg, args, args_cls):
             periodic_checkpointer.step(iteration)
 
 
-def main(args, args_cls):
+def main(args, args_cls, args_box):
     logger = logging.getLogger("detectron2")
     cfg = utils.setup(args)
 
@@ -212,7 +265,7 @@ def main(args, args_cls):
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False
         )
 
-    train(model, logger, cfg, args, args_cls)
+    train(model, logger, cfg, args, args_cls, args_box)
 
     # evaluate on validation set
     return utils.validate(model, logger, cfg, args)
@@ -223,26 +276,37 @@ if __name__ == "__main__":
     print("Category Adaptation Args:")
     pprint.pprint(args_cls)
 
+    args_box, argv = bbox_adaptation.BoundingBoxAdaptor.get_parser().parse_known_args(args=argv)
+    print("Bounding Box Adaptation Args:")
+    pprint.pprint(args_box)
+
     parser = argparse.ArgumentParser(add_help=True)
     # dataset parameters
     parser.add_argument('-s', '--sources', nargs='+', help='source domain(s)')
     parser.add_argument('-t', '--targets', nargs='+', help='target domain(s)')
     parser.add_argument('--test', nargs='+', help='test domain(s)')
+    parser.add_argument('--ignore-score-test', type=float, nargs='+', default=None)
     # model parameters
-    parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller learning rate for backbone')
+    parser.add_argument('--finetune', action='store_true',
+                        help='whether use 10x smaller learning rate for backbone')
     parser.add_argument(
         "--resume",
         action="store_true",
         help="Whether to attempt to resume from the checkpoint directory. "
              "See documentation of `DefaultTrainer.resume_or_load()` for what it means.",
     )
-    parser.add_argument('--trade-off', default=1., type=float, help='trade-off hyper-parameter for losses on target domain')
+    parser.add_argument('--trade-off', default=1., type=float,
+                        help='trade-off hyper-parameter for losses on target domain')
+    parser.add_argument('--ignored-scores-test-c', type=float, nargs='+', default=None)
+    parser.add_argument('--bbox-refine', action='store_true',
+                        help='whether perform bounding box refinement')
     # training parameters
     parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
     parser.add_argument("--eval-only", action="store_true", help="perform evaluation only")
     parser.add_argument("--num-gpus", type=int, default=1, help="number of gpus *per machine*")
     parser.add_argument("--num-machines", type=int, default=1, help="total number of machines")
-    parser.add_argument("--machine-rank", type=int, default=0, help="the rank of this machine (unique per machine)")
+    parser.add_argument("--machine-rank", type=int, default=0,
+                        help="the rank of this machine (unique per machine)")
     # PyTorch still may leave orphan processes in multi-gpu training.
     # Therefore we use a deterministic way to obtain port,
     # so that users are aware of orphan processes by seeing the port occupied.
@@ -275,5 +339,5 @@ if __name__ == "__main__":
         num_machines=args.num_machines,
         machine_rank=args.machine_rank,
         dist_url=args.dist_url,
-        args=(args, args_cls,),
+        args=(args, args_cls, args_box),
     )

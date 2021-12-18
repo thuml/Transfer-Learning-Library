@@ -127,7 +127,7 @@ class ProposalGenerator(DatasetEvaluator):
             else:
                 gt_ious, gt_classes_idx = pairwise_iou(pred_boxes, gt_boxes).max(dim=1)
                 gt_classes = input_instance.gt_classes[gt_classes_idx]
-                proposal.gt_fg_classes = gt_classes.numpy()
+                proposal.gt_fg_classes = copy.deepcopy(gt_classes.numpy())
                 gt_classes[gt_ious <= self.iou_threshold[0]] = self.num_classes  # background classes
                 gt_classes[(self.iou_threshold[0] < gt_ious) & (gt_ious <= self.iou_threshold[1])] = -1  # ignore
                 proposal.gt_classes = gt_classes.numpy()
@@ -189,7 +189,6 @@ class Proposal:
     def __str__(self):
         pp = pprint.PrettyPrinter(indent=2)
         return pp.pformat(self.to_dict())
-        # return self.to_dict().__str__()
 
     def __len__(self):
         return len(self.pred_boxes)
@@ -241,7 +240,6 @@ class PersistentProposalList(list):
     def __init__(self, filename=None):
         super(PersistentProposalList, self).__init__()
         self.filename = filename
-        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
 
     def load(self):
         """
@@ -262,6 +260,7 @@ class PersistentProposalList(list):
         """
         Flush to cache.
         """
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
         with open(self.filename, "w") as f:
             json.dump(self, f, cls=ProposalEncoder)
         print("Write to cache: {}".format(self.filename))
@@ -291,11 +290,13 @@ class ProposalDataset(datasets.VisionDataset):
         proposal_list (list): list of Proposal
         transform (callable, optional): A function/transform that  takes in an PIL image
             and returns a transformed version. E.g, ``transforms.RandomCrop``
+        crop_func: (ExpandCrop, optional):
     """
-    def __init__(self, proposal_list: List[Proposal], transform: Optional[Callable] = None):
+    def __init__(self, proposal_list: List[Proposal], transform: Optional[Callable] = None, crop_func=None):
         super(ProposalDataset, self).__init__("", transform=transform)
         self.proposal_list = list(filter(lambda p: len(p) > 0, proposal_list))  # remove images without proposals
         self.loader = default_loader
+        self.crop_func = crop_func
 
     def __getitem__(self, index: int):
         # get proposals for the index-th image
@@ -304,20 +305,51 @@ class ProposalDataset(datasets.VisionDataset):
 
         # random sample a proposal
         proposal = proposals[random.randint(0, len(proposals)-1)]
-        proposal.width = img.width
-        proposal.height = img.height
+        image_width, image_height = img.width, img.height
+        # proposal_dict = proposal.to_dict()
+        # proposal_dict.update(width=img.width, height=img.height)
 
         # crop the proposal from the whole image
         x1, y1, x2, y2 = proposal.pred_boxes
         top, left, height, width = int(y1), int(x1), int(y2 - y1), int(x2 - x1)
+        if self.crop_func is not None:
+            top, left, height, width = self.crop_func(img, top, left, height, width)
         img = crop(img, top, left, height, width)
 
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, proposal.to_dict()
+        return img, {
+            "image_id": proposal.image_id,
+            "filename": proposal.filename,
+            "pred_boxes": proposal.pred_boxes.astype(np.float),
+            "pred_classes": proposal.pred_classes.astype(np.long),
+            "pred_scores": proposal.pred_scores.astype(np.float),
+            "gt_classes": proposal.gt_classes.astype(np.long),
+            "gt_boxes": proposal.gt_boxes.astype(np.float),
+            "gt_ious": proposal.gt_ious.astype(np.float),
+            "gt_fg_classes": proposal.gt_fg_classes.astype(np.long),
+            "width": image_width,
+            "height": image_height
+        }
 
     def __len__(self):
         return len(self.proposal_list)
 
 
+class ExpandCrop:
+    """
+    The input of the bounding box adaptor (the crops of objects) will be larger than the original
+    predicted box, so that the bounding box adapter could access more location information.
+    """
+    def __init__(self, expand=1.):
+        self.expand = expand
+
+    def __call__(self, img, top, left, height, width):
+        cx = left + width / 2.
+        cy = top + height / 2.
+        height = round(height * self.expand)
+        width = round(width * self.expand)
+        new_top = round(cy - height / 2.)
+        new_left = round(cx - width / 2.)
+        return new_top, new_left, height, width

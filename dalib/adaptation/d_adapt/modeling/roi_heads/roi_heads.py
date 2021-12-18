@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
@@ -9,6 +9,7 @@ from detectron2.layers import ShapeSpec, batched_nms
 from detectron2.modeling.roi_heads import (
     ROI_HEADS_REGISTRY,
     Res5ROIHeads,
+    StandardROIHeads
 )
 from detectron2.modeling.roi_heads.fast_rcnn import fast_rcnn_inference
 from detectron2.modeling.sampling import subsample_labels
@@ -111,6 +112,8 @@ class DecoupledRes5ROIHeads(Res5ROIHeads):
         if self.training:
             del features
             losses = self.box_predictor.losses(predictions, proposals)
+            if not labeled:
+                losses.pop("loss_box_reg")
             return [], [], losses
         else:
             pred_instances, _ = self.box_predictor.inference(predictions, proposals)
@@ -154,6 +157,217 @@ class DecoupledRes5ROIHeads(Res5ROIHeads):
                 `Instances` contains the feedback of per-instance annotations
                 for the i-th input image.  Specify `feedbacks` during training only.
                 It have the same fields as `targets`.
+
+        Returns:
+            list[Instances]:
+                length `N` list of `Instances`s containing the proposals
+                sampled for training. Each `Instances` has the following fields:
+
+                - proposal_boxes: the proposal boxes
+                - gt_boxes: the ground-truth box that the proposal is assigned to
+                  (this is only meaningful if the proposal has a label > 0; if label = 0
+                  then the ground-truth box is random)
+
+                Other fields such as "gt_classes", "gt_masks", that's included in `targets`.
+        """
+
+        proposals_with_gt = []
+
+        num_fg_samples = []
+        num_bg_samples = []
+        for feedbacks_per_image in feedbacks:
+            gt_classes = feedbacks_per_image.gt_classes
+            positive = nonzero_tuple((gt_classes != -1) & (gt_classes != self.num_classes))[0]
+            # ensure each batch consists the same number bg and fg boxes
+            batch_size = min(batch_size_per_image, max(2 * positive.numel(), 1))
+            sampled_fg_idxs, sampled_bg_idxs = subsample_labels(
+                gt_classes, batch_size, self.positive_fraction, self.num_classes
+            )
+
+            sampled_idxs = torch.cat([sampled_fg_idxs, sampled_bg_idxs], dim=0)
+            gt_classes = gt_classes[sampled_idxs]
+
+            # Set target attributes of the sampled proposals:
+            proposals_per_image = feedbacks_per_image[sampled_idxs]
+            proposals_per_image.gt_classes = gt_classes
+
+            num_bg_samples.append((gt_classes == self.num_classes).sum().item())
+            num_fg_samples.append(gt_classes.numel() - num_bg_samples[-1])
+            proposals_with_gt.append(proposals_per_image)
+
+        # Log the number of fg/bg samples that are selected for training ROI heads
+        storage = get_event_storage()
+        storage.put_scalar("roi_head_pseudo/num_fg_samples", np.mean(num_fg_samples))
+        storage.put_scalar("roi_head_pseudo/num_bg_samples", np.mean(num_bg_samples))
+
+        return proposals_with_gt
+
+
+@ROI_HEADS_REGISTRY.register()
+class DecoupledStandardROIHeads(StandardROIHeads):
+    """
+    The Standard ROIHeads used by most models, such as FPN and C5.
+    It's "standard" in a sense that there is no ROI transform sharing
+    or feature sharing between tasks.
+    Each head independently processes the input features by each head's
+    own pooler and head.
+
+    It typically contains logic to
+
+      1. when training on labeled source domain, match proposals with ground truth and sample them
+      2. when training on unlabeled target domain, match proposals with feedbacks from adaptors and sample them
+      3. crop the regions and extract per-region features using proposals
+      4. make per-region predictions with different heads
+    """
+    def __init__(self, *args, **kwargs):
+        super(DecoupledStandardROIHeads, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        # fmt: off
+        ret = super().from_config(cfg, input_shape)
+        box_predictor = DecoupledFastRCNNOutputLayers(cfg, ret['box_head'].output_shape)
+        ret["box_predictor"] = box_predictor
+        return ret
+
+    def forward(self, images, features, proposals, targets=None, feedbacks=None, labeled=True):
+        """
+        Prepare some proposals to be used to train the ROI heads.
+        When training on labeled source domain, it performs box matching between `proposals` and `targets`, and assigns
+        training labels to the proposals.
+        When training on unlabeled target domain, it performs box matching between `proposals` and `feedbacks`, and assigns
+        training labels to the proposals.
+        It returns ``self.batch_size_per_image`` random samples from proposals and groundtruth
+        boxes, with a fraction of positives that is no larger than
+        ``self.positive_fraction``.
+
+        Args:
+            images (ImageList):
+            features (dict[str,Tensor]): input data as a mapping from feature
+                map name to tensor. Axis 0 represents the number of images `N` in
+                the input data; axes 1-3 are channels, height, and width, which may
+                vary between feature maps (e.g., if a feature pyramid is used).
+            proposals (list[Instances]): length `N` list of `Instances`. The i-th
+                `Instances` contains object proposals for the i-th input image,
+                with fields "proposal_boxes" and "objectness_logits".
+            targets (list[Instances], optional): length `N` list of `Instances`. The i-th
+                `Instances` contains the ground-truth per-instance annotations
+                for the i-th input image.  Specify `targets` during training only.
+                It may have the following fields:
+
+                - gt_boxes: the bounding box of each instance.
+                - gt_classes: the label for each instance with a category ranging in [0, #class].
+                - gt_masks: PolygonMasks or BitMasks, the ground-truth masks of each instance.
+                - gt_keypoints: NxKx3, the groud-truth keypoints for each instance.
+            feedbacks (list[Instances], optional): length `N` list of `Instances`. The i-th
+                `Instances` contains the feedback of per-instance annotations
+                for the i-th input image.  Specify `feedbacks` during training only.
+                It have the same fields as `targets`.
+            labeled (bool, optional): whether has ground-truth label
+
+        Returns:
+            tuple[list[Instances], list[Instances], dict]:
+                a tuple containing foreground proposals (`Instances`), background proposals (`Instances`) and a dict of different losses.
+
+            Each `Instances` has the following fields:
+
+                - proposal_boxes: the proposal boxes
+                - gt_boxes: the ground-truth box that the proposal is assigned to
+                  (this is only meaningful if the proposal has a label > 0; if label = 0
+                  then the ground-truth box is random)
+
+                Other fields such as "gt_classes", "gt_masks", that's included in `targets`.
+        """
+        del images
+
+        if self.training:
+            assert targets
+            if labeled:
+                proposals = self.label_and_sample_proposals(proposals, targets)
+            else:
+                proposals = self.label_and_sample_feedbacks(feedbacks)
+            del targets
+
+        if self.training:
+            losses = self._forward_box(features, proposals)
+            # Usually the original proposals used by the box head are used by the mask, keypoint
+            # heads. But when `self.train_on_pred_boxes is True`, proposals will contain boxes
+            # predicted by the box head.
+            losses.update(self._forward_mask(features, proposals))
+            losses.update(self._forward_keypoint(features, proposals))
+
+            if not labeled:
+                losses.pop('loss_box_reg')
+            return [], [], losses
+        else:
+            pred_instances, predictions = self._forward_box(features, proposals)
+            scores = self.box_predictor.predict_probs(predictions, proposals)
+            image_shapes = [x.image_size for x in proposals]
+            proposal_boxes = [x.proposal_boxes for x in proposals]
+            background_instances, _ = fast_rcnn_sample_background(
+                [box.tensor for box in proposal_boxes],
+                scores,
+                image_shapes,
+                self.box_predictor.test_score_thresh,
+                self.box_predictor.test_nms_thresh,
+                self.box_predictor.test_topk_per_image,
+            )
+            pred_instances = self.forward_with_given_boxes(features, pred_instances)
+            background_instances = self.forward_with_given_boxes(features, background_instances)
+            return pred_instances, background_instances, {}
+
+    def _forward_box(self, features: Dict[str, torch.Tensor], proposals: List[Instances]):
+        """
+        Forward logic of the box prediction branch. If `self.train_on_pred_boxes is True`,
+            the function puts predicted boxes in the `proposal_boxes` field of `proposals` argument.
+
+        Args:
+            features (dict[str, Tensor]): mapping from feature map names to tensor.
+                Same as in :meth:`ROIHeads.forward`.
+            proposals (list[Instances]): the per-image object proposals with
+                their matching ground truth.
+                Each has fields "proposal_boxes", and "objectness_logits",
+                "gt_classes", "gt_boxes".
+
+        Returns:
+            In training, a dict of losses.
+            In inference, a list of `Instances`, the predicted instances.
+        """
+        features = [features[f] for f in self.box_in_features]
+        box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals])
+        box_features = self.box_head(box_features)
+        predictions = self.box_predictor(box_features)
+        del box_features
+
+        if self.training:
+            losses = self.box_predictor.losses(predictions, proposals)
+            # proposals is modified in-place below, so losses must be computed first.
+            if self.train_on_pred_boxes:
+                with torch.no_grad():
+                    pred_boxes = self.box_predictor.predict_boxes_for_gt_classes(
+                        predictions, proposals
+                    )
+                    for proposals_per_image, pred_boxes_per_image in zip(proposals, pred_boxes):
+                        proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
+            return losses
+        else:
+            pred_instances, _ = self.box_predictor.inference(predictions, proposals)
+            return pred_instances, predictions
+
+    @torch.no_grad()
+    def label_and_sample_feedbacks(
+            self, feedbacks, batch_size_per_image=256
+    ) -> List[Instances]:
+        """
+        Prepare some proposals to be used to train the ROI heads.
+        It performs box matching between `proposals` and `targets`, and assigns
+        training labels to the proposals.
+        It returns ``self.batch_size_per_image`` random samples from proposals and groundtruth
+        boxes, with a fraction of positives that is no larger than
+        ``self.positive_fraction``.
+
+        Args:
+            See :meth:`ROIHeads.forward`
 
         Returns:
             list[Instances]:

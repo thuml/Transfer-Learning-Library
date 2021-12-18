@@ -11,6 +11,7 @@ import argparse
 import os.path as osp
 from collections import deque
 import tqdm
+from typing import List
 
 import torch
 from torch import Tensor
@@ -25,7 +26,7 @@ import torch.nn.functional as F
 sys.path.append('../../../..')
 from dalib.modules.domain_discriminator import DomainDiscriminator
 from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
-from dalib.adaptation.d_adapt.proposal import ProposalDataset, PersistentProposalList, flatten
+from dalib.adaptation.d_adapt.proposal import ProposalDataset, flatten, Proposal
 from common.utils.data import ForeverDataIterator
 from common.utils.metric import accuracy, ConfusionMatrix
 from common.utils.meter import AverageMeter, ProgressMeter
@@ -39,6 +40,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class ConfidenceBasedDataSelector:
+    """Select data point based on confidence"""
     def __init__(self, confidence_ratio=0.1, category_names=()):
         self.confidence_ratio = confidence_ratio
         self.categories = []
@@ -56,9 +58,11 @@ class ConfidenceBasedDataSelector:
             per_category_scores[c].append(s)
 
         per_category_thresholds = {}
+        print(per_category_scores.keys())
         for c, s in per_category_scores.items():
             s.sort(reverse=True)
-            per_category_thresholds[c] = s[int(self.confidence_ratio * len(s))]
+            print(c, len(s), int(self.confidence_ratio * len(s)))
+            per_category_thresholds[c] = s[int(self.confidence_ratio * len(s))] if len(s) else 1.
 
         print('----------------------------------------------------')
         print("confidence threshold for each category:")
@@ -74,6 +78,7 @@ class ConfidenceBasedDataSelector:
 
 
 class RobustCrossEntropyLoss(nn.CrossEntropyLoss):
+    """Cross-entropy that's robust to label noise"""
     def __init__(self, *args, offset=0.1, **kwargs):
         self.offset = offset
         super(RobustCrossEntropyLoss, self).__init__(*args, **kwargs)
@@ -86,10 +91,10 @@ class RobustCrossEntropyLoss(nn.CrossEntropyLoss):
 class CategoryAdaptor:
     def __init__(self, class_names, log, args):
         self.class_names = class_names
-        print(self.class_names)
         for k, v in args._get_kwargs():
             setattr(args, k.rstrip("_c"), v)
         self.args = args
+        print(self.args)
         self.logger = CompleteLogger(log)
         self.selector = ConfidenceBasedDataSelector(self.args.confidence_ratio, range(len(self.class_names) + 1))
 
@@ -109,13 +114,15 @@ class CategoryAdaptor:
         else:
             return False
 
-    def prepare_training_data(self, proposal_list: PersistentProposalList, labeled=True):
+    def prepare_training_data(self, proposal_list: List[Proposal], labeled=True):
         if not labeled:
             # remove proposals with confidence score between (ignored_scores[0], ignored_scores[1])
             filtered_proposals_list = []
-            assert len(self.args.ignored_scores) == 2 and self.args.ignored_scores[0] <= self.args.ignored_scores[1], "Please provide a range for ignored_scores!"
+            assert len(self.args.ignored_scores) == 2 and self.args.ignored_scores[0] <= self.args.ignored_scores[1], \
+                "Please provide a range for ignored_scores!"
             for proposals in proposal_list:
-                keep_indices = ~((self.args.ignored_scores[0] < proposals.pred_scores) & (proposals.pred_scores < self.args.ignored_scores[1]))
+                keep_indices = ~((self.args.ignored_scores[0] < proposals.pred_scores)
+                                 & (proposals.pred_scores < self.args.ignored_scores[1]))
                 filtered_proposals_list.append(proposals[keep_indices])
 
             # calculate confidence threshold for each cateogry on the target domain
@@ -126,7 +133,9 @@ class CategoryAdaptor:
             # remove proposals with ignored classes
             filtered_proposals_list = []
             for proposals in proposal_list:
-                keep_indices = proposals.gt_classes != -1
+                keep_indices = (proposals.gt_classes != -1) & \
+                               ~((self.args.ignored_ious[0] < proposals.gt_ious) &
+                                 (proposals.gt_ious < self.args.ignored_ious[1]))
                 filtered_proposals_list.append(proposals[keep_indices])
 
         filtered_proposals_list = flatten(filtered_proposals_list, self.args.max_train)
@@ -146,7 +155,7 @@ class CategoryAdaptor:
                                 shuffle=True, num_workers=self.args.workers, drop_last=True)
         return dataloader
 
-    def prepare_validation_data(self, proposal_list: PersistentProposalList):
+    def prepare_validation_data(self, proposal_list: List[Proposal]):
         normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         transform = T.Compose([
             ResizeImage(self.args.resize_size),
@@ -166,7 +175,7 @@ class CategoryAdaptor:
                                 shuffle=False, num_workers=self.args.workers, drop_last=False)
         return dataloader
 
-    def prepare_test_data(self, proposal_list: PersistentProposalList):
+    def prepare_test_data(self, proposal_list: List[Proposal]):
         normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         transform = T.Compose([
             ResizeImage(self.args.resize_size),
@@ -180,6 +189,7 @@ class CategoryAdaptor:
         return dataloader
 
     def fit(self, data_loader_source, data_loader_target, data_loader_validation=None):
+        """When no labels exists on target domain, please set data_loader_validation=None"""
         args = self.args
         if args.seed is not None:
             random.seed(args.seed)
@@ -196,16 +206,16 @@ class CategoryAdaptor:
         iter_source = ForeverDataIterator(data_loader_source)
         iter_target = ForeverDataIterator(data_loader_target)
 
-        classifier = self.model
-        classifier_feature_dim = classifier.features_dim
+        model = self.model
+        feature_dim = model.features_dim
         num_classes = len(self.class_names) + 1
 
         if args.randomized:
             domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024).to(device)
         else:
-            domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
+            domain_discri = DomainDiscriminator(feature_dim * num_classes, hidden_size=1024).to(device)
 
-        all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+        all_parameters = model.get_parameters() + domain_discri.get_parameters()
         # define optimizer and lr scheduler
         optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
         lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
@@ -213,7 +223,7 @@ class CategoryAdaptor:
         # define loss function
         domain_adv = ConditionalDomainAdversarialLoss(
             domain_discri, entropy_conditioning=args.entropy,
-            num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized,
+            num_classes=num_classes, features_dim=feature_dim, randomized=args.randomized,
             randomized_dim=args.randomized_dim
         ).to(device)
 
@@ -222,20 +232,88 @@ class CategoryAdaptor:
         for epoch in range(args.epochs):
             print("lr:", lr_scheduler.get_last_lr()[0])
             # train for one epoch
-            self.train(iter_source, iter_target, classifier, domain_adv, self.selector, optimizer,
-                  lr_scheduler, epoch, args)
+            batch_time = AverageMeter('Time', ':3.1f')
+            data_time = AverageMeter('Data', ':3.1f')
+            losses = AverageMeter('Loss', ':3.2f')
+            losses_t = AverageMeter('Loss(t)', ':3.2f')
+            trans_losses = AverageMeter('Trans Loss', ':3.2f')
+            cls_accs = AverageMeter('Cls Acc', ':3.1f')
+            domain_accs = AverageMeter('Domain Acc', ':3.1f')
+            progress = ProgressMeter(
+                args.iters_per_epoch,
+                [batch_time, data_time, losses, losses_t, trans_losses, cls_accs, domain_accs],
+                prefix="Epoch: [{}]".format(epoch))
+
+            # switch to train mode
+            model.train()
+            domain_adv.train()
+
+            end = time.time()
+            for i in range(args.iters_per_epoch):
+                x_s, labels_s = next(iter_source)
+                x_t, labels_t = next(iter_target)
+
+                # assign pseudo labels for target-domain proposals with extremely high confidence
+                selected = torch.tensor(
+                    self.selector.whether_select(
+                        labels_t['pred_classes'].numpy().tolist(),
+                        labels_t['pred_scores'].numpy().tolist()
+                    )
+                )
+                pseudo_classes_t = selected * labels_t['pred_classes'] + (~selected) * -1
+                pseudo_classes_t = pseudo_classes_t.to(device)
+
+                x_s = x_s.to(device)
+                x_t = x_t.to(device)
+                gt_classes_s = labels_s['gt_classes'].to(device)
+
+                # measure data loading time
+                data_time.update(time.time() - end)
+
+                # compute output
+                x = torch.cat((x_s, x_t), dim=0)
+                y, f = model(x)
+                y_s, y_t = y.chunk(2, dim=0)
+                f_s, f_t = f.chunk(2, dim=0)
+
+                cls_loss = F.cross_entropy(y_s, gt_classes_s, ignore_index=-1)
+                cls_loss_t = RobustCrossEntropyLoss(ignore_index=-1, offset=args.epsilon)(y_t, pseudo_classes_t)
+                transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
+                domain_acc = domain_adv.domain_discriminator_accuracy
+                loss = cls_loss + transfer_loss * args.trade_off + cls_loss_t
+
+                cls_acc = accuracy(y_s, gt_classes_s)[0]
+
+                losses.update(loss.item(), x_s.size(0))
+                cls_accs.update(cls_acc, x_s.size(0))
+                domain_accs.update(domain_acc, x_s.size(0))
+                trans_losses.update(transfer_loss.item(), x_s.size(0))
+                losses_t.update(cls_loss_t.item(), x_s.size(0))
+
+                # compute gradient and do SGD step
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
+
+                # measure elapsed time
+                batch_time.update(time.time() - end)
+                end = time.time()
+
+                if i % args.print_freq == 0:
+                    progress.display(i)
 
             # evaluate on validation set
             if data_loader_validation is not None:
-                acc1 = self.validate(data_loader_validation, classifier, self.class_names, args)
+                acc1 = self.validate(data_loader_validation, model, self.class_names, args)
                 best_acc1 = max(acc1, best_acc1)
 
             # save checkpoint
-            torch.save(classifier.state_dict(), self.logger.get_checkpoint_path('latest'))
+            torch.save(model.state_dict(), self.logger.get_checkpoint_path('latest'))
 
         print("best_acc1 = {:3.1f}".format(best_acc1))
-        self.model = classifier
         domain_adv.to(torch.device("cpu"))
+        self.logger.logger.flush()
 
     def predict(self, data_loader):
         # switch to evaluate mode
@@ -296,81 +374,6 @@ class CategoryAdaptor:
         return top1.avg
 
     @staticmethod
-    def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-              domain_adv: ConditionalDomainAdversarialLoss, selector: ConfidenceBasedDataSelector, optimizer: SGD,
-              lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
-        batch_time = AverageMeter('Time', ':3.1f')
-        data_time = AverageMeter('Data', ':3.1f')
-        losses = AverageMeter('Loss', ':3.2f')
-        losses_t = AverageMeter('Loss(t)', ':3.2f')
-        trans_losses = AverageMeter('Trans Loss', ':3.2f')
-        cls_accs = AverageMeter('Cls Acc', ':3.1f')
-        domain_accs = AverageMeter('Domain Acc', ':3.1f')
-        progress = ProgressMeter(
-            args.iters_per_epoch,
-            [batch_time, data_time, losses, losses_t, trans_losses, cls_accs, domain_accs],
-            prefix="Epoch: [{}]".format(epoch))
-
-        # switch to train mode
-        model.train()
-        domain_adv.train()
-
-        end = time.time()
-        for i in range(args.iters_per_epoch):
-            x_s, labels_s = next(train_source_iter)
-            x_t, labels_t = next(train_target_iter)
-
-            # assign pseudo labels for target-domain proposals with extremely high confidence
-            selected = torch.tensor(
-                selector.whether_select(
-                    labels_t['pred_classes'].numpy().tolist(),
-                    labels_t['pred_scores'].numpy().tolist()
-                )
-            )
-            pseudo_classes_t = selected * labels_t['pred_classes'] + (~selected) * -1
-            pseudo_classes_t = pseudo_classes_t.to(device)
-
-            x_s = x_s.to(device)
-            x_t = x_t.to(device)
-            gt_classes_s = labels_s['gt_classes'].to(device)
-
-            # measure data loading time
-            data_time.update(time.time() - end)
-
-            # compute output
-            x = torch.cat((x_s, x_t), dim=0)
-            y, f = model(x)
-            y_s, y_t = y.chunk(2, dim=0)
-            f_s, f_t = f.chunk(2, dim=0)
-
-            cls_loss = F.cross_entropy(y_s, gt_classes_s, ignore_index=-1)
-            cls_loss_t = RobustCrossEntropyLoss(ignore_index=-1, offset=args.epsilon)(y_t, pseudo_classes_t)
-            transfer_loss = domain_adv(y_s, f_s, y_t, f_t)
-            domain_acc = domain_adv.domain_discriminator_accuracy
-            loss = cls_loss + transfer_loss * args.trade_off + cls_loss_t
-
-            cls_acc = accuracy(y_s, gt_classes_s)[0]
-
-            losses.update(loss.item(), x_s.size(0))
-            cls_accs.update(cls_acc, x_s.size(0))
-            domain_accs.update(domain_acc, x_s.size(0))
-            trans_losses.update(transfer_loss.item(), x_s.size(0))
-            losses_t.update(cls_loss_t.item(), x_s.size(0))
-
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            if i % args.print_freq == 0:
-                progress.display(i)
-
-    @staticmethod
     def get_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(add_help=False)
         # dataset parameters
@@ -379,6 +382,8 @@ class CategoryAdaptor:
         parser.add_argument('--ignored-scores-c', type=float, nargs='+', default=[0.05, 0.3])
         parser.add_argument('--max-train-c', type=int, default=10)
         parser.add_argument('--max-val-c', type=int, default=2)
+        parser.add_argument('--ignored-ious-c', type=float, nargs='+', default=(0.4, 0.5),
+                            help='the iou threshold for ignored boxes')
         # model parameters
         parser.add_argument('--arch-c', metavar='ARCH', default='resnet101',
                             choices=utils.get_model_names(),
@@ -403,7 +408,7 @@ class CategoryAdaptor:
         # training parameters
         parser.add_argument('--batch-size-c', default=64, type=int,
                             metavar='N',
-                            help='mini-batch size (default: 32)')
+                            help='mini-batch size (default: 64)')
         parser.add_argument('--learning-rate-c', default=0.01, type=float,
                             metavar='LR', help='initial learning rate', dest='lr')
         parser.add_argument('--lr-gamma-c', default=0.001, type=float, help='parameter for lr scheduler')
@@ -422,8 +427,6 @@ class CategoryAdaptor:
                             metavar='N', help='print frequency (default: 100)')
         parser.add_argument('--seed-c', default=None, type=int,
                             help='seed for initializing training. ')
-        parser.add_argument('--per-class-eval-c', action='store_true',
-                            help='whether output per-class accuracy during evaluation')
         parser.add_argument("--log-c", type=str, default='cdan',
                             help="Where to save logs, checkpoints and debugging images.")
         return parser
