@@ -56,14 +56,6 @@ def generate_category_labels(prop, category_adaptor, cache_filename):
     if not prop_w_category.load():
         for p in prop:
             prop_w_category.append(p)
-            # if ignored_scores_test is not None:
-            #     assert len(ignored_scores_test) == 2 and ignored_scores_test[0] <= ignored_scores_test[1], \
-            #         "Please provide a range for ignored_scores!"
-            #     keep_indices = ~((ignored_scores_test[0] < p.pred_scores)
-            #                      & (p.pred_scores < ignored_scores_test[1]))
-            #     prop_w_category.append(p[keep_indices])
-            # else:
-            #     prop_w_category.append(p)
 
         data_loader_test = category_adaptor.prepare_test_data(flatten(prop_w_category))
         predictions = category_adaptor.predict(data_loader_test)
@@ -184,6 +176,18 @@ def train(model, logger, cfg, args, args_cls, args_box):
         prop_t_bg += prop_t_bg_refined
         bbox_adaptor.model.to(torch.device("cpu"))
 
+    if args.remove_bg:
+        prop_t_bg_new = []
+        for p in prop_t_bg:
+            keep_indices = p.pred_classes == len(classes)
+            prop_t_bg_new.append(p[keep_indices])
+        prop_t_bg = prop_t_bg_new
+
+        prop_t_fg_new = []
+        for p in prop_t_fg:
+            prop_t_bg_new.append(p[:20])
+        prop_t_fg = prop_t_fg_new
+
     model = model.to(torch.device(cfg.MODEL.DEVICE))
     # Data loading code
     train_source_dataset = get_detection_dataset_dicts(args.sources)
@@ -286,6 +290,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--targets', nargs='+', help='target domain(s)')
     parser.add_argument('--test', nargs='+', help='test domain(s)')
     parser.add_argument('--ignore-score-test', type=float, nargs='+', default=None)
+    parser.add_argument('--remove-bg', action='store_true')
     # model parameters
     parser.add_argument('--finetune', action='store_true',
                         help='whether use 10x smaller learning rate for backbone')
