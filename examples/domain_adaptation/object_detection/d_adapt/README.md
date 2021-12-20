@@ -9,10 +9,14 @@ please install them before usage.
 
 ## Method
 Compared with previous cross-domain object detection methods, D-adapt decouples the adversarial adaptation from the training of detector.
-![alt text](fig/comparison.png)
+<div align="center">
+	<img src="./fig/comparison.png" alt="Editor" width="800">
+</div>
 
 The whole pipeline is as follows:
-![alt text](fig/d_adapt_pipeline.png)
+<div align="center">
+	<img src="./fig/d_adapt_pipeline.png" alt="Editor" width="500">
+</div>
 
 First, you need to run ``source_only.py`` to obtain pre-trained models. (See source_only.sh for scripts.)
 Then you need to run ``d_adapt.py`` to obtain adapted models. (See d_adapt.sh for scripts).
