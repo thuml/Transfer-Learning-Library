@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import torch
 from typing import Optional, Callable, Tuple, Any, List, Sequence, Dict
 import numpy as np
@@ -20,7 +24,7 @@ class DecoupledGeneralizedRCNN(TLGeneralizedRCNN):
     2. Region proposal generation
     3. Per-region feature extraction and prediction
 
-    Different from that in Supervised Learning, TLGeneralizedRCNN
+    Different from that in Supervised Learning, DecoupledGeneralizedRCNN
     1. accepts unlabeled images and uses the feedbacks from adaptors as supervision during training
     2. generate foreground and background proposals during inference
 

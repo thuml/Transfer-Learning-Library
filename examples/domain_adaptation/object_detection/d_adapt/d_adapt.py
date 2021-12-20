@@ -1,4 +1,5 @@
 """
+`D-adapt: Decoupled Adaptation for Cross-Domain Object Detection <https://openreview.net/pdf?id=VNqaB1g9393>`_.
 @author: Junguang Jiang
 @contact: JiangJunguang1123@outlook.com
 """
@@ -37,6 +38,7 @@ import bbox_adaptation
 
 
 def generate_proposals(model, num_classes, dataset_names, cache_root, cfg):
+    """Generate foreground proposals and background proposals from `model` and save them to the disk"""
     fg_proposals_list = PersistentProposalList(os.path.join(cache_root, "{}_fg.json".format(dataset_names[0])))
     bg_proposals_list = PersistentProposalList(os.path.join(cache_root, "{}_bg.json".format(dataset_names[0])))
     if not (fg_proposals_list.load() and bg_proposals_list.load()):
@@ -52,6 +54,7 @@ def generate_proposals(model, num_classes, dataset_names, cache_root, cfg):
 
 
 def generate_category_labels(prop, category_adaptor, cache_filename):
+    """Generate category labels for each proposals in `prop` and save them to the disk"""
     prop_w_category = PersistentProposalList(cache_filename)
     if not prop_w_category.load():
         for p in prop:
@@ -66,6 +69,7 @@ def generate_category_labels(prop, category_adaptor, cache_filename):
 
 
 def generate_bounding_box_labels(prop, bbox_adaptor, class_names, cache_filename):
+    """Generate bounding box labels for each proposals in `prop` and save them to the disk"""
     prop_w_bbox = PersistentProposalList(cache_filename)
     if not prop_w_bbox.load():
         # remove (predicted) background proposals
@@ -139,9 +143,6 @@ def train(model, logger, cfg, args, args_cls, args_box):
         data_loader_validation = category_adaptor.prepare_validation_data(prop_t_fg + prop_t_bg)
         category_adaptor.fit(data_loader_source, data_loader_target, data_loader_validation)
 
-    # data_loader_validation = category_adaptor.prepare_validation_data(prop_t_fg + prop_t_bg)
-    # category_adaptor.validate(data_loader_validation, category_adaptor.model, category_adaptor.class_names, category_adaptor.args)
-
     # generate category labels for each proposals
     cache_feedback_root = os.path.join(cfg.OUTPUT_DIR, "cache", "feedback")
     prop_t_fg = generate_category_labels(
@@ -176,7 +177,8 @@ def train(model, logger, cfg, args, args_cls, args_box):
         prop_t_bg += prop_t_bg_refined
         bbox_adaptor.model.to(torch.device("cpu"))
 
-    if args.remove_bg:
+    if args.reduce_proposals:
+        # remove proposals
         prop_t_bg_new = []
         for p in prop_t_bg:
             keep_indices = p.pred_classes == len(classes)
@@ -185,7 +187,7 @@ def train(model, logger, cfg, args, args_cls, args_box):
 
         prop_t_fg_new = []
         for p in prop_t_fg:
-            prop_t_bg_new.append(p[:20])
+            prop_t_fg_new.append(p[:20])
         prop_t_fg = prop_t_fg_new
 
     model = model.to(torch.device(cfg.MODEL.DEVICE))
@@ -217,7 +219,6 @@ def train(model, logger, cfg, args, args_cls, args_box):
             # compute losses and gradient on target domain
             loss_dict_t = model(data_t, labeled=False)
             losses_t = sum(loss_dict_t.values())
-            # losses_t = loss_dict_t['loss_cls']
             assert torch.isfinite(losses_t).all()
 
             loss_dict_reduced_t = {"{}_t".format(k): v.item() for k, v in comm.reduce_dict(loss_dict_t).items()}
@@ -289,8 +290,6 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--sources', nargs='+', help='source domain(s)')
     parser.add_argument('-t', '--targets', nargs='+', help='target domain(s)')
     parser.add_argument('--test', nargs='+', help='test domain(s)')
-    parser.add_argument('--ignore-score-test', type=float, nargs='+', default=None)
-    parser.add_argument('--remove-bg', action='store_true')
     # model parameters
     parser.add_argument('--finetune', action='store_true',
                         help='whether use 10x smaller learning rate for backbone')
@@ -302,9 +301,11 @@ if __name__ == "__main__":
     )
     parser.add_argument('--trade-off', default=1., type=float,
                         help='trade-off hyper-parameter for losses on target domain')
-    parser.add_argument('--ignored-scores-test-c', type=float, nargs='+', default=None)
     parser.add_argument('--bbox-refine', action='store_true',
                         help='whether perform bounding box refinement')
+    parser.add_argument('--reduce-proposals', action='store_true',
+                        help='whether remove some low-quality proposals.'
+                             'Helpful for RetinaNet')
     # training parameters
     parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
     parser.add_argument("--eval-only", action="store_true", help="perform evaluation only")

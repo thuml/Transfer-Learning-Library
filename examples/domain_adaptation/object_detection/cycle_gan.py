@@ -1,3 +1,9 @@
+"""
+CycleGAN for VOC-format Object Detection Dataset
+You need to modify function build_dataset if you want to use your own dataset.
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 import random
 import time
 import warnings
@@ -413,7 +419,7 @@ if __name__ == '__main__':
                         help='the input image size during test')
     parser.add_argument('--translated-source', type=str, default=None, nargs='+',
                         help="The root to put the translated source dataset")
-    parser.add_argument('--translated-target', type=str, default=None,
+    parser.add_argument('--translated-target', type=str, default=None, nargs='+',
                         help="The root to put the translated target dataset")
     parser.add_argument('--image-base', default=4, type=int,
                         help='the input image will be multiple of image-base before translated')

@@ -130,7 +130,7 @@ class CategoryAdaptor:
                 self.selector.extend(proposals.pred_classes.tolist(), proposals.pred_scores.tolist())
             self.selector.calculate()
         else:
-            # remove proposals with ignored classes
+            # remove proposals with ignored classes or ious between (ignored_ious[0], ignored_ious[1])
             filtered_proposals_list = []
             for proposals in proposal_list:
                 keep_indices = (proposals.gt_classes != -1) & \
@@ -156,6 +156,7 @@ class CategoryAdaptor:
         return dataloader
 
     def prepare_validation_data(self, proposal_list: List[Proposal]):
+        """call this function if you have labeled data for validation"""
         normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         transform = T.Compose([
             ResizeImage(self.args.resize_size),

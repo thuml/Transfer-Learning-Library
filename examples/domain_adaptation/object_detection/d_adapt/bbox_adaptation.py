@@ -248,6 +248,7 @@ class BoundingBoxAdaptor:
         return predictions
 
     def validate_baseline(self, val_loader):
+        """call this function if you have labeled data for validation"""
         ious = AverageMeter("IoU", ":.4e")
         print("Calculate baseline IoU:")
         for _, labels in tqdm.tqdm(val_loader):
@@ -260,6 +261,7 @@ class BoundingBoxAdaptor:
 
     @staticmethod
     def validate(val_loader, model, box_transform, args) -> float:
+        """call this function if you have labeled data for validation"""
         batch_time = AverageMeter('Time', ':6.3f')
         ious = AverageMeter("IoU", ":.4e")
         progress = ProgressMeter(

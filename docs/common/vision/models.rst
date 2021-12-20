@@ -30,9 +30,15 @@ Object Detection
 .. autoclass:: common.vision.models.object_detection.meta_arch.TLGeneralizedRCNN
    :members:
 
+.. autoclass:: common.vision.models.object_detection.meta_arch.TLRetinaNet
+   :members:
+
 .. autoclass:: common.vision.models.object_detection.proposal_generator.rpn.TLRPN
 
 .. autoclass:: common.vision.models.object_detection.roi_heads.TLRes5ROIHeads
+    :members:
+
+.. autoclass:: common.vision.models.object_detection.roi_heads.TLStandardROIHeads
     :members:
 
 ----------------------------------

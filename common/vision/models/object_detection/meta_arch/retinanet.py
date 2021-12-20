@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Dict, List, Tuple
 import torch
 from torch import Tensor, nn
@@ -80,6 +84,7 @@ class TLRetinaNet(RetinaNetBase):
         self.finetune = finetune
 
     def forward(self, batched_inputs: Tuple[Dict[str, Tensor]], labeled=True):
+        """"""
         images = self.preprocess_image(batched_inputs)
         features = self.backbone(images.tensor)
         features = [features[f] for f in self.head_in_features]
@@ -111,6 +116,9 @@ class TLRetinaNet(RetinaNetBase):
             return processed_results
 
     def get_parameters(self, lr=1.):
+        """Return a parameter list which decides optimization hyper-parameters,
+            such as the learning rate of each layer
+        """
         return [
             (self.backbone.bottom_up, 0.1 * lr if self.finetune else lr),
             (self.backbone.fpn_lateral4, lr),

@@ -39,6 +39,13 @@ For more information please refer to [Get Started](/docs/get_started/quickstart.
 
 ### VOC->WaterColor
 
+|                         | AP   | AP50 | AP75 | bicycle | bird | car  | cat  | dog  | person |
+|-------------------------|------|------|------|---------|------|------|------|------|--------|
+| Faster RCNN (ResNet101) | 23.0 | 45.9 | 18.5 | 71.1    | 48.3 | 48.6 | 23.7 | 23.3 | 60.3   |
+| CycleGAN                | 24.9 | 50.8 | 22.4 | 75.8    | 52.1 | 49.8 | 30.1 | 33.4 | 63.6   |
+| D-adapt                 | 28.5 | 57.5 | 23.6 | 77.4    | 54.0 | 52.8 | 43.9 | 48.1 | 68.9   |
+| Target                  | 23.8 | 51.3 | 17.4 | 48.5    | 54.7 | 41.3 | 36.2 | 52.6 | 74.6   |
+
 ### VOC->Comic
 
 |                         |  AP  | AP50 | AP75 | bicycle | bird |  car |  cat |  dog | person |
@@ -76,8 +83,10 @@ For more information please refer to [Get Started](/docs/get_started/quickstart.
 |                         |  D-adapt | 27.4 | 51.9 | 25.7 |
 |                         |  Target  | 24.6 | 44.4 | 23.0 |
 
+### Visualization
+
 ## TODO
-Support methods: SWDA
+Support methods: SWDA, Global/Local Alignment, Dataset Installation Instruction, Tutorial, visualization code
 
 ## Citation
 If you use these methods in your research, please consider citing.

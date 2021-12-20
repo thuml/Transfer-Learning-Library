@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Dict
 
 from detectron2.layers import cat

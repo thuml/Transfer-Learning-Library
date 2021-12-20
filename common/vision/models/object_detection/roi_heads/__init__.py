@@ -1,1 +1,1 @@
-from .roi_heads import TLRes5ROIHeads
+from .roi_heads import TLRes5ROIHeads, TLStandardROIHeads

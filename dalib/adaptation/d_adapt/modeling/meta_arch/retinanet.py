@@ -1,3 +1,7 @@
+"""
+@author: Junguang Jiang
+@contact: JiangJunguang1123@outlook.com
+"""
 from typing import Optional, Callable, Tuple, Any, List, Sequence, Dict
 import random
 import numpy as np
@@ -17,6 +21,74 @@ from ..matcher import MaxOverlapMatcher
 
 @META_ARCH_REGISTRY.register()
 class DecoupledRetinaNet(TLRetinaNet):
+    """
+    RetinaNet for Decoupled Adaptation (D-adapt).
+
+    Different from that in Supervised Learning, DecoupledRetinaNet
+    1. accepts unlabeled images and uses the feedbacks from adaptors as supervision during training
+    2. generate foreground and background proposals during inference
+
+    Args:
+        backbone: a backbone module, must follow detectron2's backbone interface
+        head (nn.Module): a module that predicts logits and regression deltas
+            for each level from a list of per-level features
+        head_in_features (Tuple[str]): Names of the input feature maps to be used in head
+        anchor_generator (nn.Module): a module that creates anchors from a
+            list of features. Usually an instance of :class:`AnchorGenerator`
+        box2box_transform (Box2BoxTransform): defines the transform from anchors boxes to
+            instance boxes
+        anchor_matcher (Matcher): label the anchors by matching them with ground truth.
+        num_classes (int): number of classes. Used to label background proposals.
+
+        # Loss parameters:
+        focal_loss_alpha (float): focal_loss_alpha
+        focal_loss_gamma (float): focal_loss_gamma
+        smooth_l1_beta (float): smooth_l1_beta
+        box_reg_loss_type (str): Options are "smooth_l1", "giou"
+
+        # Inference parameters:
+        test_score_thresh (float): Inference cls score threshold, only anchors with
+            score > INFERENCE_TH are considered for inference (to improve speed)
+        test_topk_candidates (int): Select topk candidates before NMS
+        test_nms_thresh (float): Overlap threshold used for non-maximum suppression
+            (suppress boxes with IoU >= this threshold)
+        max_detections_per_image (int):
+            Maximum number of detections to return per image during inference
+            (100 is based on the limit established for the COCO dataset).
+
+        # Input parameters
+        pixel_mean (Tuple[float]):
+            Values to be used for image normalization (BGR order).
+            To train on images of different number of channels, set different mean & std.
+            Default values are the mean pixel value from ImageNet: [103.53, 116.28, 123.675]
+        pixel_std (Tuple[float]):
+            When using pre-trained models in Detectron1 or any MSRA models,
+            std has been absorbed into its conv1 weights, so the std needs to be set 1.
+            Otherwise, you can use [57.375, 57.120, 58.395] (ImageNet std)
+        vis_period (int):
+            The period (in terms of steps) for minibatch visualization at train time.
+            Set to 0 to disable.
+        input_format (str): Whether the model needs RGB, YUV, HSV etc.
+        finetune (bool): whether finetune the detector or train from scratch. Default: True
+
+    Inputs:
+        - batched_inputs: a list, batched outputs of :class:`DatasetMapper`.
+          Each item in the list contains the inputs for one image.
+          For now, each item in the list is a dict that contains:
+            * image: Tensor, image in (C, H, W) format.
+            * instances (optional): groundtruth :class:`Instances`
+            * "height", "width" (int): the output resolution of the model, used in inference.
+              See :meth:`postprocess` for details.
+        - labeled (bool, optional): whether has ground-truth label
+
+    Outputs:
+        - outputs: A list of dict where each dict is the output for one input image.
+          The dict contains a key "instances" whose value is a :class:`Instances`
+          and a key "features" whose value is the features of middle layers.
+          The :class:`Instances` object has the following keys:
+          "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
+        - losses: A dict of different losses
+    """
     def __init__(self, *args, max_samples_per_level=25, **kwargs):
         super(DecoupledRetinaNet, self).__init__(*args, **kwargs)
         self.max_samples_per_level = max_samples_per_level

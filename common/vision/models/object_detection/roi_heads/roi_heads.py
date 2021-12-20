@@ -178,6 +178,7 @@ class TLStandardROIHeads(StandardROIHeads):
         super(TLStandardROIHeads, self).__init__(*args, **kwargs)
 
     def forward(self, images, features, proposals, targets=None, labeled=True):
+        """"""
         del images
         if self.training:
             if labeled:
@@ -250,18 +251,16 @@ class TLStandardROIHeads(StandardROIHeads):
         self, proposals: List[Instances]
     ) -> List[Instances]:
         """
-        Prepare some unlabeled proposals
+        Prepare some unlabeled proposals.
         It returns top ``self.batch_size_per_image`` samples from proposals
 
         Args:
-            See :meth:`ROIHeads.forward`
+            proposals (list[Instances]): length `N` list of `Instances`. The i-th
+                `Instances` contains object proposals for the i-th input image,
+                with fields "proposal_boxes" and "objectness_logits".
 
         Returns:
-            list[Instances]:
-                length `N` list of `Instances`s containing the proposals
-                sampled for training. Each `Instances` has the following fields:
-
-                - proposal_boxes: the proposal boxes
+            length `N` list of `Instances`s containing the proposals sampled for training.
         """
         return [proposal[:self.batch_size_per_image] for proposal in proposals]
 
