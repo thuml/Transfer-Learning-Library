@@ -26,8 +26,52 @@ Supported methods include:
 ## Experiment and Results
 
 The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/object_detection.rst) with specified hyper-parameters.
+The basic training pipeline is as follows.
 
-For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+#### Prepare Datasets
+Our code is based on Detectron due to its performance and scalability. Detectron expects dataset to be either in `VOC` format
+or `CoCo` format. VOC0712, Clipart, WaterColor and Comic datasets are already in `VOC` format. For other datasets and perhaps your own
+datasets, you need to prepare them manually.
+
+Below we use Cityscapes dataset as an example. First download the raw [dataset](https://www.cityscapes-dataset.com/), 
+and unzip them under the directory like
+```
+object_detction/datasets/cityscape
+├── gtFine
+├── leftImg8bit
+├── leftImg8bit_foggy
+└── ...
+```
+Then run 
+```
+python prepare_cityscapes_to_voc.py 
+```
+This will automatically generate dataset in `VOC` format.
+```
+object_detction/datasets/cityscapes_in_voc
+├── Annotations
+├── ImageSets
+├── JPEGImages
+```
+
+**Note**: you may need to install `pascal_voc_writer` via `pip install pascal_voc_writer` when converting the dataset format. To use your own datasets, you 
+should convert them into corresponding format. See `prepare_gta5_to_voc.py` and `prepare_cityscapes_to_voc.py` for some help.
+
+#### Run our code
+The following command trains a Faster-RCNN detector on task VOC->Clipart, with only source (VOC) data.
+```
+CUDA_VISIBLE_DEVICES=0 python source_only.py \
+  --config-file config/faster_rcnn_R_101_C4_voc.yaml \
+  -s VOC2007 datasets/VOC2007 VOC2012 datasets/VOC2012 -t Clipart datasets/clipart \
+  --test VOC2007Test datasets/VOC2007 Clipart datasets/clipart --finetune \
+  OUTPUT_DIR logs/source_only/faster_rcnn_R_101_C4/voc2clipart
+```
+Explanation of some arguments
+- `--config-file`: path to config file that specifies training hyper-parameters.
+- `-s`: a list that specifies source datasets, for each dataset you should pass in a `(name, path)` pair, in the
+    above command, there are two source datasets **VOC2007** and **VOC2012**.
+- `-t`: a list that specifies target datasets, same format as above.
+- `--test`: a list that specifiers test datasets, same format as above.
 
 ### VOC->Clipart
 
