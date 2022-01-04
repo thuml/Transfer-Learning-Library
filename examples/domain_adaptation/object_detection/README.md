@@ -8,33 +8,17 @@ Our code is based on [Detectron latest(v0.6)](https://detectron2.readthedocs.io/
 ## Dataset
 
 You need to prepare following datasets manually if you want to use them:
-- [Cityscapes](https://www.cityscapes-dataset.com/)
-- VOC0712
-- Clipart
-- WaterColor
-- Comic
-- Sim10k
 
+#### PASCAL_VOC 07+12
+- Please follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare VOC datasets.
 
-## Supported Methods
+#### Clipart, WaterColor, Comic
+- Dataset preparation instruction link [Cross Domain Detection ](https://github.com/naoto0804/cross-domain-detection/tree/master/datasets). 
 
-Supported methods include:
+#### Cityscapes -> Foggy Cityscapes
+  - Download Cityscapes and Foggy Cityscapes dataset from the [link](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *leftImg8bit_trainvaltest.zip* for Cityscapes and *leftImg8bit_trainvaltest_foggy.zip* for Foggy Cityscapes.
+  - Unzip them under the directory like
 
-- [Cycle-Consistent Adversarial Networks (CycleGAN)](https://arxiv.org/pdf/1703.10593.pdf)
-- [Decoupled Adaptation for Cross-Domain Object Detection (D-adapt)](https://arxiv.org/abs/2110.02578)
-
-## Experiment and Results
-
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/object_detection.rst) with specified hyper-parameters.
-The basic training pipeline is as follows.
-
-#### Prepare Datasets
-Our code is based on Detectron due to its performance and scalability. Detectron expects dataset to be either in `VOC` format
-or `CoCo` format. VOC0712, Clipart, WaterColor and Comic datasets are already in `VOC` format. For other datasets and perhaps your own
-datasets, you need to prepare them manually.
-
-Below we use Cityscapes dataset as an example. First download the raw [dataset](https://www.cityscapes-dataset.com/), 
-and unzip them under the directory like
 ```
 object_detction/datasets/cityscape
 ├── gtFine
@@ -51,13 +35,43 @@ This will automatically generate dataset in `VOC` format.
 object_detction/datasets/cityscapes_in_voc
 ├── Annotations
 ├── ImageSets
-├── JPEGImages
+└── JPEGImages
 ```
 
 **Note**: you may need to install `pascal_voc_writer` via `pip install pascal_voc_writer` when converting the dataset format. To use your own datasets, you 
 should convert them into corresponding format. See `prepare_gta5_to_voc.py` and `prepare_cityscapes_to_voc.py` for some help.
+ 
+#### Sim10k -> Cityscapes (class car only)
+  - Download Sim10k dataset and Cityscapes dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix) and [Cityscapes](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *repro_10k_images.tgz* and *repro_10k_annotations.tgz* for Sim10k and *leftImg8bit_trainvaltest.zip* for Cityscapes.
+  
+After preparation, there should exist following files:
+```
+object_detction/datasets/
+├── VCO2007
+│   ├── Annotations
+│   ├──ImageSets
+│   └──JPEGImages
+├── VCO2012
+├── clipart
+├── watercolor
+├── comic
+├── cityscapes_in_voc
+├── foggy_cityscapes_in_voc
+└── sim10k_to_cityscapes_car
+```
 
-#### Run our code
+## Supported Methods
+
+Supported methods include:
+
+- [Cycle-Consistent Adversarial Networks (CycleGAN)](https://arxiv.org/pdf/1703.10593.pdf)
+- [Decoupled Adaptation for Cross-Domain Object Detection (D-adapt)](https://arxiv.org/abs/2110.02578)
+
+## Experiment and Results
+
+The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/object_detection.rst) with specified hyper-parameters.
+The basic training pipeline is as follows.
+
 The following command trains a Faster-RCNN detector on task VOC->Clipart, with only source (VOC) data.
 ```
 CUDA_VISIBLE_DEVICES=0 python source_only.py \
