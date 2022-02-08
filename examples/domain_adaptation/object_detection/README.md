@@ -15,7 +15,7 @@ You need to prepare following datasets manually if you want to use them:
 #### Clipart, WaterColor, Comic
 - Dataset preparation instruction link [Cross Domain Detection ](https://github.com/naoto0804/cross-domain-detection/tree/master/datasets). 
 
-#### Cityscapes -> Foggy Cityscapes
+#### Cityscapes, Foggy Cityscapes
   - Download Cityscapes and Foggy Cityscapes dataset from the [link](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *leftImg8bit_trainvaltest.zip* for Cityscapes and *leftImg8bit_trainvaltest_foggy.zip* for Foggy Cityscapes.
   - Unzip them under the directory like
 
@@ -39,25 +39,46 @@ object_detction/datasets/cityscapes_in_voc
 ```
 
 **Note**: you may need to install `pascal_voc_writer` via `pip install pascal_voc_writer` when converting the dataset format. To use your own datasets, you 
-should convert them into corresponding format. See `prepare_gta5_to_voc.py` and `prepare_cityscapes_to_voc.py` for some help.
+should convert them into corresponding format. 
  
-#### Sim10k -> Cityscapes (class car only)
-  - Download Sim10k dataset and Cityscapes dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix) and [Cityscapes](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *repro_10k_images.tgz* and *repro_10k_annotations.tgz* for Sim10k and *leftImg8bit_trainvaltest.zip* for Cityscapes.
+#### Sim10k
+  - Download Sim10k dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix). Particularly, we use *repro_10k_images.tgz* and *repro_10k_annotations.tgz* for Sim10k.
   
 After preparation, there should exist following files:
 ```
 object_detction/datasets/
-├── VCO2007
+├── VOC2007
 │   ├── Annotations
 │   ├──ImageSets
 │   └──JPEGImages
-├── VCO2012
+├── VOC2012
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 ├── clipart
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 ├── watercolor
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 ├── comic
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 ├── cityscapes_in_voc
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 ├── foggy_cityscapes_in_voc
+│   ├── Annotations
+│   ├── ImageSets
+│   └── JPEGImages
 └── sim10k_to_cityscapes_car
+    ├── Annotations
+    ├── ImageSets
+    └── JPEGImages
 ```
 
 ## Supported Methods
