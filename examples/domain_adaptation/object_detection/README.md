@@ -42,7 +42,8 @@ object_detction/datasets/cityscapes_in_voc
 should convert them into corresponding format. 
  
 #### Sim10k
-  - Download Sim10k dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix). Particularly, we use *repro_10k_images.tgz* and *repro_10k_annotations.tgz* for Sim10k.
+  - Download Sim10k dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix). Particularly, we use *repro_10k_images.tgz* , *repro_image_sets.tar* and *repro_10k_annotations.tgz* for Sim10k.
+  - Extract the training set from *repro_10k_images.tgz* *repro_image_sets.tar*, and *repro_10k_annotations.tgz*, then rename directory `VOC2012/` to `sim10k/`.
   
 After preparation, there should exist following files:
 ```
@@ -75,7 +76,7 @@ object_detction/datasets/
 │   ├── Annotations
 │   ├── ImageSets
 │   └── JPEGImages
-└── sim10k_to_cityscapes_car
+└── sim10k
     ├── Annotations
     ├── ImageSets
     └── JPEGImages
