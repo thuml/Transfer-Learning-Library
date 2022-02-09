@@ -20,14 +20,14 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from common.modules.regressor import Regressor
-from dalib.adaptation.rsd import RepresentationSubspaceDistance
-import common.vision.datasets.regression as datasets
-import common.vision.models as models
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.modules.regressor import Regressor
+from tllib.alignment.rsd import RepresentationSubspaceDistance
+import tllib.vision.datasets.regression as datasets
+import tllib.vision.models as models
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 from utils import convert_model, validate

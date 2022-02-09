@@ -19,12 +19,12 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.adaptation.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.alignment.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy, ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 import utils

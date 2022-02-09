@@ -15,11 +15,11 @@ from torch.utils.data import Subset
 import torchvision.transforms as T
 from torch.optim import SGD, Adam
 
-import common.vision.datasets as datasets
-import common.vision.models as models
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.vision.transforms import Denormalize
+import tllib.vision.datasets as datasets
+import tllib.vision.models as models
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.vision.transforms import Denormalize
 
 
 def get_model_names():
@@ -32,7 +32,7 @@ def get_model_names():
 
 def get_model(model_name, pretrained_checkpoint=None):
     if model_name in models.__dict__:
-        # load models from common.vision.models
+        # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models

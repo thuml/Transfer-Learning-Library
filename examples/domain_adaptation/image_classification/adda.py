@@ -23,15 +23,15 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.adda import ImageClassifier, DomainAdversarialLoss
-from dalib.modules.gl import WarmStartGradientLayer
-from dalib.translation.cyclegan.util import set_requires_grad
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, binary_accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.alignment.adda import ImageClassifier, DomainAdversarialLoss
+from tllib.modules.gl import WarmStartGradientLayer
+from tllib.translation.cyclegan.util import set_requires_grad
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy, binary_accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 import utils

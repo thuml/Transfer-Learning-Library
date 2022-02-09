@@ -20,13 +20,13 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.adaptation.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
-from common.vision.transforms import ResizeImage, MultipleApply
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.self_training.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
+from tllib.vision.transforms import ResizeImage, MultipleApply
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 import utils

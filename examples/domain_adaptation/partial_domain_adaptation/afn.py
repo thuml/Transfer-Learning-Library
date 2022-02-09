@@ -18,14 +18,14 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.adaptation.afn import AdaptiveFeatureNorm, ImageClassifier
-from dalib.modules.entropy import entropy
-import common.vision.models as models
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.alignment.afn import AdaptiveFeatureNorm, ImageClassifier
+from tllib.modules.entropy import entropy
+import tllib.vision.models as models
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 import utils

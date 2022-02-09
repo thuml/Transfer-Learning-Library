@@ -19,16 +19,16 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
-from common.vision.models.reid.identifier import ReIdentifier
-import common.vision.datasets.reid as datasets
-from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-from common.utils.scheduler import WarmupMultiStepLR
-from common.utils.metric.reid import validate, visualize_ranked_results
-from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
+from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
+from tllib.vision.models.reid.identifier import ReIdentifier
+import tllib.vision.datasets.reid as datasets
+from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
+from tllib.utils.scheduler import WarmupMultiStepLR
+from tllib.utils.metric.reid import validate, visualize_ranked_results
+from tllib.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

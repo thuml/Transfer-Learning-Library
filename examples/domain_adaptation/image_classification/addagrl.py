@@ -20,15 +20,15 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.adda import ImageClassifier
-from dalib.adaptation.dann import DomainAdversarialLoss
-from dalib.translation.cyclegan.util import set_requires_grad
-from dalib.modules.grl import WarmStartGradientReverseLayer
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.alignment.adda import ImageClassifier
+from tllib.alignment.dann import DomainAdversarialLoss
+from tllib.translation.cyclegan.util import set_requires_grad
+from tllib.modules.grl import WarmStartGradientReverseLayer
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('../classification')
 import utils

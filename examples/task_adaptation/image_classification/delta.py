@@ -19,12 +19,12 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from talib.finetune.delta import *
-from common.modules.classifier import Classifier
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
+from tllib.regularization.delta import *
+from tllib.modules.classifier import Classifier
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 sys.path.append('.')
 import utils

@@ -15,11 +15,11 @@ from torch.utils.data.dataset import Subset, ConcatDataset
 import wilds
 
 sys.path.append('../../..')
-import common.vision.datasets as datasets
-import common.vision.models as models
-from common.vision.transforms import ResizeImage
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
+import tllib.vision.datasets as datasets
+import tllib.vision.models as models
+from tllib.vision.transforms import ResizeImage
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 def get_model_names():
@@ -32,7 +32,7 @@ def get_model_names():
 
 def get_model(model_name):
     if model_name in models.__dict__:
-        # load models from common.vision.models
+        # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
@@ -111,7 +111,7 @@ def convert_from_wilds_dataset(dataset_name, wild_dataset):
 def get_dataset(dataset_name, root, task_list, split='train', download=True, transform=None, seed=0):
     assert split in ['train', 'val', 'test']
     if dataset_name in datasets.__dict__:
-        # load datasets from common.vision.datasets
+        # load datasets from tllib.vision.datasets
         # currently only PACS, OfficeHome and DomainNet are supported
         supported_dataset = ['PACS', 'OfficeHome', 'DomainNet']
         assert dataset_name in supported_dataset

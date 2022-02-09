@@ -18,12 +18,12 @@ from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from talib.finetune.lwf import collect_pretrain_labels, Classifier
-from common.loss import KnowledgeDistillationLoss
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.data import ForeverDataIterator, CombineDataset
+from tllib.regularization.lwf import collect_pretrain_labels, Classifier
+from tllib.regularization.knowledge_distillation import KnowledgeDistillationLoss
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.data import ForeverDataIterator, CombineDataset
 
 sys.path.append('.')
 import utils

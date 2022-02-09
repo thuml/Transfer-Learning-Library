@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from common.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.meter import AverageMeter, ProgressMeter
 from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from torch.nn.modules.instancenorm import InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 

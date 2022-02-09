@@ -21,15 +21,15 @@ from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans, DBSCAN
 
 sys.path.append('../../..')
-import common.vision.datasets.reid as datasets
-from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-from common.vision.models.reid.identifier import ReIdentifier
-from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
-from common.utils.metric.reid import extract_reid_feature, validate, visualize_ranked_results
-from common.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
+import tllib.vision.datasets.reid as datasets
+from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
+from tllib.vision.models.reid.identifier import ReIdentifier
+from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
+from tllib.utils.metric.reid import extract_reid_feature, validate, visualize_ranked_results
+from tllib.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 sys.path.append('.')
 import utils

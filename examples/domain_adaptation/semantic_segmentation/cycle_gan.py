@@ -18,14 +18,14 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import ToPILImage, Compose
 
 sys.path.append('../../..')
-import dalib.translation.cyclegan as cyclegan
-from dalib.translation.cyclegan.util import ImagePool, set_requires_grad
-import common.vision.datasets.segmentation as datasets
-from common.vision.transforms import Denormalize
-import common.vision.transforms.segmentation as T
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
+import tllib.translation.cyclegan as cyclegan
+from tllib.translation.cyclegan.util import ImagePool, set_requires_grad
+import tllib.vision.datasets.segmentation as datasets
+from tllib.vision.transforms import Denormalize
+import tllib.vision.transforms.segmentation as T
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

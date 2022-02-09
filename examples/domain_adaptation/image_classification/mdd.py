@@ -19,13 +19,13 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dalib.adaptation.mdd import ClassificationMarginDisparityDiscrepancy\
+from tllib.alignment.mdd import ClassificationMarginDisparityDiscrepancy\
     as MarginDisparityDiscrepancy, ImageClassifier
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 sys.path.append('.')
 import utils

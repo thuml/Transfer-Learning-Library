@@ -9,9 +9,9 @@ import torch.nn as nn
 import torchvision.transforms as T
 
 sys.path.append('../../..')
-from common.utils.metric.reid import extract_reid_feature
-from common.utils.analysis import tsne
-import common.vision.models.reid as models
+from tllib.utils.metric.reid import extract_reid_feature
+from tllib.utils.analysis import tsne
+import tllib.vision.models.reid as models
 
 
 def get_model_names():
@@ -24,7 +24,7 @@ def get_model_names():
 
 def get_model(model_name):
     if model_name in models.__dict__:
-        # load models from common.vision.models
+        # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
