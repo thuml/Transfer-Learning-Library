@@ -1,4 +1,5 @@
 """
+Adapted from https://github.com/facebookresearch/DomainBed
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
@@ -19,9 +20,9 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dglib.generalization.groupdro import AutomaticUpdateDomainWeightModule
 from dglib.modules.sampler import RandomDomainSampler
 from dglib.modules.classifier import ImageClassifier as Classifier
+from tllib.reweight.groupdro import AutomaticUpdateDomainWeightModule
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter

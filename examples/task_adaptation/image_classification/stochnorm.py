@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from tllib.regularization.stochnorm import convert_model
+from tllib.modules.normalization.stochnorm import convert_model
 from tllib.modules.classifier import Classifier
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter

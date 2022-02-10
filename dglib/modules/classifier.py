@@ -5,7 +5,7 @@
 from typing import Optional, Tuple
 import torch
 import torch.nn as nn
-from common.modules.classifier import Classifier as ClassifierBase
+from tllib.modules.classifier import Classifier as ClassifierBase
 
 
 class ImageClassifier(ClassifierBase):

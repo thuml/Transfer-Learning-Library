@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-import dglib.generalization.mixstyle.models as models
+import tllib.modules.normalization.mixstyle.models as models
 from dglib.modules.sampler import RandomDomainSampler
 from dglib.modules.classifier import ImageClassifier as Classifier
 from tllib.utils.data import ForeverDataIterator
