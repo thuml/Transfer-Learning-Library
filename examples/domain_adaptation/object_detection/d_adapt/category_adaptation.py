@@ -24,16 +24,15 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 sys.path.append('../../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
-from dalib.adaptation.d_adapt.proposal import ProposalDataset, flatten, Proposal
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.vision.transforms import ResizeImage
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.alignment.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
+from tllib.alignment.d_adapt.proposal import ProposalDataset, flatten, Proposal
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy, ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.vision.transforms import ResizeImage
 
-sys.path.append('.')
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

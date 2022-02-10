@@ -30,8 +30,8 @@ from detectron2.utils.colormap import random_color
 from fvcore.common.param_scheduler import *
 import timm
 
-import common.vision.datasets.object_detection as datasets
-import common.vision.models as models
+import tllib.vision.datasets.object_detection as datasets
+import tllib.vision.models as models
 
 
 class PascalVOCDetectionPerClassEvaluator(PascalVOCDetectionEvaluator):

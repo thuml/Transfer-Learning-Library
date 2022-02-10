@@ -10,7 +10,7 @@ from detectron2.modeling.roi_heads.fast_rcnn import (
     FastRCNNOutputLayers
 )
 from detectron2.structures import Instances
-from common.loss.label_smooth import LabelSmoothSoftmaxCEV1
+from tllib.modules.loss import LabelSmoothSoftmaxCEV1
 
 import torch
 

@@ -25,14 +25,13 @@ from detectron2.utils.events import EventStorage
 from detectron2.evaluation import inference_on_dataset
 
 sys.path.append('../../../..')
-import dalib.adaptation.d_adapt.modeling.meta_arch as models
-from dalib.adaptation.d_adapt.proposal import ProposalGenerator, ProposalMapper, PersistentProposalList, flatten
-from dalib.adaptation.d_adapt.feedback import get_detection_dataset_dicts, DatasetMapper
+import tllib.alignment.d_adapt.modeling.meta_arch as models
+from tllib.alignment.d_adapt.proposal import ProposalGenerator, ProposalMapper, PersistentProposalList, flatten
+from tllib.alignment.d_adapt.feedback import get_detection_dataset_dicts, DatasetMapper
 
 sys.path.append('..')
 import utils
 
-sys.path.append('.')
 import category_adaptation
 import bbox_adaptation
 

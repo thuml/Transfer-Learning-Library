@@ -15,7 +15,7 @@ from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 from detectron2.data.detection_utils import convert_image_to_rgb
 from detectron2.utils.events import get_event_storage
 
-from common.vision.models.object_detection.meta_arch import TLRetinaNet
+from tllib.vision.models.object_detection.meta_arch import TLRetinaNet
 from ..matcher import MaxOverlapMatcher
 
 

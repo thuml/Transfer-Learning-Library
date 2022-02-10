@@ -21,12 +21,12 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 from detectron2.modeling.box_regression import Box2BoxTransform
 
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.modules.regressor import Regressor
-from dalib.adaptation.mdd import ImageRegressor, RegressionMarginDisparityDiscrepancy
-from dalib.adaptation.d_adapt.proposal import ProposalDataset, PersistentProposalList, flatten, ExpandCrop
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.modules.regressor import Regressor
+from tllib.alignment.mdd import ImageRegressor, RegressionMarginDisparityDiscrepancy
+from tllib.alignment.d_adapt.proposal import ProposalDataset, PersistentProposalList, flatten, ExpandCrop
 
 import utils
 

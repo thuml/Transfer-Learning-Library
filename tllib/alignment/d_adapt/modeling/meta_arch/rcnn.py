@@ -12,7 +12,7 @@ from detectron2.data.detection_utils import convert_image_to_rgb
 from detectron2.modeling.postprocessing import detector_postprocess
 from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 
-from common.vision.models.object_detection.meta_arch import TLGeneralizedRCNN
+from tllib.vision.models.object_detection.meta_arch import TLGeneralizedRCNN
 
 
 @META_ARCH_REGISTRY.register()

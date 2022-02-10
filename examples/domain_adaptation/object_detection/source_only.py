@@ -21,9 +21,8 @@ from detectron2.data import (
 from detectron2.utils.events import EventStorage
 
 sys.path.append('../../..')
-import common.vision.models.object_detection.meta_arch as models
+import tllib.vision.models.object_detection.meta_arch as models
 
-sys.path.append('.')
 import utils
 
 
