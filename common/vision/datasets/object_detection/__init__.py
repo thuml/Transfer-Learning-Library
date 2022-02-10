@@ -12,6 +12,16 @@ from detectron2.data import (
 )
 from detectron2.utils.file_io import PathManager
 from detectron2.structures import BoxMode
+from common.vision.datasets._util import download as download_dataset
+
+
+def parse_root_and_file_name(path):
+    path_list = path.split('/')
+    dataset_root = '/'.join(path_list[:-1])
+    file_name = path_list[-1]
+    if dataset_root == '':
+        dataset_root = '.'
+    return dataset_root, file_name
 
 
 class VOCBase:
@@ -21,31 +31,44 @@ class VOCBase:
         "pottedplant", "sheep", "sofa", "train", "tvmonitor"
     )
 
-    def __init__(self, root, split="trainval", year=2007, ext='.jpg'):
+    def __init__(self, root, split="trainval", year=2007, ext='.jpg', download=True):
         self.name = "{}_{}".format(root, split)
         self.name = self.name.replace(os.path.sep, "_")
         if self.name not in MetadataCatalog.keys():
             register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext)
             MetadataCatalog.get(self.name).evaluator_type = "pascal_voc"
+        if download:
+            dataset_root, file_name = parse_root_and_file_name(root)
+            download_dataset(dataset_root, file_name, self.archive_name, self.dataset_url)
 
 
 class VOC2007(VOCBase):
+    archive_name = 'VOC2007.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+
     def __init__(self, root):
         super(VOC2007, self).__init__(root)
 
 
 class VOC2012(VOCBase):
+    archive_name = 'VOC2012.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/29450c5e151843999872/?dl=1'
+
     def __init__(self, root):
         super(VOC2012, self).__init__(root, year=2012)
 
 
 class VOC2007Test(VOCBase):
+    archive_name = 'VOC2007.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+
     def __init__(self, root):
         super(VOC2007Test, self).__init__(root, year=2007, split='test')
 
 
 class Clipart(VOCBase):
-    pass
+    archive_name = 'clipart.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/53ae84b87016418d931d/?dl=1'
 
 
 class VOCPartialBase:
@@ -53,45 +76,69 @@ class VOCPartialBase:
         "bicycle", "bird", "car", "cat", "dog", "person",
     )
 
-    def __init__(self, root, split="trainval", year=2007, ext='.jpg'):
+    def __init__(self, root, split="trainval", year=2007, ext='.jpg', download=True):
         self.name = "{}_{}".format(root, split)
         self.name = self.name.replace(os.path.sep, "_")
         if self.name not in MetadataCatalog.keys():
             register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext)
             MetadataCatalog.get(self.name).evaluator_type = "pascal_voc"
+        if download:
+            dataset_root, file_name = parse_root_and_file_name(root)
+            download_dataset(dataset_root, file_name, self.archive_name, self.dataset_url)
 
 
 class VOC2007Partial(VOCPartialBase):
+    archive_name = 'VOC2007.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+
     def __init__(self, root):
         super(VOC2007Partial, self).__init__(root)
 
 
 class VOC2012Partial(VOCPartialBase):
+    archive_name = 'VOC2012.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/29450c5e151843999872/?dl=1'
+
     def __init__(self, root):
         super(VOC2012Partial, self).__init__(root, year=2012)
 
 
 class VOC2007PartialTest(VOCPartialBase):
+    archive_name = 'VOC2007.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+
     def __init__(self, root):
         super(VOC2007PartialTest, self).__init__(root, year=2007, split='test')
 
 
 class WaterColor(VOCPartialBase):
+    archive_name = 'watercolor.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/f6b648436ac2497bb232/?dl=1'
+
     def __init__(self, root):
         super(WaterColor, self).__init__(root, split='train')
 
 
 class WaterColorTest(VOCPartialBase):
+    archive_name = 'watercolor.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/f6b648436ac2497bb232/?dl=1'
+
     def __init__(self, root):
         super(WaterColorTest, self).__init__(root, split='test')
 
 
 class Comic(VOCPartialBase):
+    archive_name = 'comic.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/a7c38db53287449f9db2/?dl=1'
+
     def __init__(self, root):
         super(Comic, self).__init__(root, split='train')
 
 
 class ComicTest(VOCPartialBase):
+    archive_name = 'comic.tar'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/a7c38db53287449f9db2/?dl=1'
+
     def __init__(self, root):
         super(ComicTest, self).__init__(root, split='test')
 
@@ -105,7 +152,8 @@ class CityscapesBase:
         self.name = "{}_{}".format(root, split)
         self.name = self.name.replace(os.path.sep, "_")
         if self.name not in MetadataCatalog.keys():
-            register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext, bbox_zero_based=True)
+            register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext,
+                                bbox_zero_based=True)
             MetadataCatalog.get(self.name).evaluator_type = "pascal_voc"
 
 
@@ -136,7 +184,8 @@ class CityscapesCarBase:
         self.name = "{}_{}".format(root, split)
         self.name = self.name.replace(os.path.sep, "_")
         if self.name not in MetadataCatalog.keys():
-            register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext, bbox_zero_based=bbox_zero_based)
+            register_pascal_voc(self.name, root, split, year, class_names=self.class_names, ext=ext,
+                                bbox_zero_based=bbox_zero_based)
             MetadataCatalog.get(self.name).evaluator_type = "pascal_voc"
 
 
@@ -228,5 +277,3 @@ def register_pascal_voc(name, dirname, split, year, class_names, **kwargs):
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split
     )
-
-

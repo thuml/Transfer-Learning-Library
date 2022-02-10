@@ -4,23 +4,38 @@
 ## Installation
 Our code is based on [Detectron latest(v0.6)](https://detectron2.readthedocs.io/en/latest/tutorials/install.html), please install it before usage.
 
+The following is an example based on PyTorch 1.9.0 with CUDA 11.1. For other versions, please refer to 
+the official website of [PyTorch](https://pytorch.org/) and 
+[Detectron](https://detectron2.readthedocs.io/en/latest/tutorials/install.html).
+```shell
+# create environment
+conda create -n detection python=3.8.3
+# activate environment
+conda activate detection
+# install pytorch 
+pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+# install detectron
+python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.9/index.html
+# install other requirements
+pip install requirements.txt
+```
 
 ## Dataset
 
+Following datasets can be downloaded automatically:
+- [PASCAL_VOC 07+12](http://host.robots.ox.ac.uk/pascal/VOC/)
+- Clipart
+- WaterColor
+- Comic
+
 You need to prepare following datasets manually if you want to use them:
-
-#### PASCAL_VOC 07+12
-- Please follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare VOC datasets.
-
-#### Clipart, WaterColor, Comic
-- Dataset preparation instruction link [Cross Domain Detection ](https://github.com/naoto0804/cross-domain-detection/tree/master/datasets). 
 
 #### Cityscapes, Foggy Cityscapes
   - Download Cityscapes and Foggy Cityscapes dataset from the [link](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *leftImg8bit_trainvaltest.zip* for Cityscapes and *leftImg8bit_trainvaltest_foggy.zip* for Foggy Cityscapes.
   - Unzip them under the directory like
 
 ```
-object_detction/datasets/cityscape
+object_detction/datasets/cityscapes
 ├── gtFine
 ├── leftImg8bit
 ├── leftImg8bit_foggy
@@ -36,14 +51,15 @@ object_detction/datasets/cityscapes_in_voc
 ├── Annotations
 ├── ImageSets
 └── JPEGImages
+object_detction/datasets/foggy_cityscapes_in_voc
+├── Annotations
+├── ImageSets
+└── JPEGImages
 ```
 
-**Note**: you may need to install `pascal_voc_writer` via `pip install pascal_voc_writer` when converting the dataset format. To use your own datasets, you 
-should convert them into corresponding format. 
- 
 #### Sim10k
-  - Download Sim10k dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix). Particularly, we use *repro_10k_images.tgz* , *repro_image_sets.tar* and *repro_10k_annotations.tgz* for Sim10k.
-  - Extract the training set from *repro_10k_images.tgz* *repro_image_sets.tar*, and *repro_10k_annotations.tgz*, then rename directory `VOC2012/` to `sim10k/`.
+  - Download Sim10k dataset from the following links: [Sim10k](https://fcav.engin.umich.edu/projects/driving-in-the-matrix). Particularly, we use *repro_10k_images.tgz* , *repro_image_sets.tgz* and *repro_10k_annotations.tgz* for Sim10k.
+  - Extract the training set from *repro_10k_images.tgz*, *repro_image_sets.tgz* and *repro_10k_annotations.tgz*, then rename directory `VOC2012/` to `sim10k/`.
   
 After preparation, there should exist following files:
 ```
@@ -81,6 +97,9 @@ object_detction/datasets/
     ├── ImageSets
     └── JPEGImages
 ```
+
+**Note**: The above is a tutorial for using standard datasets. To use your own datasets, 
+you need to convert them into corresponding format.
 
 ## Supported Methods
 
@@ -167,10 +186,21 @@ Explanation of some arguments
 |                         |  Target  | 24.6 | 44.4 | 23.0 |
 
 ### Visualization
+We provide code for visualization in `visualize.py`. For example, suppose you have trained the source only model 
+of task VOC->Clipart using provided scripts. The following code visualizes the prediction of the 
+detector on Clipart.
+```shell
+CUDA_VISIBLE_DEVICES=0 python visualize.py --config-file config/faster_rcnn_R_101_C4_voc.yaml \
+  --test Clipart datasets/clipart --save-path visualizations/source_only/voc2clipart \
+  MODEL.WEIGHTS logs/source_only/faster_rcnn_R_101_C4/voc2clipart/model_final.pth
+```
+Explanation of some arguments
+- `--test`: a list that specifiers test datasets for visualization.
+- `--save-path`: where to save visualization results.
+- `MODEL.WEIGHTS`: path to the model.
 
 ## TODO
-Support methods: SWDA, Global/Local Alignment, Dataset Installation Instruction, Tutorial, visualization code
-
+Support methods: SWDA, Global/Local Alignment
 
 ## Citation
 If you use these methods in your research, please consider citing.
