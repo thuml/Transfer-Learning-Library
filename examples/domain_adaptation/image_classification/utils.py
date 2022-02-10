@@ -5,13 +5,12 @@
 import sys
 import os.path as osp
 import time
+
 import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
-from torch.utils.data import ConcatDataset
-import wilds
 
 sys.path.append('../../..')
 import tllib.vision.datasets as datasets
@@ -19,6 +18,7 @@ import tllib.vision.models as models
 from tllib.vision.transforms import ResizeImage
 from tllib.utils.metric import accuracy, ConfusionMatrix
 from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.vision.datasets.imagelist import MultipleDomainsDataset
 
 
 def get_model_names():
@@ -45,26 +45,11 @@ def get_model(model_name, pretrain=True):
     return backbone
 
 
-def convert_from_wilds_dataset(wild_dataset):
-    class Dataset:
-        def __init__(self):
-            self.dataset = wild_dataset
-
-        def __getitem__(self, idx):
-            x, y, metadata = self.dataset[idx]
-            return x, y
-
-        def __len__(self):
-            return len(self.dataset)
-
-    return Dataset()
-
-
 def get_dataset_names():
     return sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
-    ) + wilds.supported_datasets + ['Digits']
+    ) + ['Digits']
 
 
 def get_dataset(dataset_name, root, source, target, train_source_transform, val_transform, train_target_transform=None):
@@ -83,26 +68,21 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
         # load datasets from tllib.vision.datasets
         dataset = datasets.__dict__[dataset_name]
 
-        def concat_dataset(tasks, **kwargs):
-            return ConcatDataset([dataset(task=task, **kwargs) for task in tasks])
+        def concat_dataset(tasks, start_idx, **kwargs):
+            # return ConcatDataset([dataset(task=task, **kwargs) for task in tasks])
+            return MultipleDomainsDataset([dataset(task=task, **kwargs) for task in tasks], tasks, domain_ids=list(range(start_idx, start_idx+len(tasks))))
 
-        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform)
-        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform)
-        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform)
+        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform, start_idx=0)
+        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform, start_idx=len(source))
+        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform, start_idx=len(source))
         if dataset_name == 'DomainNet':
-            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform)
+            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform, start_idx=len(source))
         else:
             test_dataset = val_dataset
         class_names = train_source_dataset.datasets[0].classes
         num_classes = len(class_names)
     else:
-        # load datasets from wilds
-        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
-        num_classes = dataset.n_classes
-        class_names = None
-        train_source_dataset = convert_from_wilds_dataset(dataset.get_subset('train', transform=train_source_transform))
-        train_target_dataset = convert_from_wilds_dataset(dataset.get_subset('test', transform=train_target_transform))
-        val_dataset = test_dataset = convert_from_wilds_dataset(dataset.get_subset('test', transform=val_transform))
+        raise NotImplementedError(dataset_name)
     return train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, class_names
 
 
@@ -124,7 +104,8 @@ def validate(val_loader, model, args, device) -> float:
 
     with torch.no_grad():
         end = time.time()
-        for i, (images, target) in enumerate(val_loader):
+        for i, data in enumerate(val_loader):
+            images, target = data[:2]
             images = images.to(device)
             target = target.to(device)
 
@@ -215,7 +196,7 @@ def get_val_transform(resizing='default', resize_size=224,
     ])
 
 
-def pretrain(train_source_iter, model, optimizer, lr_scheduler, epoch, args, device):
+def empirical_risk_minimization(train_source_iter, model, optimizer, lr_scheduler, epoch, args, device):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -231,7 +212,7 @@ def pretrain(train_source_iter, model, optimizer, lr_scheduler, epoch, args, dev
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
 

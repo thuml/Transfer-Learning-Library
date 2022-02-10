@@ -18,18 +18,16 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from tllib.modules.domain_discriminator import DomainDiscriminator
+import utils
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.alignment.bsp import BatchSpectralPenalizationLoss, ImageClassifier
+from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -128,8 +126,8 @@ def main(args: argparse.Namespace):
         for epoch in range(args.pretrain_epochs):
             print("lr:", pretrain_lr_scheduler.get_lr())
             # pretrain for one epoch
-            utils.pretrain(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
-                           device)
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+                                              device)
             # validate to show pretrain process
             utils.validate(val_loader, pretrain_model, args, device)
 
@@ -185,8 +183,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
+        x_t, = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)

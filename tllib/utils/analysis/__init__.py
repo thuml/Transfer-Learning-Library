@@ -21,10 +21,10 @@ def collect_feature(data_loader: DataLoader, feature_extractor: nn.Module,
     feature_extractor.eval()
     all_features = []
     with torch.no_grad():
-        for i, (images, target) in enumerate(tqdm.tqdm(data_loader)):
+        for i, data in enumerate(tqdm.tqdm(data_loader)):
             if max_num_features is not None and i >= max_num_features:
                 break
-            images = images.to(device)
-            feature = feature_extractor(images).cpu()
+            inputs = data[0].to(device)
+            feature = feature_extractor(inputs).cpu()
             all_features.append(feature)
     return torch.cat(all_features, dim=0)

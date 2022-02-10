@@ -3,13 +3,12 @@
 @contact: cbx_99_hasta@outlook.com
 Note: Our implementation is different from ADDA paper in several respects. We do not use separate networks for
 source and target domain, nor fix classifier head. Besides, we do not adopt asymmetric objective loss function
-of the feature extractor. We achieve promising results on digits datasets (reported by ADDA paper).
-But on other benchmarks, ADDA-grl may achieve better results.
+of the feature extractor.
 """
 import random
 import time
 import warnings
-import sys
+import copy
 import argparse
 import shutil
 import os.path as osp
@@ -20,23 +19,26 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
+from tllib.alignment.adda import ImageClassifier
+from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.modules.domain_discriminator import DomainDiscriminator
-from tllib.alignment.adda import ImageClassifier, DomainAdversarialLoss
-from tllib.modules.gl import WarmStartGradientLayer
-from tllib.translation.cyclegan.util import set_requires_grad
+from tllib.modules.grl import WarmStartGradientReverseLayer
 from tllib.utils.data import ForeverDataIterator
-from tllib.utils.metric import accuracy, binary_accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-sys.path.append('.')
-import utils
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def set_requires_grad(net, requires_grad=False):
+    """
+    Set requies_grad=Fasle for all the networks to avoid unnecessary computations
+    """
+    for param in net.parameters():
+        param.requires_grad = requires_grad
 
 
 def main(args: argparse.Namespace):
@@ -80,31 +82,62 @@ def main(args: argparse.Namespace):
     print("=> using model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 pool_layer=pool_layer, finetune=not args.scratch).to(device)
-    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
+    source_classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                        pool_layer=pool_layer, finetune=not args.scratch).to(device)
+
+    if args.phase == 'train' and args.pretrain is None:
+        # first pretrain the classifier wish source data
+        print("Pretraining the model on source domain.")
+        args.pretrain = logger.get_checkpoint_path('pretrain')
+        pretrain_model = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                         pool_layer=pool_layer, finetune=not args.scratch).to(device)
+        pretrain_optimizer = SGD(pretrain_model.get_parameters(), args.pretrain_lr, momentum=args.momentum,
+                                 weight_decay=args.weight_decay, nesterov=True)
+        pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
+                                         lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
+                                             -args.lr_decay))
+        # start pretraining
+        for epoch in range(args.pretrain_epochs):
+            print("lr:", pretrain_lr_scheduler.get_lr())
+            # pretrain for one epoch
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+                                              device)
+            # validate to show pretrain process
+            utils.validate(val_loader, pretrain_model, args, device)
+
+        torch.save(pretrain_model.state_dict(), args.pretrain)
+        print("Pretraining process is done.")
+
+    checkpoint = torch.load(args.pretrain, map_location='cpu')
+    source_classifier.load_state_dict(checkpoint)
+    target_classifier = copy.deepcopy(source_classifier)
+
+    # freeze source classifier
+    set_requires_grad(source_classifier, False)
+    source_classifier.freeze_bn()
+
+    domain_discri = DomainDiscriminator(in_feature=source_classifier.features_dim, hidden_size=1024).to(device)
 
     # define loss function
-    domain_adv = DomainAdversarialLoss().to(device)
-    gl = WarmStartGradientLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
+    grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=2., max_iters=1000, auto_step=True)
+    domain_adv = DomainAdversarialLoss(domain_discri, grl=grl).to(device)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay,
-                    nesterov=True)
-    optimizer_d = SGD(domain_discri.get_parameters(), args.lr_d, momentum=args.momentum, weight_decay=args.weight_decay,
-                      nesterov=True)
+    # note that we only optimize target feature extractor
+    optimizer = SGD(target_classifier.get_parameters(optimize_head=False) + domain_discri.get_parameters(), args.lr,
+                    momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
     lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
-    lr_scheduler_d = LambdaLR(optimizer_d, lambda x: args.lr_d * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # resume from the best checkpoint
     if args.phase != 'train':
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
-        classifier.load_state_dict(checkpoint)
+        target_classifier.load_state_dict(checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
         # extract features from both domains
-        feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
+        feature_extractor = nn.Sequential(target_classifier.backbone, target_classifier.pool_layer,
+                                          target_classifier.bottleneck).to(device)
         source_feature = collect_feature(train_source_loader, feature_extractor, device)
         target_feature = collect_feature(train_target_loader, feature_extractor, device)
         # plot t-SNE
@@ -117,24 +150,23 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1 = utils.validate(test_loader, classifier, args, device)
+        acc1 = utils.validate(test_loader, target_classifier, args, device)
         print(acc1)
         return
 
     # start training
     best_acc1 = 0.
     for epoch in range(args.epochs):
-        print("lr classifier:", lr_scheduler.get_lr())
-        print("lr discriminator:", lr_scheduler_d.get_lr())
+        print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, domain_discri, domain_adv,  gl, optimizer,
-              lr_scheduler, optimizer_d, lr_scheduler_d, epoch, args)
+        train(train_source_iter, train_target_iter, source_classifier, target_classifier, domain_adv,
+              optimizer, lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        acc1 = utils.validate(val_loader, classifier, args, device)
+        acc1 = utils.validate(val_loader, target_classifier, args, device)
 
         # remember best acc@1 and save checkpoint
-        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
+        torch.save(target_classifier.state_dict(), logger.get_checkpoint_path('latest'))
         if acc1 > best_acc1:
             shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
         best_acc1 = max(acc1, best_acc1)
@@ -142,82 +174,52 @@ def main(args: argparse.Namespace):
     print("best_acc1 = {:3.1f}".format(best_acc1))
 
     # evaluate on test set
-    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
-    acc1 = utils.validate(test_loader, classifier, args, device)
+    target_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    acc1 = utils.validate(test_loader, target_classifier, args, device)
     print("test_acc1 = {:3.1f}".format(acc1))
 
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          domain_discri: DomainDiscriminator, domain_adv: DomainAdversarialLoss, gl,
-          optimizer: SGD, lr_scheduler: LambdaLR, optimizer_d: SGD, lr_scheduler_d: LambdaLR,
-          epoch: int, args: argparse.Namespace):
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,
+          source_model: ImageClassifier, target_model: ImageClassifier, domain_adv: DomainAdversarialLoss,
+          optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
-    losses_s = AverageMeter('Cls Loss', ':6.2f')
     losses_transfer = AverageMeter('Transfer Loss', ':6.2f')
-    losses_discriminator = AverageMeter('Discriminator Loss', ':6.2f')
-    cls_accs = AverageMeter('Cls Acc', ':3.1f')
     domain_accs = AverageMeter('Domain Acc', ':3.1f')
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, losses_s, losses_transfer, losses_discriminator, cls_accs, domain_accs],
+        [batch_time, data_time, losses_transfer, domain_accs],
         prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    target_model.train()
+    domain_adv.train()
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_s, = next(train_source_iter)[:1]
+        x_t, = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
-        labels_s = labels_s.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
 
-        # Step 1: Train the classifier, freeze the discriminator
-        model.train()
-        domain_discri.eval()
-        set_requires_grad(model, True)
-        set_requires_grad(domain_discri, False)
-        x = torch.cat((x_s, x_t), dim=0)
-        y, f = model(x)
-        y_s, y_t = y.chunk(2, dim=0)
-        loss_s = F.cross_entropy(y_s, labels_s)
+        _, f_s = source_model(x_s)
+        _, f_t = target_model(x_t)
+        loss_transfer = domain_adv(f_s, f_t)
 
-        # adversarial training to fool the discriminator
-        d = domain_discri(gl(f))
-        d_s, d_t = d.chunk(2, dim=0)
-        loss_transfer = 0.5 * (domain_adv(d_s, 'target') + domain_adv(d_t, 'source'))
-
+        # Compute gradient and do SGD step
         optimizer.zero_grad()
-        (loss_s + loss_transfer * args.trade_off).backward()
+        loss_transfer.backward()
         optimizer.step()
         lr_scheduler.step()
 
-        # Step 2: Train the discriminator
-        model.eval()
-        domain_discri.train()
-        set_requires_grad(model, False)
-        set_requires_grad(domain_discri, True)
-        d = domain_discri(f.detach())
-        d_s, d_t = d.chunk(2, dim=0)
-        loss_discriminator = 0.5 * (domain_adv(d_s, 'source') + domain_adv(d_t, 'target'))
-
-        optimizer_d.zero_grad()
-        loss_discriminator.backward()
-        optimizer_d.step()
-        lr_scheduler_d.step()
-
-        losses_s.update(loss_s.item(), x_s.size(0))
         losses_transfer.update(loss_transfer.item(), x_s.size(0))
-        losses_discriminator.update(loss_discriminator.item(), x_s.size(0))
-
-        cls_acc = accuracy(y_s, labels_s)[0]
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-        domain_acc = 0.5 * (binary_accuracy(d_s, torch.ones_like(d_s)) + binary_accuracy(d_t, torch.zeros_like(d_t)))
+        domain_acc = domain_adv.domain_discriminator_accuracy
         domain_accs.update(domain_acc.item(), x_s.size(0))
 
         # measure elapsed time
@@ -254,22 +256,21 @@ if __name__ == '__main__':
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet18)')
+    parser.add_argument('--pretrain', type=str, default=None,
+                        help='pretrain checkpoint for classification model')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
-    parser.add_argument('--trade-off', default=0.1, type=float,
-                        help='the trade-off hyper-parameter for transfer loss')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate of the classifier', dest='lr')
-    parser.add_argument('--lr-d', default=0.01, type=float,
-                        help='initial learning rate of the domain discriminator')
-    parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
+    parser.add_argument('--pretrain-lr', default=0.001, type=float, help='initial pretrain learning rate')
+    parser.add_argument('--lr-gamma', default=0.0003, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
@@ -280,6 +281,8 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
+    parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
+                        help='number of total epochs(pretrain) to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -288,7 +291,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='adda',
+    parser.add_argument("--log", type=str, default='addagrl',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

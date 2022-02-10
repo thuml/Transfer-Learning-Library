@@ -17,8 +17,8 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from tllib.alignment.afn import AdaptiveFeatureNorm, ImageClassifier
+import utils
+from tllib.modules.normalization.afn import AdaptiveFeatureNorm, ImageClassifier
 from tllib.modules.entropy import entropy
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
@@ -26,8 +26,6 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -141,11 +139,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     src_feature_norm = AverageMeter('Source Feature Norm', ':3.2f')
     tgt_feature_norm = AverageMeter('Target Feature Norm', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, cls_losses, norm_losses, src_feature_norm, tgt_feature_norm, cls_accs, tgt_accs],
+        [batch_time, data_time, cls_losses, norm_losses, src_feature_norm, tgt_feature_norm, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -153,13 +150,12 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, labels_t = next(train_target_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
+        x_t, = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
         labels_s = labels_s.to(device)
-        labels_t = labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -187,14 +183,12 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         # update statistics
         cls_acc = accuracy(y_s, labels_s)[0]
-        tgt_acc = accuracy(y_t, labels_t)[0]
 
         cls_losses.update(cls_loss.item(), x_s.size(0))
         norm_losses.update(norm_loss.item(), x_s.size(0))
         src_feature_norm.update(f_s.norm(p=2, dim=1).mean().item(), x_s.size(0))
         tgt_feature_norm.update(f_t.norm(p=2, dim=1).mean().item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_s.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

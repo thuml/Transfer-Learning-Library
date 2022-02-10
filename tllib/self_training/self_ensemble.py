@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tllib.modules.classifier import Classifier as ClassifierBase
-from dalib.translation.cyclegan.util import set_requires_grad
 
 
 class ConsistencyLoss(nn.Module):
@@ -166,6 +165,14 @@ class EmaTeacher(object):
     @property
     def module(self):
         return self.teacher.module
+
+
+def set_requires_grad(net, requires_grad=False):
+    """
+    Set requies_grad=Fasle for all the networks to avoid unnecessary computations
+    """
+    for param in net.parameters():
+        param.requires_grad = requires_grad
 
 
 class ImageClassifier(ClassifierBase):

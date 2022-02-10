@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
 from tllib.self_training.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
 from tllib.vision.transforms import ResizeImage, MultipleApply
 from tllib.utils.data import ForeverDataIterator
@@ -28,8 +28,6 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -131,8 +129,8 @@ def main(args: argparse.Namespace):
         # start pretraining
         for epoch in range(args.pretrain_epochs):
             # pretrain for one epoch
-            utils.pretrain(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
-                           device)
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+                                              device)
             # validate to show pretrain process
             utils.validate(val_loader, pretrain_model, args, device)
 
@@ -180,11 +178,10 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
     cons_losses = AverageMeter('Cons Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
-    tgt_accs = AverageMeter('Tgt Acc', ':3.1f')
 
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, data_time, cls_losses, cons_losses, cls_accs, tgt_accs],
+        [batch_time, data_time, cls_losses, cons_losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -193,14 +190,13 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        (x_t1, x_t2), labels_t = next(train_target_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
+        (x_t1, x_t2), = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t1 = x_t1.to(device)
         x_t2 = x_t2.to(device)
         labels_s = labels_s.to(device)
-        labels_t = labels_t.to(device)
 
         # measure data loading time
         data_time.update(time.time() - end)
@@ -236,11 +232,9 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         # update statistics
         cls_acc = accuracy(y_s, labels_s)[0]
-        tgt_acc = accuracy(y_t, labels_t)[0]
         cls_losses.update(cls_loss.item(), x_s.size(0))
         cons_losses.update(cons_loss.item(), x_s.size(0))
         cls_accs.update(cls_acc.item(), x_s.size(0))
-        tgt_accs.update(tgt_acc.item(), x_s.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

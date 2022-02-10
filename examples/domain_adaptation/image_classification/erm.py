@@ -3,9 +3,7 @@
 @contact: JiangJunguang1123@outlook.com
 """
 import random
-import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -17,19 +15,17 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+import utils
 from tllib.modules.classifier import Classifier
-from tllib.utils.data import ForeverDataIterator
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
+from tllib.utils.data import ForeverDataIterator
 
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(args: argparse.Namespace):
+def main(args):
     logger = CompleteLogger(args.log, args.phase)
     print(args)
 
@@ -105,7 +101,7 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        utils.pretrain(train_source_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
+        utils.empirical_risk_minimization(train_source_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
 
         # evaluate on validation set
         acc1 = utils.validate(val_loader, classifier, args, device)

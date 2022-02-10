@@ -76,16 +76,6 @@ CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s c i p r s -t
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet101 --epochs 40 -i 5000 -p 500 --bottleneck-dim 2048 --seed 0 --lr 0.004 --log logs/mdd/DomainNet_:2r
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet101 --epochs 40 -i 5000 -p 500 --bottleneck-dim 2048 --seed 0 --lr 0.004 --log logs/mdd/DomainNet_:2s
 
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python mdd.py data/wilds -d iwildcam --train-resizing 'res.' --val-resizing 'res.' \
-  -a resnet50 --bottleneck-dim 2048 --epochs 30 -i 1000 --seed 0 --log logs/mdd/iwildcam
-
-# DenseNet121, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python mdd.py data/wilds -d camelyon17 --train-resizing 'res.' --val-resizing 'res.' --resize-size 96 \
-  -a densenet121 --scratch --epochs 30 -i 1000 --lr 0.01 --seed 0 --log logs/mdd/camelyon17
-CUDA_VISIBLE_DEVICES=0 python mdd.py data/wilds -d fmow --train-resizing 'res.' --val-resizing 'res.' \
-  -a densenet121 --bottleneck-dim 2048 --epochs 30 -i 1000 --lr 0.01 --seed 0 --log logs/mdd/fmow
-
 # Digits
 CUDA_VISIBLE_DEVICES=0 python mdd.py data/digits -d Digits -s MNIST -t USPS --train-resizing 'res.' --val-resizing 'res.' \
   --resize-size 28 --no-hflip --norm-mean 0.5 --norm-std 0.5 -a lenet --no-pool --lr 0.01 -b 128 -i 2500 --scratch --seed 0 --log logs/mdd/MNIST2USPS

@@ -1,14 +1,9 @@
 # Unsupervised Domain Adaptation for Image Classification
 
 ## Installation
-Example scripts can deal with [WILDS datasets](https://wilds.stanford.edu/).
-You should first install ``wilds`` before using these scripts.
+It’s suggested to use **pytorch==1.7.1** and torchvision==0.8.2 in order to reproduce the benchmark results.
 
-```
-pip install wilds
-```
-
-Example scripts also support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
+Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
 You also need to install timm to use PyTorch-Image-Models.
 
 ```
@@ -25,9 +20,6 @@ Following datasets can be downloaded automatically:
 - [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
 - [VisDA2017](http://ai.bu.edu/visda-2017/)
 - [DomainNet](http://ai.bu.edu/M3SDA/)
-- [iwildcam (WILDS)](https://wilds.stanford.edu/datasets/)
-- [camelyon17 (WILDS)](https://wilds.stanford.edu/datasets/)
-- [fmow (WILDS)](https://wilds.stanford.edu/datasets/)
 
 You need to prepare following datasets manually if you want to use them:
 - [ImageNet](https://www.image-net.org/)

@@ -18,7 +18,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.alignment.cdan import ConditionalDomainAdversarialLoss, ImageClassifier
 from tllib.utils.data import ForeverDataIterator
@@ -27,8 +27,6 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -167,8 +165,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
+        x_t, = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
