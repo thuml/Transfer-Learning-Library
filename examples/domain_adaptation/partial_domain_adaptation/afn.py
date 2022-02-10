@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from tllib.alignment.afn import AdaptiveFeatureNorm, ImageClassifier
+from tllib.modules.normalization.afn import AdaptiveFeatureNorm, ImageClassifier
 from tllib.modules.entropy import entropy
 import tllib.vision.models as models
 from tllib.utils.data import ForeverDataIterator
