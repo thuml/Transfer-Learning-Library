@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tllib.modules.classifier import Classifier as ClassifierBase
-from tllib.utils.metric import binary_accuracy
+from tllib.utils.metric import binary_accuracy, accuracy
 from tllib.modules.grl import WarmStartGradientReverseLayer
 from tllib.modules.entropy import entropy
 
@@ -80,18 +80,19 @@ class ConditionalDomainAdversarialLoss(nn.Module):
     def __init__(self, domain_discriminator: nn.Module, entropy_conditioning: Optional[bool] = False,
                  randomized: Optional[bool] = False, num_classes: Optional[int] = -1,
                  features_dim: Optional[int] = -1, randomized_dim: Optional[int] = 1024,
-                 reduction: Optional[str] = 'mean'):
+                 reduction: Optional[str] = 'mean', sigmoid=True):
         super(ConditionalDomainAdversarialLoss, self).__init__()
         self.domain_discriminator = domain_discriminator
         self.grl = WarmStartGradientReverseLayer(alpha=1., lo=0., hi=1., max_iters=1000, auto_step=True)
         self.entropy_conditioning = entropy_conditioning
+        self.sigmoid = sigmoid
+        self.reduction = reduction
 
         if randomized:
             assert num_classes > 0 and features_dim > 0 and randomized_dim > 0
             self.map = RandomizedMultiLinearMap(features_dim, num_classes, randomized_dim)
         else:
             self.map = MultiLinearMap()
-
         self.bce = lambda input, target, weight: F.binary_cross_entropy(input, target, weight,
                                                                         reduction=reduction) if self.entropy_conditioning \
             else F.binary_cross_entropy(input, target, reduction=reduction)
@@ -103,15 +104,30 @@ class ConditionalDomainAdversarialLoss(nn.Module):
         g = F.softmax(g, dim=1).detach()
         h = self.grl(self.map(f, g))
         d = self.domain_discriminator(h)
-        d_label = torch.cat((
-            torch.ones((g_s.size(0), 1)).to(g_s.device),
-            torch.zeros((g_t.size(0), 1)).to(g_t.device),
-        ))
+
         weight = 1.0 + torch.exp(-entropy(g))
         batch_size = f.size(0)
         weight = weight / torch.sum(weight) * batch_size
-        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
-        return self.bce(d, d_label, weight.view_as(d))
+
+        if self.sigmoid:
+            d_label = torch.cat((
+                torch.ones((g_s.size(0), 1)).to(g_s.device),
+                torch.zeros((g_t.size(0), 1)).to(g_t.device),
+            ))
+            self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+            if self.entropy_conditioning:
+                return F.binary_cross_entropy(d, d_label, weight.view_as(d), reduction=self.reduction)
+            else:
+                return F.binary_cross_entropy(d, d_label, reduction=self.reduction)
+        else:
+            d_label = torch.cat((
+                torch.ones((g_s.size(0), )).to(g_s.device),
+                torch.zeros((g_t.size(0), )).to(g_t.device),
+            )).long()
+            self.domain_discriminator_accuracy = accuracy(d, d_label)
+            if self.entropy_conditioning:
+                raise NotImplementedError("entropy_conditioning")
+            return F.cross_entropy(d, d_label, reduction=self.reduction)
 
 
 class RandomizedMultiLinearMap(nn.Module):

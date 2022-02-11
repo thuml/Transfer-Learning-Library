@@ -43,20 +43,6 @@ def get_model(model_name, pretrain=True):
     return backbone
 
 
-# def convert_from_wilds_unlabeled_dataset(wild_dataset):
-#     class Dataset:
-#         def __init__(self):
-#             self.dataset = wild_dataset
-#
-#         def __getitem__(self, idx):
-#             x, metadata = self.dataset[idx]
-#             return x, torch.tensor(-1).long(), metadata
-#
-#         def __len__(self):
-#             return len(self.dataset)
-#
-#     return Dataset()
-
 def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_list=("test",),
                 transform_train=None, transform_test=None, verbose=True):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
@@ -291,7 +277,7 @@ def plot_classes_preds(images, labels, outputs, class_names, metadata, metadata_
     # plot the images in the batch, along with predicted and true labels
     fig = plt.figure(figsize=(12, nrows * 4))
     domains = get_domain_names(metadata, metadata_map)
-    for idx in np.arange(nrows * 4):
+    for idx in np.arange(min(nrows * 4, len(images))):
         ax = fig.add_subplot(nrows, 4, idx+1, xticks=[], yticks=[])
         matplotlib_imshow(images[idx])
         ax.set_title("{0}, {1:.1f}%\n(label: {2}\ndomain: {3})".format(
