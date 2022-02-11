@@ -9,11 +9,11 @@ Classification & Segmentation
 Accuracy
 ---------------------------------
 
-.. autofunction:: common.utils.metric.accuracy
+.. autofunction:: tllib.utils.metric.accuracy
 
 
 ConfusionMatrix
 ---------------------------------
 
-.. autoclass:: common.utils.metric.ConfusionMatrix
+.. autoclass:: tllib.utils.metric.ConfusionMatrix
    :members:

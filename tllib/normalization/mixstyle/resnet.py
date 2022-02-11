@@ -2,9 +2,9 @@
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
-from .mixstyle import MixStyle
-from common.vision.models.reid.resnet import ReidResNet
-from common.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
+from . import MixStyle
+from tllib.vision.models.reid.resnet import ReidResNet
+from tllib.vision.models.resnet import ResNet, load_state_dict_from_url, model_urls, BasicBlock, Bottleneck
 
 __all__ = ['resnet18', 'resnet34', 'resnet50', 'resnet101']
 

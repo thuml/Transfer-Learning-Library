@@ -96,7 +96,7 @@ class FourierTransform(nn.Module):
     Examples:
 
         >>> from tllib.translation.fourier_transform import FourierTransform
-        >>> import common.vision.datasets.segmentation.transforms as T
+        >>> import tllibvision.datasets.segmentation.transforms as T
         >>> from PIL import Image
         >>> target_image_list = ["target_image_path1", "target_image_path2"]
         >>> amplitude_dir = "path/to/amplitude_dir"

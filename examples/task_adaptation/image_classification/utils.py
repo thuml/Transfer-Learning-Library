@@ -7,6 +7,7 @@ from PIL import Image
 import timm
 import numpy as np
 import random
+import sys
 
 import torch
 import torch.nn as nn
@@ -15,6 +16,7 @@ from torch.utils.data import Subset
 import torchvision.transforms as T
 from torch.optim import SGD, Adam
 
+sys.path.append('../../..')
 import tllib.vision.datasets as datasets
 import tllib.vision.models as models
 from tllib.utils.metric import accuracy

@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 
@@ -15,16 +14,13 @@ import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+import utils
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.logger import CompleteLogger
 from tllib.regularization.bi_tuning import Classifier, BiTuning
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

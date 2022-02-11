@@ -43,9 +43,11 @@ Supported methods include:
 
 ## Experiment and Results
 
-We follow the common practice in the community as described in Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019).
+We follow the common practice in the community as described in [Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning (BSS, NIPS 2019)](https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf).
+
 Training iterations and data augmentations are kept the same for different task-adaptation
 methods for a fair comparison.
+
 Hyper-parameters of each method are selected by the performance on target validation data.
 
 ### Fine-tune the supervised pre-trained model

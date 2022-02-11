@@ -18,8 +18,8 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from tllib.modules.normalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
-import tllib.modules.normalization.mixstyle.models as models
+from tllib.normalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
+import tllib.normalization.mixstyle.models as models
 from tllib.vision.models.reid.identifier import ReIdentifier
 from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
 import tllib.vision.datasets.reid as datasets

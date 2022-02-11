@@ -7,16 +7,16 @@ Self Training Methods
 Self Ensemble
 -----------------------------
 
-.. autoclass:: dalib.adaptation.self_ensemble.ConsistencyLoss
+.. autoclass:: tllib.self_training.self_ensemble.ConsistencyLoss
 
 
-.. autoclass:: dalib.adaptation.self_ensemble.L2ConsistencyLoss
+.. autoclass:: tllib.self_training.self_ensemble.L2ConsistencyLoss
 
 
-.. autoclass:: dalib.adaptation.self_ensemble.ClassBalanceLoss
+.. autoclass:: tllib.self_training.self_ensemble.ClassBalanceLoss
 
 
-.. autoclass:: dalib.adaptation.self_ensemble.EmaTeacher
+.. autoclass:: tllib.self_training.self_ensemble.EmaTeacher
 
 
 .. _MCC:
@@ -24,7 +24,7 @@ Self Ensemble
 MCC: Minimum Class Confusion
 -----------------------------
 
-.. autoclass:: dalib.adaptation.mcc.MinimumClassConfusionLoss
+.. autoclass:: tllib.self_training.mcc.MinimumClassConfusionLoss
 
 
 .. _MMT:
@@ -64,22 +64,8 @@ These two networks cooperate with each other in three ways:
 
 The above mentioned loss functions are listed below, more details can be found in training scripts.
 
-.. autoclass:: common.vision.models.reid.loss.SoftTripletLoss
+.. autoclass:: tllib.vision.models.reid.loss.SoftTripletLoss
 
-.. autoclass:: common.vision.models.reid.loss.CrossEntropyLoss
+.. autoclass:: tllib.vision.models.reid.loss.CrossEntropyLoss
 
 
-=======================================
-Other Methods
-=======================================
-
-.. _AFN:
-
-AFN: Adaptive Feature Norm
------------------------------
-
-.. autoclass:: dalib.adaptation.afn.AdaptiveFeatureNorm
-
-.. autoclass:: dalib.adaptation.afn.Block
-
-.. autoclass:: dalib.adaptation.afn.ImageClassifier

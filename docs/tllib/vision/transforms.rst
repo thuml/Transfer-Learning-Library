@@ -1,11 +1,11 @@
-Vision Transforms
+Transforms
 =============================
 
 
 Classification
 ---------------------------------
 
-.. automodule:: common.vision.transforms
+.. automodule:: tllib.vision.transforms
    :members:
 
 
@@ -13,7 +13,7 @@ Segmentation
 ---------------------------------
 
 
-.. automodule:: common.vision.transforms.segmentation
+.. automodule:: tllib.vision.transforms.segmentation
    :members:
 
 
@@ -21,5 +21,5 @@ Keypoint Detection
 ---------------------------------
 
 
-.. automodule:: common.vision.transforms.keypoint_detection
+.. automodule:: tllib.vision.transforms.keypoint_detection
    :members:

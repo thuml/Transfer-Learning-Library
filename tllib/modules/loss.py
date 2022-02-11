@@ -1,4 +1,3 @@
-# Copy from https://github.com/CoinCheung/pytorch-loss
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
@@ -7,7 +6,7 @@ import torch.nn.functional as F
 # version 1: use torch.autograd
 class LabelSmoothSoftmaxCEV1(nn.Module):
     '''
-    This is the autograd version, you can also try the LabelSmoothSoftmaxCEV2 that uses derived gradients
+    Adapted from https://github.com/CoinCheung/pytorch-loss
     '''
 
     def __init__(self, lb_smooth=0.1, reduction='mean', ignore_index=-1):

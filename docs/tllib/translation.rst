@@ -12,44 +12,44 @@ CycleGAN: Cycle-Consistent Adversarial Networks
 Discriminator
 --------------
 
-.. autofunction:: dalib.translation.cyclegan.pixel
+.. autofunction:: tllib.translation.cyclegan.pixel
 
-.. autofunction:: dalib.translation.cyclegan.patch
+.. autofunction:: tllib.translation.cyclegan.patch
 
 Generator
 --------------
 
-.. autofunction:: dalib.translation.cyclegan.resnet_9
+.. autofunction:: tllib.translation.cyclegan.resnet_9
 
-.. autofunction:: dalib.translation.cyclegan.resnet_6
+.. autofunction:: tllib.translation.cyclegan.resnet_6
 
-.. autofunction:: dalib.translation.cyclegan.unet_256
+.. autofunction:: tllib.translation.cyclegan.unet_256
 
-.. autofunction:: dalib.translation.cyclegan.unet_128
+.. autofunction:: tllib.translation.cyclegan.unet_128
 
 
 GAN Loss
 --------------
 
-.. autoclass:: dalib.translation.cyclegan.LeastSquaresGenerativeAdversarialLoss
+.. autoclass:: tllib.translation.cyclegan.LeastSquaresGenerativeAdversarialLoss
 
-.. autoclass:: dalib.translation.cyclegan.VanillaGenerativeAdversarialLoss
+.. autoclass:: tllib.translation.cyclegan.VanillaGenerativeAdversarialLoss
 
-.. autoclass:: dalib.translation.cyclegan.WassersteinGenerativeAdversarialLoss
+.. autoclass:: tllib.translation.cyclegan.WassersteinGenerativeAdversarialLoss
 
 Translation
 --------------
 
-.. autoclass:: dalib.translation.cyclegan.Translation
+.. autoclass:: tllib.translation.cyclegan.Translation
 
 
 Util
 ----------------
 
-.. autoclass:: dalib.translation.cyclegan.util.ImagePool
+.. autoclass:: tllib.translation.cyclegan.util.ImagePool
     :members:
 
-.. autofunction:: dalib.translation.cyclegan.util.set_requires_grad
+.. autofunction:: tllib.translation.cyclegan.util.set_requires_grad
 
 
 
@@ -60,7 +60,7 @@ Util
 CyCADA: Cycle-Consistent Adversarial Domain Adaptation
 --------------------------------------------------------------
 
-.. autoclass:: dalib.translation.cycada.SemanticConsistency
+.. autoclass:: tllib.translation.cycada.SemanticConsistency
 
 
 
@@ -76,12 +76,12 @@ the generator to produce images different from identities in target dataset.
 Siamese Network
 -------------------
 
-.. autoclass:: dalib.translation.spgan.siamese.SiameseNetwork
+.. autoclass:: tllib.translation.spgan.siamese.SiameseNetwork
 
 Contrastive Loss
 -------------------
 
-.. autoclass:: dalib.translation.spgan.loss.ContrastiveLoss
+.. autoclass:: tllib.translation.spgan.loss.ContrastiveLoss
 
 
 .. _FDA:
@@ -90,11 +90,11 @@ Contrastive Loss
 FDA: Fourier Domain Adaptation
 ------------------------------------------------
 
-.. autoclass:: dalib.translation.fourier_transform.FourierTransform
+.. autoclass:: tllib.translation.fourier_transform.FourierTransform
 
-.. autofunction:: dalib.translation.fourier_transform.low_freq_mutate
+.. autofunction:: tllib.translation.fourier_transform.low_freq_mutate
 
-.. autofunction:: dalib.adaptation.fda.robust_entropy
+.. autofunction:: tllib.adaptation.fda.robust_entropy
 
 
 

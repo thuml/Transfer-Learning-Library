@@ -2,14 +2,6 @@
 Learning Strategy
 =======================================
 
-.. _GroupDRO:
-
-Group Distributionally robust optimization (GroupDRO)
-------------------------------------------------------
-
-.. autoclass:: dglib.generalization.groupdro.AutomaticUpdateDomainWeightModule
-    :members:
-
 .. _IRM:
 
 Invariant Risk Minimization (IRM)
