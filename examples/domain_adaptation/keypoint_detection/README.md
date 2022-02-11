@@ -1,4 +1,5 @@
 # Unsupervised Domain Adaptation for Keypoint Detection
+It’s suggested to use **pytorch==1.7.1** and torchvision==0.8.2 in order to better reproduce the benchmark results.
 
 ## Dataset
 Following datasets can be downloaded automatically:
@@ -22,7 +23,7 @@ Supported methods include:
 
 ## Experiment and Results
 
-The shell files give the script to reproduce the [benchmarks](/docs/dalib/benchmarks/keypoint_detection.rst) with specified hyper-parameters.
+The shell files give the script to reproduce the results with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
 
 ```shell script

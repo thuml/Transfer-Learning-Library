@@ -131,7 +131,7 @@ class RegressionDisparity(nn.Module):
         >>> batch_size = 10
         >>> H = W = 64
         >>> pseudo_label_generator = PseudoLabelGenerator2d(num_keypoints)
-        >>> from common.vision.models.keypoint_detection.loss import JointsKLLoss
+        >>> from tllibvision.models.keypoint_detection.loss import JointsKLLoss
         >>> loss = RegressionDisparity(pseudo_label_generator, JointsKLLoss())
         >>> # output from source domain and target domain
         >>> y_s, y_t = torch.randn(batch_size, num_keypoints, H, W), torch.randn(batch_size, num_keypoints, H, W)

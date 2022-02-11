@@ -17,7 +17,7 @@ import torch
 
 def label_smoothing_cross_entropy(input, target, *, reduction="mean", **kwargs):
     """
-    Same as `common.loss.label_smooth.LabelSmoothSoftmaxCEV1`, but returns 0 (instead of nan)
+    Same as `tllib.modules.loss.LabelSmoothSoftmaxCEV1`, but returns 0 (instead of nan)
     for empty inputs.
     """
     if target.numel() == 0 and reduction == "mean":
