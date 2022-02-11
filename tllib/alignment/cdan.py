@@ -62,8 +62,8 @@ class ConditionalDomainAdversarialLoss(nn.Module):
 
     Examples::
 
-        >>> from dalib.modules.domain_discriminator import DomainDiscriminator
-        >>> from dalib.adaptation.cdan import ConditionalDomainAdversarialLoss
+        >>> from tllib.modules.domain_discriminator import DomainDiscriminator
+        >>> from tllib.alignment.cdan import ConditionalDomainAdversarialLoss
         >>> import torch
         >>> num_classes = 2
         >>> feature_dim = 1024

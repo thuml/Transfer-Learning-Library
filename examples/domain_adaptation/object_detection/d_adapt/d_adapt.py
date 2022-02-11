@@ -332,7 +332,7 @@ if __name__ == "__main__":
     )
     args, argv = parser.parse_known_args(argv)
     print("Detection Args:")
-    pprint.pp(args)
+    pprint.pprint(args)
 
     args.sources = utils.build_dataset(args.sources[::2], args.sources[1::2])
     args.targets = utils.build_dataset(args.targets[::2], args.targets[1::2])

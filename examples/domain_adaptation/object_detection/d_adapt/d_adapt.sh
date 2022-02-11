@@ -1,6 +1,6 @@
 # ResNet101 Based Faster RCNN: Faster RCNN: VOC->Clipart
 # 44.8
-pretrained_models=../source_only/logs/faster_rcnn_R_101_C4/voc2clipart/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_R_101_C4/voc2clipart/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py \
   --config-file config/faster_rcnn_R_101_C4_voc.yaml \
   -s VOC2007 ../datasets/VOC2007 VOC2012 ../datasets/VOC2012  \
@@ -28,7 +28,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --confidence-ratio-c 0.2 \
 
 # ResNet101 Based Faster RCNN: Faster RCNN: VOC->WaterColor
 # 54.1
-pretrained_models=../source_only/logs/faster_rcnn_R_101_C4/voc2watercolor_comic/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_R_101_C4/voc2watercolor_comic/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py \
   --config-file config/faster_rcnn_R_101_C4_voc.yaml \
   -s VOC2007Partial ../datasets/VOC2007 VOC2012Partial ../datasets/VOC2012  \
@@ -45,7 +45,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --confidence-ratio-c 0.1 \
 
 # ResNet101 Based Faster RCNN: Faster RCNN: VOC->Comic
 # 39.7
-pretrained_models=../source_only/logs/faster_rcnn_R_101_C4/voc2watercolor_comic/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_R_101_C4/voc2watercolor_comic/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py \
   --config-file config/faster_rcnn_R_101_C4_voc.yaml \
   -s VOC2007Partial ../datasets/VOC2007 VOC2012Partial ../datasets/VOC2012  \
@@ -62,7 +62,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --confidence-ratio-c 0.1 \
 
 # ResNet101 Based Faster RCNN: Cityscapes -> Foggy Cityscapes
 # 40.1
-pretrained_models=../source_only/logs/faster_rcnn_R_101_C4/cityscapes2foggy/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_R_101_C4/cityscapes2foggy/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 4 --max-train-c 20 --ignored-scores-c 0.05 0.5 \
   --config-file config/faster_rcnn_R_101_C4_cityscapes.yaml \
   -s Cityscapes ../datasets/cityscapes_in_voc -t FoggyCityscapes ../datasets/foggy_cityscapes_in_voc/  \
@@ -80,7 +80,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 4 --max-train-c 20 --ignore
 
 # VGG Based Faster RCNN: Cityscapes -> Foggy Cityscapes
 # 33.3
-pretrained_models=../source_only/logs/faster_rcnn_vgg_16/cityscapes2foggy/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_vgg_16/cityscapes2foggy/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 4 --max-train-c 20 --ignored-scores-c 0.05 0.5 \
   --config-file config/faster_rcnn_vgg_16_cityscapes.yaml \
   -s Cityscapes ../datasets/cityscapes_in_voc -t FoggyCityscapes ../datasets/foggy_cityscapes_in_voc/  \
@@ -105,7 +105,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 4 --max-train-c 20 --ignore
 
 # ResNet101 Based Faster RCNN: Sim10k -> Cityscapes Car
 # 51.9
-pretrained_models=../source_only/logs/faster_rcnn_R_101_C4/sim10k2cityscapes_car/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_R_101_C4/sim10k2cityscapes_car/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 8 --ignored-scores-c 0.05 0.5 --bottleneck-dim-c 256 --bottleneck-dim-b 256 \
   --config-file config/faster_rcnn_R_101_C4_cityscapes.yaml \
   -s Sim10kCar ../datasets/sim10k -t CityscapesCar ../datasets/cityscapes_in_voc/  \
@@ -114,7 +114,7 @@ CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 8 --ignored-scores-c 0.05 0
 
 # VGG Based Faster RCNN: Sim10k -> Cityscapes Car
 # 49.3
-pretrained_models=../source_only/logs/faster_rcnn_vgg_16/sim10k2cityscapes_car/model_final.pth
+pretrained_models=../logs/source_only/faster_rcnn_vgg_16/sim10k2cityscapes_car/model_final.pth
 CUDA_VISIBLE_DEVICES=0 python d_adapt.py --workers-c 8 --ignored-scores-c 0.05 0.5 --bottleneck-dim-c 256 --bottleneck-dim-b 256 \
   --config-file config/faster_rcnn_vgg_16_cityscapes.yaml \
   -s Sim10kCar ../datasets/sim10k -t CityscapesCar ../datasets/cityscapes_in_voc/  \

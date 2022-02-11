@@ -12,7 +12,7 @@ from detectron2.data import (
 )
 from detectron2.utils.file_io import PathManager
 from detectron2.structures import BoxMode
-from common.vision.datasets._util import download as download_dataset
+from tllib.vision.datasets._util import download as download_dataset
 
 
 def parse_root_and_file_name(path):
