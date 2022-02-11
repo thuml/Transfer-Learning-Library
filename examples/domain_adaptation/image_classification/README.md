@@ -57,7 +57,7 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 
 **Notations**
 - ``Origin`` means the accuracy reported by the original paper.
-- ``Avg`` is the accuracy reported by Trasnfer-Learn.
+- ``Avg`` is the accuracy reported by `TLlib`.
 - ``ERM`` refers to the model trained with data from the source domain.
 - ``Oracle`` refers to the model trained with data from the target domain.
 
@@ -67,7 +67,8 @@ even after the random seed is fixed, thus we repeat running adversarial methods 
 for three times and report their average accuracy.
 
 
-### Office31
+### Office-31 accuracy on ResNet-50
+
 | Methods | Origin | Avg  | A → W | D → W | W → D | A → D | D → A | W → A |
 |---------|--------|------|-------|-------|-------|-------|-------|-------|
 | ERM     | 76.1   | 79.5 | 75.8  | 95.5  | 99.0  | 79.3  | 63.6  | 63.8  |
@@ -82,7 +83,7 @@ for three times and report their average accuracy.
 | MDD     | 88.9   | 89.6 | 95.6  | 98.6  | 100.0 | 94.4  | 76.6  | 72.2  |
 | MCC     | 89.4   | 89.6 | 94.1  | 98.4  | 99.8  | 95.6  | 75.5  | 74.2  |
 
-### Office-Home
+### Office-Home accuracy on ResNet-50
 
 | Methods     | Origin | Avg  | Ar → Cl | Ar → Pr | Ar → Rw | Cl → Ar | Cl → Pr | Cl → Rw | Pr → Ar | Pr → Cl | Pr → Rw | Rw → Ar | Rw → Cl | Rw → Pr |
 |-------------|--------|------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|
@@ -98,7 +99,8 @@ for three times and report their average accuracy.
 | MDD         | 68.1   | 69.7 | 56.2    | 75.4    | 79.6    | 63.5    | 72.1    | 73.8    | 62.5    | 54.8    | 79.9    | 73.5    | 60.9    | 84.5    |
 | MCC         | /      | 72.4 | 58.4    | 79.6    | 83.0    | 67.5    | 77.0    | 78.5    | 66.6    | 54.8    | 81.8    | 74.4    | 61.4    | 85.6    |
 
-### VisDA-2017
+### VisDA-2017 accuracy ResNet-101
+
 | Methods     | Origin | Mean | plane | bcycl | bus  | car  | horse | knife | mcycl | person | plant | sktbrd | train | truck | Avg  |
 |-------------|--------|------|-------|-------|------|------|-------|-------|-------|--------|-------|--------|-------|-------|------|
 | ERM | 52.4   | 51.7 | 63.6  | 35.3  | 50.6 | 78.2 | 74.6  | 18.7  | 82.1  | 16.0   | 84.2  | 35.5   | 77.4  | 4.7   | 56.9 |
@@ -113,7 +115,8 @@ for three times and report their average accuracy.
 | MDD         | /      | 82.0 | 88.3  | 62.8  | 85.2 | 69.9 | 91.9  | 95.1  | 94.4  | 81.2   | 93.8  | 89.8   | 84.1  | 47.9  | 79.8 |
 | MCC         | 78.8   | 83.6 | 95.3  | 85.8  | 77.1 | 68.0 | 93.9  | 92.9  | 84.5  | 79.5   | 93.6  | 93.7   | 85.3  | 53.8  | 80.4 |
 
-### DomainNet
+### DomainNet accuracy on ResNet-101
+
 | Methods   | c->p | c->r | c->s | p->c | p->r | p->s | r->c | r->p | r->s | s->c | s->p | s->r | Avg  |
 |-------------|------|------|------|------|------|------|------|------|------|------|------|------|------|
 | ERM | 32.7 | 50.6 | 39.4 | 41.1 | 56.8 | 35.0 | 48.6 | 48.8 | 36.1 | 49.0 | 34.8 | 46.1 | 43.3 |
