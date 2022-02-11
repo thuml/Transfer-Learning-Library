@@ -58,7 +58,7 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 **Notations**
 - ``Origin`` means the accuracy reported by the original paper.
 - ``Avg`` is the accuracy reported by Trasnfer-Learn.
-- ``Source Only`` refers to the model trained with data from the source domain.
+- ``ERM`` refers to the model trained with data from the source domain.
 - ``Oracle`` refers to the model trained with data from the target domain.
 
 
@@ -86,7 +86,7 @@ for three times and report their average accuracy.
 
 | Methods     | Origin | Avg  | Ar → Cl | Ar → Pr | Ar → Rw | Cl → Ar | Cl → Pr | Cl → Rw | Pr → Ar | Pr → Cl | Pr → Rw | Rw → Ar | Rw → Cl | Rw → Pr |
 |-------------|--------|------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|
-| Source Only | 46.1   | 58.4 | 41.1    | 65.9    | 73.7    | 53.1    | 60.1    | 63.3    | 52.2    | 36.7    | 71.8    | 64.8    | 42.6    | 75.2    |
+| ERM | 46.1   | 58.4 | 41.1    | 65.9    | 73.7    | 53.1    | 60.1    | 63.3    | 52.2    | 36.7    | 71.8    | 64.8    | 42.6    | 75.2    |
 | DAN         | 56.3   | 61.4 | 45.6    | 67.7    | 73.9    | 57.7    | 63.8    | 66.0    | 54.9    | 40.0    | 74.5    | 66.2    | 49.1    | 77.9    |
 | DANN        | 57.6   | 65.2 | 53.8    | 62.6    | 74.0    | 55.8    | 67.3    | 67.3    | 55.8    | 55.1    | 77.9    | 71.1    | 60.7    | 81.1    |
 | ADDA        | /      | 65.6 | 52.6    | 62.9    | 74.0    | 59.7    | 68.0    | 68.8    | 61.4    | 52.5    | 77.6    | 71.1    | 58.6    | 80.2    |
@@ -101,7 +101,7 @@ for three times and report their average accuracy.
 ### VisDA-2017
 | Methods     | Origin | Mean | plane | bcycl | bus  | car  | horse | knife | mcycl | person | plant | sktbrd | train | truck | Avg  |
 |-------------|--------|------|-------|-------|------|------|-------|-------|-------|--------|-------|--------|-------|-------|------|
-| Source Only | 52.4   | 51.7 | 63.6  | 35.3  | 50.6 | 78.2 | 74.6  | 18.7  | 82.1  | 16.0   | 84.2  | 35.5   | 77.4  | 4.7   | 56.9 |
+| ERM | 52.4   | 51.7 | 63.6  | 35.3  | 50.6 | 78.2 | 74.6  | 18.7  | 82.1  | 16.0   | 84.2  | 35.5   | 77.4  | 4.7   | 56.9 |
 | DANN        | 57.4   | 79.5 | 93.5  | 74.3  | 83.4 | 50.7 | 87.2  | 90.2  | 89.9  | 76.1   | 88.1  | 91.4   | 89.7  | 39.8  | 74.9 |
 | ADDA        | /      | 77.5 | 95.6  | 70.8  | 84.4 | 54.0 | 87.8  | 75.8  | 88.4  | 69.3   | 84.1  | 86.2   | 85.0  | 48.0  | 74.3 |
 | BSP         | 75.9   | 80.5 | 95.7  | 75.6  | 82.8 | 54.5 | 89.2  | 96.5  | 91.3  | 72.2   | 88.9  | 88.7   | 88.0  | 43.4  | 76.2 |
@@ -116,7 +116,7 @@ for three times and report their average accuracy.
 ### DomainNet
 | Methods   | c->p | c->r | c->s | p->c | p->r | p->s | r->c | r->p | r->s | s->c | s->p | s->r | Avg  |
 |-------------|------|------|------|------|------|------|------|------|------|------|------|------|------|
-| Source Only | 32.7 | 50.6 | 39.4 | 41.1 | 56.8 | 35.0 | 48.6 | 48.8 | 36.1 | 49.0 | 34.8 | 46.1 | 43.3 |
+| ERM | 32.7 | 50.6 | 39.4 | 41.1 | 56.8 | 35.0 | 48.6 | 48.8 | 36.1 | 49.0 | 34.8 | 46.1 | 43.3 |
 | DAN         | 38.8 | 55.2 | 43.9 | 45.9 | 59.0 | 40.8 | 50.8 | 49.8 | 38.9 | 56.1 | 45.9 | 55.5 | 48.4 |
 | DANN        | 37.9 | 54.3 | 44.4 | 41.7 | 55.6 | 36.8 | 50.7 | 50.8 | 40.1 | 55.0 | 45.0 | 54.5 | 47.2 |
 | JAN         | 40.5 | 56.7 | 45.1 | 47.2 | 59.9 | 43.0 | 54.2 | 52.6 | 41.9 | 56.6 | 46.2 | 55.5 | 50.0 |
@@ -125,8 +125,13 @@ for three times and report their average accuracy.
 | MDD         | 42.9 | 59.5 | 47.5 | 48.6 | 59.4 | 42.6 | 58.3 | 53.7 | 46.2 | 58.7 | 46.5 | 57.7 | 51.8 |
 | MCC         | 37.7 | 55.7 | 42.6 | 45.4 | 59.8 | 39.9 | 54.4 | 53.1 | 37.0 | 58.1 | 46.3 | 56.2 | 48.9 |
 
+| Oracle | clp  | inf  | pnt  | real | skt  | Avg |
+|--------|------|------|------|------|------|-----|
+| /      | 78.2 | 40.7 | 71.6 | 83.8 | 70.6 | 69  |
+
 ## TODO
-Support methods: AdaBN/TransNorm, CycleGAN, CyCADA
+1. Support self-training methods
+2. Support translation methods
 
 ## Citation
 If you use these methods in your research, please consider citing.
