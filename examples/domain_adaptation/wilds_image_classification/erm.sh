@@ -5,5 +5,3 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/wilds -d "fmow" --aa "v0" --arch "dens
 CUDA_VISIBLE_DEVICES=0 python erm.py data/wilds -d "iwildcam" --unlabeled-list "extra_unlabeled" --lr 0.3 --opt-level O1 \
   --deterministic --img-size 448 448 --crop-pct 1.0 --scale 1.0 1.0 --epochs 12 -b 24 24 -p 500 --metric "F1-macro_all" \
   --log logs/erm/iwildcam/lr_0_3_deterministic
-
-
