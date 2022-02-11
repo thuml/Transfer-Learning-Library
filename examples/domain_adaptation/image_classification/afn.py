@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 import utils
-from tllib.modules.normalization.afn import AdaptiveFeatureNorm, ImageClassifier
+from tllib.normalization.afn import AdaptiveFeatureNorm, ImageClassifier
 from tllib.modules.entropy import entropy
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
