@@ -14,7 +14,7 @@ class Translation(nn.Module):
     Image Translation Transform Module
 
     Args:
-        generator (torch.nn.Module): An image generator, e.g. :meth:`~dalib.translation.cyclegan.resnet_9_generator`
+        generator (torch.nn.Module): An image generator, e.g. :meth:`~tllib.translation.cyclegan.resnet_9_generator`
         device (torch.device): device to put the generator. Default: 'cpu'
         mean (tuple): the normalized mean for image
         std (tuple): the normalized std for image

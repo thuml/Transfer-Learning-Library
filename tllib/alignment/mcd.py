@@ -35,7 +35,7 @@ def entropy(predictions: torch.Tensor) -> torch.Tensor:
     where K is number of classes.
 
     .. note::
-        This entropy function is specifically used in MCD and different from the usual :meth:`~dalib.modules.entropy.entropy` function.
+        This entropy function is specifically used in MCD and different from the usual :meth:`~tllib.modules.entropy.entropy` function.
 
     Args:
         predictions (torch.Tensor): Classifier predictions. Expected to contain raw, normalized scores for each class

@@ -34,7 +34,7 @@ class AutomaticUpdateClassWeightModule(object):
         >>>     class_weight_module.step()
         >>>     # weight for F.cross_entropy
         >>>     w_c = class_weight_module.get_class_weight_for_cross_entropy_loss()
-        >>>     # weight for dalib.addaptation.dann.DomainAdversarialLoss
+        >>>     # weight for tllib.alignment.dann.DomainAdversarialLoss
         >>>     w_s, w_t = class_weight_module.get_class_weight_for_adversarial_loss()
     """
 
@@ -70,8 +70,8 @@ class AutomaticUpdateClassWeightModule(object):
     def get_class_weight_for_adversarial_loss(self, source_labels: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Outputs:
-            - w_s: source weight for :py:class:`~dalib.adaptation.dann.DomainAdversarialLoss`
-            - w_t: target weight for :py:class:`~dalib.adaptation.dann.DomainAdversarialLoss`
+            - w_s: source weight for :py:class:`~tllib.alignment.dann.DomainAdversarialLoss`
+            - w_t: target weight for :py:class:`~tllib.alignment.dann.DomainAdversarialLoss`
 
         Shape:
             - w_s: :math:`(minibatch, )`

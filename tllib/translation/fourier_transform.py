@@ -73,7 +73,7 @@ class FourierTransform(nn.Module):
 
     Examples:
 
-        >>> from dalib.translation.fourier_transform import FourierTransform
+        >>> from tllib.translation.fourier_transform import FourierTransform
         >>> image_list = ["target_image_path1", "target_image_path2"]
         >>> amplitude_dir = "path/to/amplitude_dir"
         >>> fourier_transform = FourierTransform(image_list, amplitude_dir, beta=1, rebuild=False)
@@ -95,7 +95,7 @@ class FourierTransform(nn.Module):
 
     Examples:
 
-        >>> from dalib.translation.fourier_transform import FourierTransform
+        >>> from tllib.translation.fourier_transform import FourierTransform
         >>> import common.vision.datasets.segmentation.transforms as T
         >>> from PIL import Image
         >>> target_image_list = ["target_image_path1", "target_image_path2"]

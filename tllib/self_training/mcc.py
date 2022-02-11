@@ -43,7 +43,7 @@ class MinimumClassConfusionLoss(nn.Module):
 
     MCC can also serve as a regularizer for existing methods.
     Examples::
-        >>> from dalib.modules.domain_discriminator import DomainDiscriminator
+        >>> from tllib.modules.domain_discriminator import DomainDiscriminator
         >>> num_classes = 2
         >>> feature_dim = 1024
         >>> batch_size = 10

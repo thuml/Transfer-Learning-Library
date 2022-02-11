@@ -59,7 +59,7 @@ class MultipleKernelMaximumMeanDiscrepancy(nn.Module):
 
     Examples::
 
-        >>> from dalib.modules.kernels import GaussianKernel
+        >>> from tllib.modules.kernels import GaussianKernel
         >>> feature_dim = 1024
         >>> batch_size = 10
         >>> kernels = (GaussianKernel(alpha=0.5), GaussianKernel(alpha=1.), GaussianKernel(alpha=2.))
