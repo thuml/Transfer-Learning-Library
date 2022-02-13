@@ -96,6 +96,26 @@ Supported methods include:
 | CycleGAN    |        | 66.0 | 97.1 | 77.6     | 84.3     | 42.7 | 46.3  | 42.8 | 47.5          | 61.0         | 84.0       | 55.2    | 83.4 | 69.4   | 51.8  | 90.7 | 73.7  | 76.2 | 54.2  | 50.7      | 65.6    |
 | Oracle      |        | 66.9 | 97.4 | 78.6     | 88.1     | 50.7 | 50.5  | 46.2 | 51.3          | 64.4         | 88.1       | 55.3    | 87.4 | 70.9   | 52.7  | 91.6 | 72.4  | 73.2 | 31.8  | 52.2      | 67.4    |
 
+## Visualization
+If you want to visualize the segmentation results during training, you should set ``--debug``.
+
+```
+CUDA_VISIBLE_DEVICES=0 python source_only.py data/GTA5 data/Cityscapes -s GTA5 -t Cityscapes --log logs/src_only/gtav2cityscapes --debug
+```
+
+Then you can find images, predictions and labels in directory ``logs/src_only/gtav2cityscapes/visualize/``.
+
+<img src="./fig/segmentation_image.png" width="300"/>
+<img src="./fig/segmentation_pred.png" width="300"/>
+<img src="./fig/segmentation_label.png" width="300"/>
+
+
+Translation model such as CycleGAN will save images by default. Here is the source-style images and its translated version.
+
+<img src="./fig/cyclegan_real_S.png" width="300"/>
+<img src="./fig/cyclegan_fake_T.png" width="300"/>
+
+
 ## TODO
 Support methods: AdaptSeg
 
