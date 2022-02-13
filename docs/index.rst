@@ -3,19 +3,6 @@ Transfer Learning
 =====================================
 
 .. toctree::
-   :caption: Get Started for Transfer Learning Library
-   :maxdepth: 2
-   :titlesonly:
-
-   get_started/installing
-   get_started/introduction
-   get_started/quickstart
-   get_started/visualization
-   get_started/faq
-
-
-
-.. toctree::
     :maxdepth: 2
     :caption: Transfer Learning API
     :titlesonly:

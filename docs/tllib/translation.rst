@@ -94,7 +94,6 @@ FDA: Fourier Domain Adaptation
 
 .. autofunction:: tllib.translation.fourier_transform.low_freq_mutate
 
-.. autofunction:: tllib.adaptation.fda.robust_entropy
 
 
 
