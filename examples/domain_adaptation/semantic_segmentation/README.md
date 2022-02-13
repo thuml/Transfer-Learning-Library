@@ -8,8 +8,6 @@ You need to prepare following datasets manually if you want to use them:
 - [GTA5](https://download.visinf.tu-darmstadt.de/data/from_games/)
 - [Synthia](https://synthia-dataset.net/)
 
-and prepare them following [Documentations for Cityscapes](/common/vision/datasets/segmentation/cityscapes.py), [GTA5](/common/vision/datasets/segmentation/gta5.py) and [Synthia](/common/vision/datasets/segmentation/synthia.py), 
-
 #### Cityscapes, Foggy Cityscapes
   - Download Cityscapes and Foggy Cityscapes dataset from the [link](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *leftImg8bit_trainvaltest.zip* for Cityscapes and *leftImg8bit_trainvaltest_foggy.zip* for Foggy Cityscapes.
   - Unzip them under the directory like
@@ -30,7 +28,7 @@ data/Cityscapes
 
 #### GTA-5
 You need to download GTA5 manually from [GTA5](https://download.visinf.tu-darmstadt.de/data/from_games/).
-Ensure that there exist following directories before you using this dataset.
+Ensure that there exist following directories before you use this dataset.
  ```
 data/GTA5
 ├── images
@@ -40,7 +38,7 @@ data/GTA5
 
 #### Synthia
 You need to download Synthia manually from [Synthia](https://synthia-dataset.net/).
-Ensure that there exist following directories before you using this dataset.
+Ensure that there exist following directories before you use this dataset.
  ```
 data/synthia
 ├── RGB
@@ -62,7 +60,7 @@ Supported methods include:
 
 **Notations**
 - ``Origin`` means the accuracy reported by the original paper.
-- ``Avg`` is the accuracy reported by `TLlib`.
+- ``mIoU`` is the accuracy reported by `TLlib`.
 - ``ERM`` refers to the model trained with data from the source domain.
 - ``Oracle`` refers to the model trained with data from the target domain.
 
