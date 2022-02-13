@@ -6,16 +6,16 @@
 The currently supported algorithms include:
 
 ##### [Domain Adaptation for Classification](/examples/domain_adaptation/image_classification)
-- [Domain Adversarial Neural Network (DANN)](https://arxiv.org/abs/1505.07818)
-- [Deep Adaptation Network (DAN)](https://arxiv.org/pdf/1502.02791)
-- [Joint Adaptation Network (JAN)](https://arxiv.org/abs/1605.06636)
-- [Adversarial Discriminative Domain Adaptation (ADDA)](https://arxiv.org/pdf/1702.05464.pdf)
-- [Conditional Domain Adversarial Network (CDAN)](https://arxiv.org/abs/1705.10667)
-- [Maximum Classifier Discrepancy (MCD)](https://arxiv.org/abs/1712.02560)
-- [Adaptive Feature Norm (AFN)](https://arxiv.org/pdf/1811.07456v2.pdf)
-- [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
-- [Batch Spectral Penalization (BSP)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf)
-- [Minimum Class Confusion (MCC)](https://arxiv.org/abs/1912.03699)
+- **DANN** - Unsupervised Domain Adaptation by Backpropagation [[ICML 2015]](http://proceedings.mlr.press/v37/ganin15.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/dann.py)
+- **DAN** - Learning Transferable Features with Deep Adaptation Networks [[ICML 2015]](http://ise.thss.tsinghua.edu.cn/~mlong/doc/deep-adaptation-networks-icml15.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/dan.py)
+- **JAN** - Deep Transfer Learning with Joint Adaptation Networks [[ICML 2017]](http://ise.thss.tsinghua.edu.cn/~mlong/doc/joint-adaptation-networks-icml17.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/jan.py)
+- **ADDA** - Adversarial Discriminative Domain Adaptation [[CVPR2017]](http://openaccess.thecvf.com/content_cvpr_2017/papers/Tzeng_Adversarial_Discriminative_Domain_CVPR_2017_paper.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/adda.py)
+- **CDAN** - Conditional Adversarial Domain Adaptation [[NIPS 2018]](http://papers.nips.cc/paper/7436-conditional-adversarial-domain-adaptation) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/cdan.py) 
+- **MCD** - Maximum Classifier Discrepancy for Unsupervised Domain Adaptation [[CVPR 2018]](http://openaccess.thecvf.com/content_cvpr_2018/papers/Saito_Maximum_Classifier_Discrepancy_CVPR_2018_paper.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/mcd.py)
+- **MDD** - Bridging Theory and Algorithm for Domain Adaptation [[ICML 2019]](http://proceedings.mlr.press/v97/zhang19i/zhang19i.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/mdd.py) 
+- **BSP** - Transferability vs. Discriminability: Batch Spectral Penalization for Adversarial Domain Adaptation [[ICML 2019]](http://proceedings.mlr.press/v97/chen19i/chen19i.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/bsp.py) 
+- **MCC** - Minimum Class Confusion for Versatile Domain Adaptation [[ECCV 2020]](http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123660460.pdf) [[Code]](https://github.com/thuml/Transfer-Learning-Library/blob/master/examples/domain_adaptation/image_classification/mcc.py)
+
 
 ##### [Partial Domain Adaptation](/examples/domain_adaptation/partial_domain_adaptation/)
 - [Domain Adversarial Neural Network (DANN)](https://arxiv.org/abs/1505.07818)
@@ -63,33 +63,35 @@ The currently supported algorithms include:
 - [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, ECCV 2018)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - [Domain Generalization with MixStyle (MixStyle, ICLR 2021)](https://arxiv.org/abs/2104.02008)
 
-We are planning to add
-- DA for Object Detection
-- TA for text classification
 
 ## Installation
 
-To use ``dalib``, ``talib``, ``dglib``, and ``common`` in other places, you need to install Transfer-Learn,
+- To use ``tllib`` in other places, you need to install TLlib,
 ```shell
 python setup.py install
 ```
 Note that we do not support *pip install* currently.
 
-For flexible use and modification of Transfer-Learn, please git clone the library.
+- For flexible use and modification of TLlib, please git clone the library and check that you have install all the dependency.
+
+```
+    pip install -r requirements.txt
+```
+
+It's recommended to use pytorch==1.7.1 and torchvision==0.8.2 in order to better reproduce the benchmark results.
 
 
 ## Documentation
-You can find the tutorial and API documentation on the website: [Documentation](http://tl.thuml.ai/). You can also build the doc by yourself following the instructions in http://tl.thuml.ai/get_started/faq.html.
+You can find the API documentation on the website: [Documentation](http://tl.thuml.ai/).
 
-Also, we have examples in the directory `examples`. A typical usage is 
+## Usage
+You can find examples in the directory `examples`. A typical usage is 
 ```shell script
 # Train a DANN on Office-31 Amazon -> Webcam task using ResNet 50.
 # Assume you have put the datasets under the path `data/office-31`, 
 # or you are glad to download the datasets automatically from the Internet to this path
 python dann.py data/office31 -d Office31 -s A -t W -a resnet50  --epochs 20
 ```
-
-In the directory `examples`, you can find all the necessary running scripts to reproduce the benchmarks with specified hyper-parameters.
 
 ## Contributing
 We appreciate all contributions. If you are planning to contribute back bug-fixes, please do so without any further discussion. If you plan to contribute new features, utility functions or extensions, please first open an issue and discuss the feature with us. 
@@ -116,7 +118,7 @@ For Q&A in Chinese, you can choose to ask questions here before sending an email
 If you use this toolbox or benchmark in your research, please cite this project. 
 
 ```latex
-@misc{dalib,
+@misc{tllib,
   author = {Junguang Jiang, Baixu Chen, Bo Fu, Mingsheng Long},
   title = {Transfer-Learning-library},
   year = {2020},
