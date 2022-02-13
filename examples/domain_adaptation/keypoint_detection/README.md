@@ -58,6 +58,18 @@ CUDA_VISIBLE_DEVICES=0 python regda.py data/RHD data/H3D_crop \
 | RegDA       | 62.7     | 76.7  | 71.1  | 81.0 | 80.3 | 75.3  | 74.6 |
 | Oracle      | 95.3     | 91.8  | 86.9  | 95.6 | 94.1 | 93.6  | 92.9 |
 
+## Visualization
+If you want to visualize the keypoint detection results during training, you should set --debug.
+
+```
+CUDA_VISIBLE_DEVICES=0 python erm.py data/RHD data/H3D_crop -s RenderedHandPose -t Hand3DStudio --log logs/erm/rhd2h3d --debug --seed 0
+```
+
+Then you can find visualization images in directory ``logs/erm/rhd2h3d/visualize/``.
+
+<img src="./fig/keypoint_detection.jpg" width="300"/>
+
+
 ## TODO
 Support methods:  CycleGAN
 
