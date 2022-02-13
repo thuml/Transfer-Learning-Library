@@ -18,7 +18,7 @@ Supported methods include:
 ## Experiment and Results
 
 The shell files give the script to reproduce the benchmark results with specified hyper-parameters.
-For example, if you want to train DD on Office31, use the following script
+For example, if you want to train DD on DSprites, use the following script
 
 ```shell script
 # Train a DD on DSprites C->N task using ResNet 18.
@@ -31,7 +31,7 @@ CUDA_VISIBLE_DEVICES=0 python dd.py data/dSprites -d DSprites -s C -t N -a resne
 
 - ``Origin`` means the accuracy reported by the original paper.
 - ``Avg`` is the accuracy reported by Transfer-Learn.
-- ``Source Only`` refers to the model trained with data from the source domain.
+- ``ERM`` refers to the model trained with data from the source domain.
 - ``Oracle`` refers to the model trained with data from the target domain.
 
 Labels are all normalized to [0, 1] to eliminate the effects of diverse scale in regression values.

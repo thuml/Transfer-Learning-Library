@@ -6,11 +6,12 @@ import sys
 import time
 import torch
 import torch.nn.functional as F
+from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from torch.nn.modules.instancenorm import InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
+
 
 sys.path.append('../../..')
 from tllib.utils.meter import AverageMeter, ProgressMeter
-from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
-from torch.nn.modules.instancenorm import InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 
 
 def convert_model(module):

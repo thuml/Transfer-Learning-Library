@@ -24,7 +24,7 @@ Supported methods include:
 ## Experiment and Results
 
 The shell files give the script to reproduce the results with specified hyper-parameters.
-For example, if you want to train DANN on Office31, use the following script
+For example, if you want to train RegDA on RHD->H3D, use the following script
 
 ```shell script
 # Train a RegDA on RHD -> H3D task using PoseResNet.

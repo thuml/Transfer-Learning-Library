@@ -10,6 +10,45 @@ You need to prepare following datasets manually if you want to use them:
 
 and prepare them following [Documentations for Cityscapes](/common/vision/datasets/segmentation/cityscapes.py), [GTA5](/common/vision/datasets/segmentation/gta5.py) and [Synthia](/common/vision/datasets/segmentation/synthia.py), 
 
+#### Cityscapes, Foggy Cityscapes
+  - Download Cityscapes and Foggy Cityscapes dataset from the [link](https://www.cityscapes-dataset.com/downloads/). Particularly, we use *leftImg8bit_trainvaltest.zip* for Cityscapes and *leftImg8bit_trainvaltest_foggy.zip* for Foggy Cityscapes.
+  - Unzip them under the directory like
+  
+ ```
+data/Cityscapes
+├── gtFine
+├── leftImg8bit
+│   ├── train
+│   ├── val
+│   └── test
+├── leftImg8bit_foggy
+│   ├── train
+│   ├── val
+│   └── test
+└── ...
+```
+
+#### GTA-5
+You need to download GTA5 manually from [GTA5](https://download.visinf.tu-darmstadt.de/data/from_games/).
+Ensure that there exist following directories before you using this dataset.
+ ```
+data/GTA5
+├── images
+├── labels
+└── ...
+```
+
+#### Synthia
+You need to download Synthia manually from [Synthia](https://synthia-dataset.net/).
+Ensure that there exist following directories before you using this dataset.
+ ```
+data/synthia
+├── RGB
+├── synthia_mapped_to_cityscapes
+└── ...
+```
+
+
 ## Supported Methods
 
 Supported methods include:
