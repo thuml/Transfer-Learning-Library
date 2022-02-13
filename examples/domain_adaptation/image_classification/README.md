@@ -43,7 +43,7 @@ Supported methods include:
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 - [Minimum Class Confusion (MCC)](https://arxiv.org/abs/1912.03699)
 
-## Experiment and Results
+## Usage
 
 The shell files give the script to reproduce the benchmark with specified hyper-parameters.
 For example, if you want to train DANN on Office31, use the following script
@@ -54,6 +54,27 @@ For example, if you want to train DANN on Office31, use the following script
 # or you are glad to download the datasets automatically from the Internet to this path
 CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W
 ```
+
+Note that ``-s`` specifies the source domain, ``-t`` specifies the target domain, and ``--log`` specifies where to store results.
+
+After running the above command, it will download ``Office-31`` datasets from the Internet if it's the first time you run the code. Directory that stores datasets will be named as
+``examples/domain_adaptation/image_classification/data/<dataset name>``.
+
+If everything works fine, you will see results in following format::
+
+    Epoch: [1][ 900/1000]	Time  0.60 ( 0.69)	Data  0.22 ( 0.31)	Loss   0.74 (  0.85)	Cls Acc 96.9 (95.1)	Domain Acc 64.1 (62.6)
+
+
+You can also watch these results in the log file ``logs/dann/Office31_A2W/log.txt``.
+
+After training, you can test your algorithm's performance by passing in ``--phase test``.
+
+```
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W --phase test
+```
+
+
+## Experiment and Results
 
 **Notations**
 - ``Origin`` means the accuracy reported by the original paper.
@@ -135,6 +156,24 @@ for three times and report their average accuracy.
 | ERM         | 32.9   | 47.0 | 64.9 | 25.2 | 54.4 | 16.9 | 68.2 | 52.3 |
 | MDD         | /      | 48.8 | 68.7 | 29.7 | 58.2 | 9.7  | 69.4 | 56.9 |
 | Oracle      | 63.0   | 69.1 | 78.2 | 40.7 | 71.6 | 69.7 | 83.8 | 70.6 |
+
+## Visualization
+
+
+After training `DANN`, run the following command
+
+```
+CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W --phase analysis
+```
+
+It may take a while, then in directory ``logs/dann/Office31_A2W/visualize``, you can find
+``TSNE.png``.
+
+Following are the t-SNE of representations from ResNet50 trained on source domain and those from DANN.
+
+<img src="./fig/resnet_A2W.png" width="300"/>
+<img src="./fig/dann_A2W.png" width="300"/>
+
 
 ## TODO
 1. Support self-training methods
