@@ -40,21 +40,10 @@ CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a res
 - ``Origin`` means the accuracy reported by the original paper.
 - ``Avg`` is the accuracy reported by `TLlib`.
 - ``ERM`` refers to the model trained with data from the source domain.
-- ``OS`` means normalized accuracy for all classes including the unknown as one class.
-- ``OS*`` means normalized accuracy only on known classes.
-- ``UNK`` is the accuracy of unknown samples.
 
-In ``OS``, the accuracy of each common class has the same contribution
-as the whole ``unknown`` class. Thus we report ``HOS`` used in `ROS (ECCV 2020)`_
-to better measure the abilities of different open set domain adaptation algorithms.
+We report ``HOS`` used in [ROS (ECCV 2020)](http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123610409.pdf) to better measure the abilities of different open set domain adaptation algorithms.
 
-
-$\textit{HOS} = 2 \cdot \dfrac{ \textit{OS*} \cdot \textit{UNK} }{ \textit{OS*} + \textit{UNK} }$
-
-The new evaluation metric is high only when both the ``OS*`` and ``UNK`` are high.
-    
 We report the best ``HOS`` in all epochs.
-
 DANN (baseline model) will degrade performance as training progresses, thus the
 final ``HOS`` will be much lower than reported.
 In contrast, OSBP will improve performance stably.
