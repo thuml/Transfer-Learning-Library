@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
 from tllib.normalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
-import tllib.normalization.mixstyle.models as models
+import tllib.normalization.mixstyle.resnet as models
 from tllib.vision.models.reid.identifier import ReIdentifier
 from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
 import tllib.vision.datasets.reid as datasets
