@@ -19,7 +19,6 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from dglib.modules.classifier import ImageClassifier as Classifier
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -76,8 +75,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
-                            finetune=args.finetune, pool_layer=pool_layer).to(device)
+    classifier = utils.ImageClassifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
+                                       finetune=args.finetune, pool_layer=pool_layer).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
@@ -140,8 +139,8 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer,
-          lr_scheduler: CosineAnnealingLR, epoch: int, args: argparse.Namespace):
+def train(train_iter: ForeverDataIterator, model, optimizer, lr_scheduler: CosineAnnealingLR, epoch: int,
+          args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')

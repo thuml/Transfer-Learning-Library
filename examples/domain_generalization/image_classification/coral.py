@@ -20,8 +20,6 @@ import torch.nn.functional as F
 
 sys.path.append('../../..')
 from tllib.alignment.coral import CorrelationAlignmentLoss
-from dglib.modules.sampler import RandomDomainSampler
-from dglib.modules.classifier import ImageClassifier as Classifier
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -60,7 +58,7 @@ def main(args: argparse.Namespace):
     train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
                                                    split='train', download=True, transform=train_transform,
                                                    seed=args.seed)
-    sampler = RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=args.n_domains_per_batch)
+    sampler = utils.RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=args.n_domains_per_batch)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
                               sampler=sampler, drop_last=True)
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
@@ -78,8 +76,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
-                            finetune=args.finetune, pool_layer=pool_layer).to(device)
+    classifier = utils.ImageClassifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
+                                       finetune=args.finetune, pool_layer=pool_layer).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
@@ -147,7 +145,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR,
+def train(train_iter: ForeverDataIterator, model, optimizer, lr_scheduler: CosineAnnealingLR,
           correlation_alignment_loss: CorrelationAlignmentLoss, n_domains_per_batch: int, epoch: int,
           args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
