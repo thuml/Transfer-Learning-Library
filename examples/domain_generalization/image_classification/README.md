@@ -1,14 +1,9 @@
 # Domain Generalization for Image Classification
 
 ## Installation
-Example scripts can deal with [WILDS datasets](https://wilds.stanford.edu/).
-You should first install ``wilds`` before using these scripts.
+It’s suggested to use **pytorch==1.7.1** and torchvision==0.8.2 in order to reproduce the benchmark results.
 
-```
-pip install wilds
-```
-
-Example scripts also support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
+Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
 You also need to install timm to use PyTorch-Image-Models.
 
 ```
@@ -23,9 +18,6 @@ Following datasets can be downloaded automatically:
 - [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
 - [DomainNet](http://ai.bu.edu/M3SDA/)
 - [PACS](https://domaingeneralization.github.io/#data)
-- [iwildcam (WILDS)](https://wilds.stanford.edu/datasets/)
-- [camelyon17 (WILDS)](https://wilds.stanford.edu/datasets/)
-- [fmow (WILDS)](https://wilds.stanford.edu/datasets/)
 
 ## Supported Methods
 
@@ -37,10 +29,10 @@ Following datasets can be downloaded automatically:
 - [Distributionally Robust Neural Networks for Group Shifts: On the Importance of Regularization for Worst-Case Generalization (GroupDRO)](https://arxiv.org/abs/1911.08731)
 - [Deep CORAL: Correlation Alignment for Deep Domain Adaptation (Deep Coral, 2016 ECCV)](https://arxiv.org/abs/1607.01719)
 
-## Experiment and Results
+## Usage
 
-The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/image_classification.rst) with specified hyper-parameters.
-For example, if you want to reproduce IRM on Office-Home, use the following script
+The shell files give the script to reproduce the benchmark with specified hyper-parameters.
+For example, if you want to train IRM on Office-Home, use the following script
 
 ```shell script
 # Train with IRM on Office-Home Ar Cl Rw -> Pr task using ResNet 50.
@@ -48,8 +40,48 @@ For example, if you want to reproduce IRM on Office-Home, use the following scri
 # or you are glad to download the datasets automatically from the Internet to this path
 CUDA_VISIBLE_DEVICES=0 python irm.py data/office-home -d OfficeHome -s Ar Cl Rw -t Pr -a resnet50 --seed 0 --log logs/irm/OfficeHome_Pr
 ```
+Note that ``-s`` specifies the source domain, ``-t`` specifies the target domain,
+and ``--log`` specifies where to store results.
 
-For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+## Experiment and Results
+Following [DomainBed](https://github.com/facebookresearch/DomainBed), we select hyper-parameters based on
+the model's performance on `training-domain validation set` (first rule in DomainBed).
+Concretely, we save model with the highest accuracy on `training-domain validation set` and then 
+load this checkpoint to test on the target domain.
+
+Here are some differences between our implementation and DomainBed. For the model, 
+we do not freeze `BatchNorm2d` layers and do not insert additional `Dropout` layer except for `PACS` dataset. 
+For the optimizer, we use `SGD` with momentum by default and find this usually achieves better performance than `Adam`.
+
+**Notations**
+- ``ERM`` refers to the model trained with data from the source domain.
+- ``Avg`` is the accuracy reported by `TLlib`.
+
+### PACS accuracy on ResNet-50
+
+| Methods  | avg  | A    | C    | P    | S    |
+|----------|------|------|------|------|------|
+| ERM      | 86.4 | 88.5 | 78.4 | 97.2 | 81.4 |
+| IBN      | 87.8 | 88.2 | 84.5 | 97.1 | 81.4 |
+| MixStyle | 87.4 | 87.8 | 82.3 | 95.0 | 84.5 |
+| MLDG     | 87.2 | 88.2 | 81.4 | 96.6 | 82.5 |
+| IRM      | 86.9 | 88.0 | 82.5 | 98.0 | 79.0 |
+| VREx     | 87.0 | 87.2 | 82.3 | 97.4 | 81.0 |
+| GroupDRO | 87.3 | 88.9 | 81.7 | 97.8 | 80.8 |
+| CORAL    | 86.4 | 89.1 | 80.0 | 97.4 | 79.1 |
+
+### Office-Home accuracy on ResNet-50
+
+| Methods  | avg  | A    | C    | P    | R    |
+|----------|------|------|------|------|------|
+| ERM      | 70.8 | 68.3 | 55.9 | 78.9 | 80.0 |
+| IBN      | 69.9 | 67.4 | 55.2 | 77.3 | 79.6 |
+| MixStyle | 71.7 | 66.8 | 58.1 | 78.0 | 79.9 |
+| MLDG     | 70.3 | 65.9 | 57.6 | 78.2 | 79.6 |
+| IRM      | 70.3 | 66.7 | 54.8 | 78.6 | 80.9 |
+| VREx     | 70.2 | 66.9 | 54.9 | 78.2 | 80.9 |
+| GroupDRO | 70.0 | 66.7 | 55.2 | 78.8 | 79.9 |
+| CORAL    | 70.9 | 68.3 | 55.4 | 78.8 | 81.0 |
 
 ## Citation
 If you use these methods in your research, please consider citing.
