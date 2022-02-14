@@ -12,28 +12,31 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 import numpy as np
 from torch.utils.data.dataset import Subset, ConcatDataset
-import wilds
 
 sys.path.append('../../..')
 import tllib.vision.datasets as datasets
 import tllib.vision.models as models
+import tllib.normalization.ibn as ibn_models
 from tllib.vision.transforms import ResizeImage
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 def get_model_names():
-    return sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    ) + timm.list_models()
+    return sorted(name for name in models.__dict__ if
+                  name.islower() and not name.startswith("__") and callable(models.__dict__[name])) + \
+           sorted(name for name in ibn_models.__dict__ if
+                  name.islower() and not name.startswith("__") and callable(ibn_models.__dict__[name])) + \
+           timm.list_models()
 
 
 def get_model(model_name):
     if model_name in models.__dict__:
         # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
+    elif model_name in ibn_models.__dict__:
+        # load models (with ibn) from tllib.normalization.ibn
+        backbone = ibn_models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
         backbone = timm.create_model(model_name, pretrained=True)
@@ -50,7 +53,7 @@ def get_dataset_names():
     return sorted(
         name for name in datasets.__dict__
         if not name.startswith("__") and callable(datasets.__dict__[name])
-    ) + wilds.supported_datasets
+    )
 
 
 class ConcatDatasetWithDomainLabel(ConcatDataset):
@@ -73,99 +76,53 @@ class ConcatDatasetWithDomainLabel(ConcatDataset):
         return img, target, domain_id
 
 
-def convert_from_wilds_dataset(dataset_name, wild_dataset):
-    metadata_array = wild_dataset.metadata_array
-    sample_idxes_per_domain = {}
-    for idx, metadata in enumerate(metadata_array):
-        if dataset_name == 'iwildcam':
-            # In iwildcam dataset, domain id is specified by location
-            domain = metadata[0].item()
-        elif dataset_name == 'camelyon17':
-            # In camelyon17 dataset, domain id is specified by hospital
-            domain = metadata[0].item()
-        elif dataset_name == 'fmow':
-            # In fmow dataset, domain id is specified by (region, year) tuple
-            domain = (metadata[0].item(), metadata[1].item())
-
-        if domain not in sample_idxes_per_domain:
-            sample_idxes_per_domain[domain] = []
-        sample_idxes_per_domain[domain].append(idx)
-
-    class Dataset:
-        def __init__(self):
-            self.dataset = wild_dataset
-
-        def __getitem__(self, idx):
-            x, y, metadata = self.dataset[idx]
-            return x, y
-
-        def __len__(self):
-            return len(self.dataset)
-
-    dataset = Dataset()
-    concat_dataset = ConcatDatasetWithDomainLabel(
-        [Subset(dataset, sample_idxes_per_domain[domain]) for domain in sample_idxes_per_domain])
-    return concat_dataset
-
-
 def get_dataset(dataset_name, root, task_list, split='train', download=True, transform=None, seed=0):
     assert split in ['train', 'val', 'test']
-    if dataset_name in datasets.__dict__:
-        # load datasets from tllib.vision.datasets
-        # currently only PACS, OfficeHome and DomainNet are supported
-        supported_dataset = ['PACS', 'OfficeHome', 'DomainNet']
-        assert dataset_name in supported_dataset
+    # load datasets from tllib.vision.datasets
+    # currently only PACS, OfficeHome and DomainNet are supported
+    supported_dataset = ['PACS', 'OfficeHome', 'DomainNet']
+    assert dataset_name in supported_dataset
 
-        dataset = datasets.__dict__[dataset_name]
+    dataset = datasets.__dict__[dataset_name]
 
-        train_split_list = []
-        val_split_list = []
-        test_split_list = []
-        # we follow DomainBed and split each dataset randomly into two parts, with 80% samples and 20% samples
-        # respectively, the former (larger) will be used as training set, and the latter will be used as validation set.
-        split_ratio = 0.8
-        num_classes = 0
+    train_split_list = []
+    val_split_list = []
+    test_split_list = []
+    # we follow DomainBed and split each dataset randomly into two parts, with 80% samples and 20% samples
+    # respectively, the former (larger) will be used as training set, and the latter will be used as validation set.
+    split_ratio = 0.8
+    num_classes = 0
 
-        # under domain generalization setting, we use all samples in target domain as test set
-        for task in task_list:
-            if dataset_name == 'PACS':
-                all_split = dataset(root=root, task=task, split='all', download=download, transform=transform)
-                num_classes = all_split.num_classes
-            elif dataset_name == 'OfficeHome':
-                all_split = dataset(root=root, task=task, download=download, transform=transform)
-                num_classes = all_split.num_classes
-            elif dataset_name == 'DomainNet':
-                train_split = dataset(root=root, task=task, split='train', download=download, transform=transform)
-                test_split = dataset(root=root, task=task, split='test', download=download, transform=transform)
-                num_classes = train_split.num_classes
-                all_split = ConcatDataset([train_split, test_split])
+    # under domain generalization setting, we use all samples in target domain as test set
+    for task in task_list:
+        if dataset_name == 'PACS':
+            all_split = dataset(root=root, task=task, split='all', download=download, transform=transform)
+            num_classes = all_split.num_classes
+        elif dataset_name == 'OfficeHome':
+            all_split = dataset(root=root, task=task, download=download, transform=transform)
+            num_classes = all_split.num_classes
+        elif dataset_name == 'DomainNet':
+            train_split = dataset(root=root, task=task, split='train', download=download, transform=transform)
+            test_split = dataset(root=root, task=task, split='test', download=download, transform=transform)
+            num_classes = train_split.num_classes
+            all_split = ConcatDataset([train_split, test_split])
 
-            train_split, val_split = split_dataset(all_split, int(len(all_split) * split_ratio), seed)
+        train_split, val_split = split_dataset(all_split, int(len(all_split) * split_ratio), seed)
 
-            train_split_list.append(train_split)
-            val_split_list.append(val_split)
-            test_split_list.append(all_split)
+        train_split_list.append(train_split)
+        val_split_list.append(val_split)
+        test_split_list.append(all_split)
 
-        train_dataset = ConcatDatasetWithDomainLabel(train_split_list)
-        val_dataset = ConcatDatasetWithDomainLabel(val_split_list)
-        test_dataset = ConcatDatasetWithDomainLabel(test_split_list)
+    train_dataset = ConcatDatasetWithDomainLabel(train_split_list)
+    val_dataset = ConcatDatasetWithDomainLabel(val_split_list)
+    test_dataset = ConcatDatasetWithDomainLabel(test_split_list)
 
-        dataset_dict = {
-            'train': train_dataset,
-            'val': val_dataset,
-            'test': test_dataset
-        }
-        return dataset_dict[split], num_classes
-    else:
-        # load datasets from wilds
-        # currently only iwildcam, camelyon17 and fmow are supported
-        supported_dataset = ['iwildcam', 'camelyon17', 'fmow']
-        assert dataset_name in supported_dataset
-
-        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
-        num_classes = dataset.n_classes
-        return convert_from_wilds_dataset(dataset_name,
-                                          dataset.get_subset(split=split, transform=transform)), num_classes
+    dataset_dict = {
+        'train': train_dataset,
+        'val': val_dataset,
+        'test': test_dataset
+    }
+    return dataset_dict[split], num_classes
 
 
 def split_dataset(dataset, n, seed=0):

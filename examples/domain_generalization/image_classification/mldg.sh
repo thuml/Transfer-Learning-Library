@@ -18,11 +18,3 @@ CUDA_VISIBLE_DEVICES=0 python mldg.py data/domainnet -d DomainNet -s c i q r s -
 CUDA_VISIBLE_DEVICES=0 python mldg.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet50 -i 5000 --lr 0.005 --seed 0 --log logs/mldg/DomainNet_q
 CUDA_VISIBLE_DEVICES=0 python mldg.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet50 -i 5000 --lr 0.005 --seed 0 --log logs/mldg/DomainNet_r
 CUDA_VISIBLE_DEVICES=0 python mldg.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet50 -i 5000 --lr 0.005 --seed 0 --log logs/mldg/DomainNet_s
-
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python mldg.py data/wilds -d camelyon17 -a resnet50 -b 36 \
-  --n-support-domains 1 --n-query-domains 2 --epochs 20 -i 1000 --lr 0.003 --seed 0 --log logs/mldg/camelyon17
-
-# DenseNet121, Wilds Dataset
-CUDA_VISIBLE_DEVICES=5 python mldg.py data/wilds -d fmow --train-resizing 'cen.crop' -a densenet121 \
-  -b 36 --n-support-domains 2 --n-query-domains 2 --epochs 60 -i 1000 --lr 0.001 --seed 0 --log logs/mldg/fmow

@@ -22,7 +22,7 @@ model_urls = {
 }
 
 
-class IBN(nn.Module):
+class InstanceBatchNorm2d(nn.Module):
     r"""Instance-Batch Normalization layer from
     `Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (ECCV 2018)
     <https://arxiv.org/pdf/1807.09441.pdf>`_.
@@ -39,7 +39,7 @@ class IBN(nn.Module):
     """
 
     def __init__(self, planes, ratio=0.5):
-        super(IBN, self).__init__()
+        super(InstanceBatchNorm2d, self).__init__()
         self.half = int(planes * ratio)
         self.IN = nn.InstanceNorm2d(self.half, affine=True)
         self.BN = nn.BatchNorm2d(planes - self.half)
@@ -60,7 +60,7 @@ class BasicBlock_IBN(nn.Module):
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         if ibn == 'a':
-            self.bn1 = IBN(planes)
+            self.bn1 = InstanceBatchNorm2d(planes)
         else:
             self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
@@ -98,7 +98,7 @@ class Bottleneck_IBN(nn.Module):
         super(Bottleneck_IBN, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         if ibn == 'a':
-            self.bn1 = IBN(planes)
+            self.bn1 = InstanceBatchNorm2d(planes)
         else:
             self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
