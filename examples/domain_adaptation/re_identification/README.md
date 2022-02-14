@@ -1,4 +1,4 @@
-# Domain Adaptation for Person Re-Identification
+# Unsupervised Domain Adaptation for Person Re-Identification
 
 ## Installation
 

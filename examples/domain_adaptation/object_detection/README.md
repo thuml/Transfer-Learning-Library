@@ -17,7 +17,7 @@ pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f ht
 # install detectron
 python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.9/index.html
 # install other requirements
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Dataset
