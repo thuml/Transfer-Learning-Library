@@ -52,11 +52,11 @@ class InstanceBatchNorm2d(nn.Module):
         return out
 
 
-class BasicBlock_IBN(nn.Module):
+class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, ibn=None, stride=1, downsample=None):
-        super(BasicBlock_IBN, self).__init__()
+        super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         if ibn == 'a':
@@ -91,11 +91,11 @@ class BasicBlock_IBN(nn.Module):
         return out
 
 
-class Bottleneck_IBN(nn.Module):
+class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, ibn=None, stride=1, downsample=None):
-        super(Bottleneck_IBN, self).__init__()
+        super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         if ibn == 'a':
             self.bn1 = InstanceBatchNorm2d(planes)
@@ -136,14 +136,14 @@ class Bottleneck_IBN(nn.Module):
         return out
 
 
-class ResNet_IBN(nn.Module):
+class IBNNet(nn.Module):
     r"""
-    ResNets-IBN without fully connected layer
+    IBNNet without fully connected layer
     """
 
     def __init__(self, block, layers, ibn_cfg=('a', 'a', 'a', None)):
         self.inplanes = 64
-        super(ResNet_IBN, self).__init__()
+        super(IBNNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         if ibn_cfg[0] == 'b':
@@ -212,9 +212,9 @@ def resnet18_ibn_a(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=BasicBlock_IBN,
-                       layers=[2, 2, 2, 2],
-                       ibn_cfg=('a', 'a', 'a', None))
+    model = IBNNet(block=BasicBlock,
+                   layers=[2, 2, 2, 2],
+                   ibn_cfg=('a', 'a', 'a', None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet18_ibn_a']), strict=False)
     return model
@@ -226,9 +226,9 @@ def resnet34_ibn_a(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=BasicBlock_IBN,
-                       layers=[3, 4, 6, 3],
-                       ibn_cfg=('a', 'a', 'a', None))
+    model = IBNNet(block=BasicBlock,
+                   layers=[3, 4, 6, 3],
+                   ibn_cfg=('a', 'a', 'a', None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet34_ibn_a']), strict=False)
     return model
@@ -240,9 +240,9 @@ def resnet50_ibn_a(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=Bottleneck_IBN,
-                       layers=[3, 4, 6, 3],
-                       ibn_cfg=('a', 'a', 'a', None))
+    model = IBNNet(block=Bottleneck,
+                   layers=[3, 4, 6, 3],
+                   ibn_cfg=('a', 'a', 'a', None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet50_ibn_a']), strict=False)
     return model
@@ -254,9 +254,9 @@ def resnet101_ibn_a(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=Bottleneck_IBN,
-                       layers=[3, 4, 23, 3],
-                       ibn_cfg=('a', 'a', 'a', None))
+    model = IBNNet(block=Bottleneck,
+                   layers=[3, 4, 23, 3],
+                   ibn_cfg=('a', 'a', 'a', None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet101_ibn_a']), strict=False)
     return model
@@ -268,9 +268,9 @@ def resnet18_ibn_b(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=BasicBlock_IBN,
-                       layers=[2, 2, 2, 2],
-                       ibn_cfg=('b', 'b', None, None))
+    model = IBNNet(block=BasicBlock,
+                   layers=[2, 2, 2, 2],
+                   ibn_cfg=('b', 'b', None, None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet18_ibn_b']), strict=False)
     return model
@@ -282,9 +282,9 @@ def resnet34_ibn_b(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=BasicBlock_IBN,
-                       layers=[3, 4, 6, 3],
-                       ibn_cfg=('b', 'b', None, None))
+    model = IBNNet(block=BasicBlock,
+                   layers=[3, 4, 6, 3],
+                   ibn_cfg=('b', 'b', None, None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet34_ibn_b']), strict=False)
     return model
@@ -296,9 +296,9 @@ def resnet50_ibn_b(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=Bottleneck_IBN,
-                       layers=[3, 4, 6, 3],
-                       ibn_cfg=('b', 'b', None, None))
+    model = IBNNet(block=Bottleneck,
+                   layers=[3, 4, 6, 3],
+                   ibn_cfg=('b', 'b', None, None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet50_ibn_b']), strict=False)
     return model
@@ -310,9 +310,9 @@ def resnet101_ibn_b(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_IBN(block=Bottleneck_IBN,
-                       layers=[3, 4, 23, 3],
-                       ibn_cfg=('b', 'b', None, None))
+    model = IBNNet(block=Bottleneck,
+                   layers=[3, 4, 23, 3],
+                   ibn_cfg=('b', 'b', None, None))
     if pretrained:
         model.load_state_dict(torch.hub.load_state_dict_from_url(model_urls['resnet101_ibn_b']), strict=False)
     return model

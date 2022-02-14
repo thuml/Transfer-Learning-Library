@@ -33,9 +33,9 @@ StochNorm: Stochastic Normalization
 IBN-Net: Instance-Batch Normalization Network
 ------------------------------------------------
 
-.. autoclass:: tllib.normalization.ibn.IBN
+.. autoclass:: tllib.normalization.ibn.InstanceBatchNorm2d
 
-.. autoclass:: tllib.normalization.ibn.ResNet_IBN
+.. autoclass:: tllib.normalization.ibn.IBNNet
     :members:
 
 .. automodule:: tllib.normalization.ibn
