@@ -24,7 +24,7 @@ import tllib.vision.datasets.reid as datasets
 from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from tllib.vision.models.reid.identifier import ReIdentifier
 from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss, CrossEntropyLoss
-from tllib.self_training.self_ensemble import EmaTeacher
+from tllib.self_training.mean_teacher import EmaTeacher
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric.reid import extract_reid_feature, validate, visualize_ranked_results
 from tllib.utils.data import ForeverDataIterator, RandomMultipleGallerySampler

@@ -75,7 +75,9 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
     split_path = os.path.join(split_root, split_path)
 
     def load_or_create_labeled_split(num_classes, labels):
-        # helper function that returns indexes corresponding to labeled data and that corresponding to unlabeled data
+        """
+        Helper function that returns indexes corresponding to labeled data and that corresponding to unlabeled data
+        """
 
         if os.path.exists(split_path) and not resample_labeled_data:
             # if a previous labeled split exists and we do not resample this time, then simply load previous split
@@ -133,7 +135,9 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
 
 
 def x_u_split(num_samples_per_class, num_classes, labels):
-    # construct labeled and unlabeled subsets, where the labeled subset is class balanced
+    """
+    Construct labeled and unlabeled subsets, where the labeled subset is class balanced
+    """
     labels = np.array(labels)
     assert num_samples_per_class * num_classes <= len(labels)
 

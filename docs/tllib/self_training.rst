@@ -12,15 +12,21 @@ Self Training Methods
 
 .. autoclass:: tllib.self_training.pi_model.L2ConsistencyLoss
 
+
+.. _MeanTeacher:
+
+Mean Teacher
+-----------------------------
+
+.. autoclass:: tllib.self_training.mean_teacher.EmaTeacher
+
+
 .. _SelfEnsemble:
 
 Self Ensemble
 -----------------------------
 
 .. autoclass:: tllib.self_training.self_ensemble.ClassBalanceLoss
-
-
-.. autoclass:: tllib.self_training.self_ensemble.EmaTeacher
 
 
 .. _MCC:

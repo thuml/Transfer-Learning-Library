@@ -19,8 +19,9 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 import utils
-from tllib.self_training.self_ensemble import EmaTeacher, ClassBalanceLoss, ImageClassifier
 from tllib.self_training.pi_model import L2ConsistencyLoss
+from tllib.self_training.mean_teacher import EmaTeacher
+from tllib.self_training.self_ensemble import ClassBalanceLoss, ImageClassifier
 from tllib.vision.transforms import ResizeImage, MultipleApply
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
