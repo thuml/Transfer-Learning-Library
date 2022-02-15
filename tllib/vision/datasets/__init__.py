@@ -13,14 +13,18 @@ from .cub200 import CUB200
 from .stanford_cars import StanfordCars
 from .stanford_dogs import StanfordDogs
 from .coco70 import COCO70
-from .oxfordpet import OxfordIIITPet
+from .oxfordpets import OxfordIIITPets
 from .dtd import DTD
 from .oxfordflowers import OxfordFlowers102
 from .patchcamelyon import PatchCamelyon
 from .retinopathy import Retinopathy
 from .eurosat import EuroSAT
 from .resisc45 import Resisc45
+from .food101 import Food101
+from .sun397 import SUN397
+from .caltech101 import Caltech101
 
-__all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "ImageNetR", "ImageNetSketch",
-           "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPet", "PACS", "DTD",
-           "OxfordFlowers102", "PatchCamelyon", "Retinopathy", "EuroSAT", "Resisc45"]
+__all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "ImageNetR",
+           "ImageNetSketch", "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPets", "PACS",
+           "DTD", "OxfordFlowers102", "PatchCamelyon", "Retinopathy", "EuroSAT", "Resisc45", "Food101", "SUN397",
+           "Caltech101"]

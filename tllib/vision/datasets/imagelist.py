@@ -38,6 +38,7 @@ class ImageList(datasets.VisionDataset):
                  transform: Optional[Callable] = None, target_transform: Optional[Callable] = None):
         super().__init__(root, transform=transform, target_transform=target_transform)
         self.samples = self.parse_data_file(data_list_file)
+        self.targets = [s[1] for s in self.samples]
         self.classes = classes
         self.class_to_idx = {cls: idx
                              for idx, cls in enumerate(self.classes)}
