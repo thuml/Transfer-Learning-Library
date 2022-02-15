@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -20,14 +19,14 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 
 import utils
-from tllib.self_training.self_ensemble import EmaTeacher, L2ConsistencyLoss, ClassBalanceLoss, ImageClassifier
+from tllib.self_training.self_ensemble import EmaTeacher, ClassBalanceLoss, ImageClassifier
+from tllib.self_training.pi_model import L2ConsistencyLoss
 from tllib.vision.transforms import ResizeImage, MultipleApply
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -129,7 +128,8 @@ def main(args: argparse.Namespace):
         # start pretraining
         for epoch in range(args.pretrain_epochs):
             # pretrain for one epoch
-            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer,
+                                              pretrain_lr_scheduler, epoch, args,
                                               device)
             # validate to show pretrain process
             utils.validate(val_loader, pretrain_model, args, device)
@@ -140,7 +140,7 @@ def main(args: argparse.Namespace):
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
     teacher = EmaTeacher(classifier, alpha=args.alpha)
-    consistent_loss = L2ConsistencyLoss().to(device)
+    consistency_loss = L2ConsistencyLoss().to(device)
     class_balance_loss = ClassBalanceLoss(num_classes).to(device)
 
     # start training
@@ -148,8 +148,8 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_source_iter, train_target_iter, classifier, teacher, consistent_loss, class_balance_loss, optimizer,
-              lr_scheduler, epoch, args)
+        train(train_source_iter, train_target_iter, classifier, teacher, consistency_loss, class_balance_loss,
+              optimizer, lr_scheduler, epoch, args)
 
         # evaluate on validation set
         acc1 = utils.validate(val_loader, classifier, args, device)
@@ -171,7 +171,7 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          teacher: EmaTeacher, consistent_loss, class_balance_loss,
+          teacher: EmaTeacher, consistency_loss, class_balance_loss,
           optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
@@ -209,15 +209,15 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         # classification loss
         cls_loss = F.cross_entropy(y_s, labels_s)
         # compute output and mask
-        y_t = F.softmax(y_t, dim=1)
-        y_t_teacher = F.softmax(y_t_teacher, dim=1)
-        max_prob, _ = y_t_teacher.max(dim=1)
-        mask = (max_prob > args.threshold).float()
+        p_t = F.softmax(y_t, dim=1)
+        p_t_teacher = F.softmax(y_t_teacher, dim=1)
+        confidence, _ = p_t_teacher.max(dim=1)
+        mask = (confidence > args.threshold).float()
 
-        # consistent loss
-        cons_loss = consistent_loss(y_t, y_t_teacher, mask)
+        # consistency loss
+        cons_loss = consistency_loss(p_t, p_t_teacher, mask)
         # balance loss
-        balance_loss = class_balance_loss(y_t) * mask.mean()
+        balance_loss = class_balance_loss(p_t) * mask.mean()
 
         loss = cls_loss + args.trade_off_cons * cons_loss + args.trade_off_balance * balance_loss
 
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--alpha', default=0.99, type=float, help='ema decay rate (default: 0.99)')
     parser.add_argument('--threshold', default=0.8, type=float, help='confidence threshold')
-    parser.add_argument('--trade-off-cons', default=3, type=float, help='trade off parameter for consistent loss')
+    parser.add_argument('--trade-off-cons', default=3, type=float, help='trade off parameter for consistency loss')
     parser.add_argument('--trade-off-balance', default=0.01, type=float,
                         help='trade off parameter for class balance loss')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',

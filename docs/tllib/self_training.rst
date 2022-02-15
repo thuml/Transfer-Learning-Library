@@ -2,16 +2,20 @@
 Self Training Methods
 =======================================
 
+.. _PiModel:
+
+:math:`\Pi` Model
+-----------------------------
+
+.. autoclass:: tllib.self_training.pi_model.ConsistencyLoss
+
+
+.. autoclass:: tllib.self_training.pi_model.L2ConsistencyLoss
+
 .. _SelfEnsemble:
 
 Self Ensemble
 -----------------------------
-
-.. autoclass:: tllib.self_training.self_ensemble.ConsistencyLoss
-
-
-.. autoclass:: tllib.self_training.self_ensemble.L2ConsistencyLoss
-
 
 .. autoclass:: tllib.self_training.self_ensemble.ClassBalanceLoss
 
