@@ -287,10 +287,10 @@ FVGC Aircraft
    :members:
 
 -------------------------------------
-Oxford-IIIT Pet
+Oxford-IIIT Pets
 -------------------------------------
 
-.. autoclass:: tllib.vision.datasets.oxfordpet.OxfordIIITPet
+.. autoclass:: tllib.vision.datasets.oxfordpets.OxfordIIITPets
    :members:
 
 -------------------------------------
@@ -312,6 +312,13 @@ OxfordFlowers102
 -------------------------------------
 
 .. autoclass:: tllib.vision.datasets.oxfordflowers.OxfordFlowers102
+   :members:
+
+-------------------------------------
+Caltech101
+-------------------------------------
+
+.. autoclass:: tllib.vision.datasets.caltech101.Caltech101
    :members:
 
 
@@ -344,4 +351,18 @@ Resisc45
 -------------------------------------
 
 .. autoclass:: tllib.vision.datasets.resisc45.Resisc45
+   :members:
+
+-------------------------------------
+Food-101
+-------------------------------------
+
+.. autoclass:: tllib.vision.datasets.food101.Food101
+   :members:
+
+-------------------------------------
+SUN397
+-------------------------------------
+
+.. autoclass:: tllib.vision.datasets.sun397.SUN397
    :members:

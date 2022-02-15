@@ -13,7 +13,7 @@ class SUN397(ImageList):
     but there are at least 100 images per category. Note that the authors construct 10 partitions,
     where each partition contains 50 training images and 50 testing images per class. We adopt partition 1.
 
-     Args:
+    Args:
         root (str): Root directory of dataset
         split (str, optional): The dataset split, supports ``train``, or ``test``.
         download (bool, optional): If true, downloads the dataset from the internet and puts it \

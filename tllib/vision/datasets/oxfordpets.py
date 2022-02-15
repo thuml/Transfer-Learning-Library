@@ -9,7 +9,7 @@ from ._util import download as download_data, check_exits
 
 
 class OxfordIIITPets(ImageList):
-    """`The Oxford-IIIT Pet <https://www.robots.ox.ac.uk/~vgg/data/pets/>`_ \
+    """`The Oxford-IIIT Pets <https://www.robots.ox.ac.uk/~vgg/data/pets/>`_ \
     is a 37-category pet dataset with roughly 200 images for each class.
 
     Args:
