@@ -16,7 +16,7 @@ Following datasets can be downloaded automatically:
 - [StanfordCars](https://ai.stanford.edu/~jkrause/cars/car_dataset.html)
 - [Aircraft](https://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/)
 - [StanfordDogs](http://vision.stanford.edu/aditya86/ImageNetDogs/)
-- [OxfordIIITPet](https://www.robots.ox.ac.uk/~vgg/data/pets/)
+- [OxfordIIITPets](https://www.robots.ox.ac.uk/~vgg/data/pets/)
 - [OxfordFlowers102](https://www.robots.ox.ac.uk/~vgg/data/flowers/102/)
 - [DTD](https://www.robots.ox.ac.uk/~vgg/data/dtd/index.html)
 - [PatchCamelyon](https://patchcamelyon.grand-challenge.org/)
