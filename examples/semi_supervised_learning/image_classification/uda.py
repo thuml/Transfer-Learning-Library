@@ -18,6 +18,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
+from tllib.self_training.uda import StrongWeakConsistencyLoss
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -142,6 +143,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         [batch_time, data_time, losses, cls_losses, con_losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
+    consistency_criterion = StrongWeakConsistencyLoss(args.threshold, args.T).to(device)
     # switch to train mode
     model.train()
 
@@ -174,12 +176,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         with torch.no_grad():
             y_u = model(x_u)
         y_u_strong = model(x_u_strong)
-
-        confidence, _ = F.softmax(y_u, dim=1).max(dim=1)
-        mask = (confidence > args.threshold).detach()
-        log_prob = F.log_softmax(y_u_strong / args.T, dim=1)
-        con_loss = args.trade_off_con * (F.kl_div(log_prob, F.softmax(y_u, dim=1), reduction='none').sum(dim=1))
-        con_loss = (con_loss * mask).sum() / max(mask.sum(), 1)
+        con_loss = args.trade_off_con * consistency_criterion(y_u_strong, y_u)
         con_loss.backward()
 
         # measure accuracy and record loss

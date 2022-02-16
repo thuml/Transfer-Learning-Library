@@ -2,6 +2,14 @@
 Self Training Methods
 =======================================
 
+
+.. _PseudoLabel:
+
+Pseudo Label
+-----------------------------
+
+.. autoclass:: tllib.self_training.pseudo_label.ConfidenceRegularizedSelfTrainingLoss
+
 .. _PiModel:
 
 :math:`\Pi` Model
@@ -27,6 +35,14 @@ Self Ensemble
 -----------------------------
 
 .. autoclass:: tllib.self_training.self_ensemble.ClassBalanceLoss
+
+
+.. _UDA:
+
+UDA
+-----------------------------
+
+.. autoclass:: tllib.self_training.uda.StrongWeakConsistencyLoss
 
 
 .. _MCC:

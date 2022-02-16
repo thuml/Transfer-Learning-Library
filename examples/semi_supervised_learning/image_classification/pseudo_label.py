@@ -18,6 +18,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
+from tllib.self_training.pseudo_label import ConfidenceRegularizedSelfTrainingLoss
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -143,6 +144,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         [batch_time, data_time, losses, cls_losses, self_training_losses, cls_accs, pseudo_label_accs],
         prefix="Epoch: [{}]".format(epoch))
 
+    self_training_criterion = ConfidenceRegularizedSelfTrainingLoss(args.threshold).to(device)
     # switch to train mode
     model.train()
 
@@ -171,13 +173,9 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         cls_loss = F.cross_entropy(y_l, labels_l) + args.trade_off_cls_strong * F.cross_entropy(y_l_strong, labels_l)
         cls_loss.backward()
 
-        # cross entropy loss with pseudo label
+        # self training loss
         y_u = model(x_u)
-        confidence, pseudo_labels = (F.softmax(y_u, dim=1)).max(dim=1)
-        confidence = confidence.detach()
-        mask = (confidence > args.threshold).float()
-        self_training_loss = args.trade_off_self_training * (
-                F.cross_entropy(y_u, pseudo_labels, reduction='none') * mask).mean()
+        self_training_loss, mask, pseudo_labels = args.trade_off_self_training * self_training_criterion(y_u, y_u)
         self_training_loss.backward()
 
         # measure accuracy and record loss

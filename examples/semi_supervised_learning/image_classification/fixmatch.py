@@ -18,6 +18,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
+from tllib.self_training.pseudo_label import ConfidenceRegularizedSelfTrainingLoss
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -145,6 +146,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
          pseudo_label_ratios],
         prefix="Epoch: [{}]".format(epoch))
 
+    self_training_criterion = ConfidenceRegularizedSelfTrainingLoss(args.threshold).to(device)
     # switch to train mode
     model.train()
 
@@ -178,11 +180,8 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         with torch.no_grad():
             y_u = model(x_u)
         y_u_strong = model(x_u_strong)
-        confidence, pseudo_labels = (F.softmax(y_u, dim=1)).max(dim=1)
-        confidence = confidence.detach()
-        mask = (confidence > args.threshold).float()
-        self_training_loss = args.trade_off_self_training * (
-                F.cross_entropy(y_u_strong, pseudo_labels, reduction='none') * mask).mean()
+        self_training_loss, mask, pseudo_labels = args.trade_off_self_training * \
+                                                  self_training_criterion(y_u_strong, y_u)
         self_training_loss.backward()
 
         # measure accuracy and record loss
@@ -278,7 +277,7 @@ if __name__ == '__main__':
                         help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training ')
-    parser.add_argument("--log", default='fix_match', type=str,
+    parser.add_argument("--log", default='fixmatch', type=str,
                         help="where to save logs, checkpoints and debugging images")
     parser.add_argument("--phase", default='train', type=str, choices=['train', 'test'],
                         help="when phase is 'test', only test the model")
