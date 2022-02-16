@@ -188,12 +188,14 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
 
         cls_acc = accuracy(y_l, labels_l)[0]
         cls_accs.update(cls_acc.item(), batch_size)
+
+        # accuracy of pseudo labels
         n_pseudo_labels = mask.sum()
         if n_pseudo_labels > 0:
             pseudo_labels = pseudo_labels * mask - (1 - mask)
             n_correct = (pseudo_labels == labels_u).float().sum()
             pseudo_label_acc = n_correct / n_pseudo_labels * 100
-            pseudo_label_accs.update(pseudo_label_acc, n_pseudo_labels)
+            pseudo_label_accs.update(pseudo_label_acc.item(), n_pseudo_labels)
 
         # compute gradient and do SGD step
         optimizer.step()
