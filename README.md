@@ -35,8 +35,6 @@ The currently supported algorithms include:
 - **SPGAN** - Similarity Preserving Generative Adversarial Network [[CVPR 2018]](https://arxiv.org/pdf/1811.10551.pdf) [[Code]](/examples/domain_adaptation/re_identification/spgan.py)
 
 ##### Partial Domain Adaptation [[Code]](/examples/domain_adaptation/partial_domain_adaptation)
-- **DANN** - Unsupervised Domain Adaptation by Backpropagation [[ICML 2015]](http://proceedings.mlr.press/v37/ganin15.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/dann.py)
-- **PADA** - Partial Adversarial Domain Adaptation [[ECCV 2018]](https://arxiv.org/abs/1808.04205) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/pada.py)
 - **IWAN** - Importance Weighted Adversarial Nets for Partial Domain Adaptation[[CVPR 2018]](https://arxiv.org/abs/1803.09210) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/iwan.py)
 - **AFN** - Larger Norm More Transferable: An Adaptive Feature Norm Approach for
 Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/afn.py)
