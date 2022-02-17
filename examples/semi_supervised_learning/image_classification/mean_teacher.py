@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
 from tllib.self_training.pi_model import sigmoid_warm_up, L2ConsistencyLoss
-from tllib.self_training.mean_teacher import update_bn, EmaTeacher
+from tllib.self_training.mean_teacher import update_bn, EMATeacher
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -86,7 +86,7 @@ def main(args: argparse.Namespace):
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = utils.ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer,
                                        finetune=args.finetune).to(device)
-    teacher = EmaTeacher(classifier, alpha=args.alpha)
+    teacher = EMATeacher(classifier, alpha=args.alpha)
     print(classifier)
 
     # define optimizer and lr scheduler

@@ -24,7 +24,7 @@ import tllib.vision.datasets.reid as datasets
 from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from tllib.vision.models.reid.identifier import ReIdentifier
 from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss, CrossEntropyLoss
-from tllib.self_training.mean_teacher import EmaTeacher
+from tllib.self_training.mean_teacher import EMATeacher
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric.reid import extract_reid_feature, validate, visualize_ranked_results
 from tllib.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
@@ -192,12 +192,12 @@ def create_model(args: argparse.Namespace, pretrained_model_path: str):
     utils.copy_state_dict(model, pretrained_model)
 
     # EMA model
-    model_ema = EmaTeacher(model, args.alpha)
+    model_ema = EMATeacher(model, args.alpha)
     return model, model_ema
 
 
-def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EmaTeacher,
-               model_2_ema: EmaTeacher, target_dataset, train_transform, args: argparse.Namespace):
+def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EMATeacher,
+               model_2_ema: EMATeacher, target_dataset, train_transform, args: argparse.Namespace):
     # run kmeans clustering algorithm
     print('Clustering into {} classes'.format(args.num_clusters))
     # collect feature with different ema teachers
@@ -238,8 +238,8 @@ def run_kmeans(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
     return train_target_iter
 
 
-def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EmaTeacher,
-               model_2_ema: EmaTeacher, target_dataset, train_transform, args: argparse.Namespace):
+def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataParallel, model_1_ema: EMATeacher,
+               model_2_ema: EMATeacher, target_dataset, train_transform, args: argparse.Namespace):
     # run dbscan clustering algorithm
 
     # collect feature with different ema teachers
@@ -298,8 +298,8 @@ def run_dbscan(cluster_loader: DataLoader, model_1: DataParallel, model_2: DataP
     return train_target_iter, num_clusters
 
 
-def train(train_target_iter: ForeverDataIterator, model_1: DataParallel, model_1_ema: EmaTeacher, model_2: DataParallel,
-          model_2_ema: EmaTeacher, optimizer: Adam, criterion_ce: CrossEntropyLossWithLabelSmooth,
+def train(train_target_iter: ForeverDataIterator, model_1: DataParallel, model_1_ema: EMATeacher, model_2: DataParallel,
+          model_2_ema: EMATeacher, optimizer: Adam, criterion_ce: CrossEntropyLossWithLabelSmooth,
           criterion_ce_soft: CrossEntropyLoss, criterion_triplet: SoftTripletLoss,
           criterion_triplet_soft: SoftTripletLoss, epoch: int, args: argparse.Namespace):
     # train with pseudo labels

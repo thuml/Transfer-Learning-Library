@@ -11,7 +11,7 @@ def set_requires_grad(net, requires_grad=False):
         param.requires_grad = requires_grad
 
 
-class EmaTeacher(object):
+class EMATeacher(object):
     r"""
     Exponential moving average model from `Mean teachers are better role models: Weight-averaged consistency targets
     improve semi-supervised deep learning results (NIPS 2017) <https://arxiv.org/abs/1703.01780>`_
@@ -34,7 +34,7 @@ class EmaTeacher(object):
 
         >>> classifier = ImageClassifier(backbone, num_classes=31, bottleneck_dim=256).to(device)
         >>> # initialize teacher model
-        >>> teacher = EmaTeacher(classifier, 0.9)
+        >>> teacher = EMATeacher(classifier, 0.9)
         >>> num_iterations = 1000
         >>> for _ in range(num_iterations):
         >>>     # x denotes input of one mini-batch

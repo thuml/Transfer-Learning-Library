@@ -26,7 +26,7 @@ Pseudo Label
 Mean Teacher
 -----------------------------
 
-.. autoclass:: tllib.self_training.mean_teacher.EmaTeacher
+.. autoclass:: tllib.self_training.mean_teacher.EMATeacher
 
 
 .. _SelfEnsemble:

@@ -20,7 +20,7 @@ import torch.nn.functional as F
 
 import utils
 from tllib.self_training.pi_model import L2ConsistencyLoss
-from tllib.self_training.mean_teacher import EmaTeacher
+from tllib.self_training.mean_teacher import EMATeacher
 from tllib.self_training.self_ensemble import ClassBalanceLoss, ImageClassifier
 from tllib.vision.transforms import ResizeImage, MultipleApply
 from tllib.utils.data import ForeverDataIterator
@@ -140,7 +140,7 @@ def main(args: argparse.Namespace):
 
     checkpoint = torch.load(args.pretrain, map_location='cpu')
     classifier.load_state_dict(checkpoint)
-    teacher = EmaTeacher(classifier, alpha=args.alpha)
+    teacher = EMATeacher(classifier, alpha=args.alpha)
     consistency_loss = L2ConsistencyLoss().to(device)
     class_balance_loss = ClassBalanceLoss(num_classes).to(device)
 
@@ -172,7 +172,7 @@ def main(args: argparse.Namespace):
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
-          teacher: EmaTeacher, consistency_loss, class_balance_loss,
+          teacher: EMATeacher, consistency_loss, class_balance_loss,
           optimizer: Adam, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':3.1f')
     data_time = AverageMeter('Data', ':3.1f')
