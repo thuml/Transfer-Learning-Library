@@ -16,15 +16,9 @@ The currently supported algorithms include:
 - **BSP** - Transferability vs. Discriminability: Batch Spectral Penalization for Adversarial Domain Adaptation [[ICML 2019]](http://proceedings.mlr.press/v97/chen19i/chen19i.pdf) [[Code]](/examples/domain_adaptation/image_classification/bsp.py) 
 - **MCC** - Minimum Class Confusion for Versatile Domain Adaptation [[ECCV 2020]](http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123660460.pdf) [[Code]](/examples/domain_adaptation/image_classification/mcc.py)
 
-##### Partial Domain Adaptation [[Code]](/examples/domain_adaptation/partial_domain_adaptation)
-- **DANN** - Unsupervised Domain Adaptation by Backpropagation [[ICML 2015]](http://proceedings.mlr.press/v37/ganin15.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/dann.py)
-- **PADA** - Partial Adversarial Domain Adaptation [[ECCV 2018]](https://arxiv.org/abs/1808.04205) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/pada.py)
-- **IWAN** - Importance Weighted Adversarial Nets for Partial Domain Adaptation[[CVPR 2018]](https://arxiv.org/abs/1803.09210) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/iwan.py)
-- **AFN** - Larger Norm More Transferable: An Adaptive Feature Norm Approach for
-Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/afn.py)
-
-##### Open-set Domain Adaptation [[Code]](/examples/domain_adaptation/openset_domain_adaptation)
-- **OSBP** - Open Set Domain Adaptation by Backpropagation [[ECCV 2018]](https://arxiv.org/abs/1804.10427) [[Code]](/examples/domain_adaptation/openset_domain_adaptation/osbp.py)
+##### Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/keypoint_detection)
+- **CycleGAN** - Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks [[ICCV 2017]](https://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf) [[Code]](/examples/domain_adaptation/object_detection/cycle_gan.py)
+- **D-adapt** - Decoupled Adaptation for Cross-Domain Object Detection [[ICLR 2022]](https://openreview.net/pdf?id=VNqaB1g9393) [[Code]](/examples/domain_adaptation/object_detection/d_adapt)
 
 ##### Domain Adaptation for Semantic Segmentation [[Code]](/examples/domain_adaptation/semantic_segmentation/)
 - **CycleGAN** - Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks [[ICCV 2017]](https://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf) [[Code]](/examples/domain_adaptation/semantic_segmentation/cycle_gan.py)
@@ -39,6 +33,16 @@ Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.
 - **IBN-Net** - Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net [[ECCV 2018]](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - **MMT** - Mutual Mean-Teaching: Pseudo Label Refinery for Unsupervised Domain Adaptation on Person Re-identification [[ICLR 2020]](https://arxiv.org/abs/2001.01526) [[Code]](/examples/domain_adaptation/re_identification/mmt.py)
 - **SPGAN** - Similarity Preserving Generative Adversarial Network [[CVPR 2018]](https://arxiv.org/pdf/1811.10551.pdf) [[Code]](/examples/domain_adaptation/re_identification/spgan.py)
+
+##### Partial Domain Adaptation [[Code]](/examples/domain_adaptation/partial_domain_adaptation)
+- **DANN** - Unsupervised Domain Adaptation by Backpropagation [[ICML 2015]](http://proceedings.mlr.press/v37/ganin15.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/dann.py)
+- **PADA** - Partial Adversarial Domain Adaptation [[ECCV 2018]](https://arxiv.org/abs/1808.04205) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/pada.py)
+- **IWAN** - Importance Weighted Adversarial Nets for Partial Domain Adaptation[[CVPR 2018]](https://arxiv.org/abs/1803.09210) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/iwan.py)
+- **AFN** - Larger Norm More Transferable: An Adaptive Feature Norm Approach for
+Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.pdf) [[Code]](/examples/domain_adaptation/partial_domain_adaptation/afn.py)
+
+##### Open-set Domain Adaptation [[Code]](/examples/domain_adaptation/openset_domain_adaptation)
+- **OSBP** - Open Set Domain Adaptation by Backpropagation [[ECCV 2018]](https://arxiv.org/abs/1804.10427) [[Code]](/examples/domain_adaptation/openset_domain_adaptation/osbp.py)
 
 ##### Task Adaptation for Image Classification [[Code]](/examples/task_adaptation/image_classification/)
 - **L2-SP** - Explicit inductive bias for transfer learning with convolutional networks [[ICML 2018]]((https://arxiv.org/abs/1802.01483)) [[Code]](/examples/task_adaptation/image_classification/delta.py)
