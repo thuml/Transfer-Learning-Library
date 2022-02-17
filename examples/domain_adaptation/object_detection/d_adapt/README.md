@@ -30,8 +30,6 @@ This can facilitate you to modify and replace other adaptors.
 We provide independent training arguments for detector, category adaptor and bounding box adaptor.
 The arguments of latter two end with ``-c`` and ``-b`` respectively.
 
-## Experiment and Results
-
 
 ## Citation
 If you use these methods in your research, please consider citing.
