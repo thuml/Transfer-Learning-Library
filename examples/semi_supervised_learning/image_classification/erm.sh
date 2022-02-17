@@ -151,10 +151,10 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/cifar100 -d CIFAR100 --train-resizing 
 
 # ======================================================================================================================
 # CUB 200
-CUDA_VISIBLE_DEVICES=0 python erm.py data/cub200 -d CUB200 --num-sample-per-class 4 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/cub200 -d CUB200 --num-samples-per-class 4 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/cub200_4_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
-CUDA_VISIBLE_DEVICES=0 python erm.py data/cub200 -d CUB200 --num-sample-per-class 10 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/cub200 -d CUB200 --num-samples-per-class 10 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/cub200_10_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
 CUDA_VISIBLE_DEVICES=0 python erm.py data/cub200 -d CUB200 --oracle --finetune \
@@ -175,10 +175,10 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/aircraft -d Aircraft --oracle --finetu
 
 # ======================================================================================================================
 # StanfordCars
-CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --num-sample-per-class 4 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --num-samples-per-class 4 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/car_4_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
-CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --num-sample-per-class 10 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --num-samples-per-class 10 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/car_10_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
 CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --oracle --finetune \
@@ -187,10 +187,10 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/cars -d StanfordCars --oracle --finetu
 
 # ======================================================================================================================
 # SUN397
-CUDA_VISIBLE_DEVICES=0 python erm.py data/sun397 -d SUN397 --num-sample-per-class 4 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/sun397 -d SUN397 --num-samples-per-class 4 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/sun_4_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
-CUDA_VISIBLE_DEVICES=0 python erm.py data/sun397 -d SUN397 --num-sample-per-class 10 --finetune \
+CUDA_VISIBLE_DEVICES=0 python erm.py data/sun397 -d SUN397 --num-samples-per-class 10 --finetune \
   -a resnet50 --seed 0 --log logs/erm_moco_pretrain/sun_10_labels_per_class --lr-scheduler cos -i 2000 \
   --pretrained-backbone checkpoints/moco_v2_800ep_backbone.pth
 CUDA_VISIBLE_DEVICES=0 python erm.py data/sun397 -d SUN397 --oracle --finetune \
