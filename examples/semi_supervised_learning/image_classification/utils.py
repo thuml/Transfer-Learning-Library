@@ -3,7 +3,6 @@
 @contact: cbx_99_hasta@outlook.com
 """
 import math
-import os
 import sys
 import time
 from PIL import Image
@@ -64,36 +63,14 @@ def get_dataset_names():
 
 
 def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transform, val_transform,
-                unlabeled_train_transform=None, resample_labeled_data=False):
+                unlabeled_train_transform=None, seed=0):
     if unlabeled_train_transform is None:
         unlabeled_train_transform = labeled_train_transform
-
-    # path to store labeled split
-    split_root = 'dataset_split'
-    os.makedirs(split_root, exist_ok=True)
-    split_path = '{}_{}_labels_per_class.pth'.format(dataset_name, num_samples_per_class)
-    split_path = os.path.join(split_root, split_path)
-
-    def load_or_create_labeled_split(num_classes, labels):
-        """
-        Helper function that returns indexes corresponding to labeled data and that corresponding to unlabeled data
-        """
-
-        if os.path.exists(split_path) and not resample_labeled_data:
-            # if a previous labeled split exists and we do not resample this time, then simply load previous split
-            print('load labeled split from {}'.format(split_path))
-            labeled_idxes, unlabeled_idxes = torch.load(split_path)
-        else:
-            # otherwise, we sample labeled split and save it to corresponding path
-            labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, num_classes, labels)
-            print('create and save labeled split to {}'.format(split_path))
-            torch.save((labeled_idxes, unlabeled_idxes), split_path)
-        return labeled_idxes, unlabeled_idxes
 
     if dataset_name == 'CIFAR100':
         train_dataset = torchvision.datasets.CIFAR100(root, train=True, download=True)
         # load or create labeled split
-        labeled_idxes, unlabeled_idxes = load_or_create_labeled_split(100, train_dataset.targets)
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, 100, train_dataset.targets, seed=seed)
         # create labeled and unlabeled dataset
         subset_class = create_cifar_subset(torchvision.datasets.CIFAR100)
         labeled_train_dataset = subset_class(root, labeled_idxes, train=True, transform=labeled_train_transform)
@@ -103,7 +80,7 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
     elif dataset_name == 'CIFAR10':
         train_dataset = torchvision.datasets.CIFAR10(root, train=True, download=True)
         # load or create labeled split
-        labeled_idxes, unlabeled_idxes = load_or_create_labeled_split(10, train_dataset.targets)
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, 10, train_dataset.targets, seed=seed)
         # create labeled and unlabeled dataset
         subset_class = create_cifar_subset(torchvision.datasets.CIFAR10)
         labeled_train_dataset = subset_class(root, labeled_idxes, train=True, transform=labeled_train_transform)
@@ -114,7 +91,8 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         dataset = datasets.__dict__[dataset_name]
         train_dataset = dataset(root=root, split='train', download=True)
         # load or create labeled split
-        labeled_idxes, unlabeled_idxes = load_or_create_labeled_split(train_dataset.num_classes, train_dataset.targets)
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, train_dataset.num_classes,
+                                                   train_dataset.targets, seed=seed)
         # create labeled and unlabeled dataset
         labeled_train_dataset = Subset(train_dataset, labeled_idxes, transform=labeled_train_transform)
         unlabeled_train_dataset = ConcatDataset([
@@ -126,7 +104,8 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         dataset = datasets.__dict__[dataset_name]
         train_dataset = dataset(root=root, split='train', download=True)
         # load or create labeled split
-        labeled_idxes, unlabeled_idxes = load_or_create_labeled_split(train_dataset.num_classes, train_dataset.targets)
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, train_dataset.num_classes,
+                                                   train_dataset.targets, seed=seed)
         # create labeled and unlabeled dataset
         labeled_train_dataset = Subset(train_dataset, labeled_idxes, transform=labeled_train_transform)
         unlabeled_train_dataset = Subset(train_dataset, unlabeled_idxes, transform=unlabeled_train_transform)
@@ -134,18 +113,20 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
     return labeled_train_dataset, unlabeled_train_dataset, val_dataset
 
 
-def x_u_split(num_samples_per_class, num_classes, labels):
+def x_u_split(num_samples_per_class, num_classes, labels, seed):
     """
-    Construct labeled and unlabeled subsets, where the labeled subset is class balanced
+    Construct labeled and unlabeled subsets, where the labeled subset is class balanced. Note that the resulting
+    subsets are **deterministic** with the same random seed.
     """
     labels = np.array(labels)
     assert num_samples_per_class * num_classes <= len(labels)
+    random_state = np.random.RandomState(seed)
 
     # labeled subset
     labeled_idxes = []
     for i in range(num_classes):
         ith_class_idxes = np.where(labels == i)[0]
-        ith_class_idxes = np.random.choice(ith_class_idxes, num_samples_per_class, False)
+        ith_class_idxes = random_state.choice(ith_class_idxes, num_samples_per_class, False)
         labeled_idxes.extend(ith_class_idxes)
 
     # unlabeled subset

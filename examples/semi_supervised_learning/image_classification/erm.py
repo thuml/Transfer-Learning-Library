@@ -61,7 +61,7 @@ def main(args: argparse.Namespace):
                           args.num_samples_per_class,
                           args.root, train_transform,
                           val_transform,
-                          resample_labeled_data=args.resample_labeled_data)
+                          seed=args.seed)
     if args.oracle:
         num_classes = labeled_train_dataset.num_classes
         labeled_train_dataset = ConcatDataset([labeled_train_dataset, unlabeled_train_dataset])
@@ -186,8 +186,6 @@ if __name__ == '__main__':
                         help='dataset: ' + ' | '.join(utils.get_dataset_names()))
     parser.add_argument('--num-samples-per-class', default=4, type=int,
                         help='number of labeled samples per class')
-    parser.add_argument('--resample-labeled-data', action='store_true', default=False,
-                        help='resample labeled data instead of using previous split')
     parser.add_argument('--train-resizing', default='default', type=str)
     parser.add_argument('--val-resizing', default='default', type=str)
     parser.add_argument('--norm-mean', default=(0.485, 0.456, 0.406), type=float, nargs='+',
