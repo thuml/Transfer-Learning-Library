@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -17,7 +16,7 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+import utils
 from tllib.normalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
 import tllib.normalization.mixstyle.resnet as models
 from tllib.vision.models.reid.identifier import ReIdentifier
@@ -31,9 +30,6 @@ from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -18,7 +17,7 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+import utils
 from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
 from tllib.vision.models.reid.identifier import ReIdentifier
 import tllib.vision.datasets.reid as datasets
@@ -31,9 +30,6 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-sys.path.append('.')
-import utils
 
 
 def main(args: argparse.Namespace):

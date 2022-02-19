@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 
@@ -17,16 +16,13 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+import utils
 from tllib.self_training.pi_model import sigmoid_warm_up, L2ConsistencyLoss
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.logger import CompleteLogger
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
