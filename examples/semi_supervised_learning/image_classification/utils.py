@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.data.dataset import ConcatDataset
+from torch.utils.data.dataset import Subset, ConcatDataset
 import torchvision
 import torchvision.transforms as T
 from torchvision.datasets.folder import default_loader
@@ -67,49 +67,35 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
     if unlabeled_train_transform is None:
         unlabeled_train_transform = labeled_train_transform
 
-    if dataset_name == 'CIFAR100':
-        train_dataset = torchvision.datasets.CIFAR100(root, train=True, download=True)
-        # load or create labeled split
-        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, 100, train_dataset.targets, seed=seed)
-        # create labeled and unlabeled dataset
-        subset_class = create_cifar_subset(torchvision.datasets.CIFAR100)
-        labeled_train_dataset = subset_class(root, labeled_idxes, train=True, transform=labeled_train_transform)
-        labeled_train_dataset.num_classes = 100
-        unlabeled_train_dataset = subset_class(root, unlabeled_idxes, train=True, transform=unlabeled_train_transform)
-        val_dataset = torchvision.datasets.CIFAR100(root, train=False, transform=val_transform, download=False)
-    elif dataset_name == 'CIFAR10':
-        train_dataset = torchvision.datasets.CIFAR10(root, train=True, download=True)
-        # load or create labeled split
-        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, 10, train_dataset.targets, seed=seed)
-        # create labeled and unlabeled dataset
-        subset_class = create_cifar_subset(torchvision.datasets.CIFAR10)
-        labeled_train_dataset = subset_class(root, labeled_idxes, train=True, transform=labeled_train_transform)
-        labeled_train_dataset.num_classes = 10
-        unlabeled_train_dataset = subset_class(root, unlabeled_idxes, train=True, transform=unlabeled_train_transform)
-        val_dataset = torchvision.datasets.CIFAR10(root, train=False, transform=val_transform, download=False)
-    elif dataset_name == 'OxfordFlowers102':
+    if dataset_name == 'OxfordFlowers102':
         dataset = datasets.__dict__[dataset_name]
-        train_dataset = dataset(root=root, split='train', download=True)
-        # load or create labeled split
-        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, train_dataset.num_classes,
-                                                   train_dataset.targets, seed=seed)
-        # create labeled and unlabeled dataset
-        labeled_train_dataset = Subset(train_dataset, labeled_idxes, transform=labeled_train_transform)
+        base_dataset = dataset(root=root, split='train', transform=labeled_train_transform, download=True)
+        # create labeled and unlabeled splits
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, base_dataset.num_classes,
+                                                   base_dataset.targets, seed=seed)
+        # labeled subset
+        labeled_train_dataset = Subset(base_dataset, labeled_idxes)
+        labeled_train_dataset.num_classes = base_dataset.num_classes
+        # unlabeled subset
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
         unlabeled_train_dataset = ConcatDataset([
-            Subset(train_dataset, unlabeled_idxes, transform=unlabeled_train_transform),
-            dataset(root=root, split='validation', download=True, transform=unlabeled_train_transform)
+            Subset(base_dataset, unlabeled_idxes),
+            dataset(root=root, split='validation', download=False, transform=unlabeled_train_transform)
         ])
-        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
+        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
     else:
         dataset = datasets.__dict__[dataset_name]
-        train_dataset = dataset(root=root, split='train', download=True)
-        # load or create labeled split
-        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, train_dataset.num_classes,
-                                                   train_dataset.targets, seed=seed)
-        # create labeled and unlabeled dataset
-        labeled_train_dataset = Subset(train_dataset, labeled_idxes, transform=labeled_train_transform)
-        unlabeled_train_dataset = Subset(train_dataset, unlabeled_idxes, transform=unlabeled_train_transform)
-        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
+        base_dataset = dataset(root=root, split='train', transform=labeled_train_transform, download=True)
+        # create labeled and unlabeled splits
+        labeled_idxes, unlabeled_idxes = x_u_split(num_samples_per_class, base_dataset.num_classes,
+                                                   base_dataset.targets, seed=seed)
+        # labeled subset
+        labeled_train_dataset = Subset(base_dataset, labeled_idxes)
+        labeled_train_dataset.num_classes = base_dataset.num_classes
+        # unlabeled subset
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
+        unlabeled_train_dataset = Subset(base_dataset, unlabeled_idxes)
+        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
     return labeled_train_dataset, unlabeled_train_dataset, val_dataset
 
 
@@ -132,54 +118,6 @@ def x_u_split(num_samples_per_class, num_classes, labels, seed):
     # unlabeled subset
     unlabeled_idxes = [i for i in range(len(labels)) if i not in labeled_idxes]
     return labeled_idxes, unlabeled_idxes
-
-
-def create_cifar_subset(base_class):
-    class Subset(base_class):
-        """
-        Subset class specific for CIFAR10 and CIFAR100
-        """
-
-        def __init__(self, root, idxes, transform, **kwargs):
-            super(Subset, self).__init__(root, transform=transform, **kwargs)
-            if idxes is not None:
-                self.data = self.data[idxes]
-                self.targets = np.array(self.targets)[idxes]
-
-        def __getitem__(self, index):
-            img, target = self.data[index], self.targets[index]
-            img = Image.fromarray(img)
-
-            if self.transform is not None:
-                img = self.transform(img)
-
-            if self.target_transform is not None:
-                target = self.target_transform(target)
-
-            return img, target
-
-    return Subset
-
-
-class Subset(object):
-    """
-    Subset class for semi-supervised learning
-    """
-
-    def __init__(self, dataset, idxes, transform):
-        self.dataset = dataset
-        self.idxes = idxes
-        self.transform = transform
-        self.num_classes = self.dataset.num_classes
-
-    def __getitem__(self, idx):
-        path, target = self.dataset.samples[self.idxes[idx]]
-        img = default_loader(path)
-        img = self.transform(img)
-        return img, target
-
-    def __len__(self):
-        return len(self.idxes)
 
 
 def get_train_transform(resizing='default', random_horizontal_flip=True, auto_augment=None,
