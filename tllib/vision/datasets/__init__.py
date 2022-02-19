@@ -23,6 +23,7 @@ from .resisc45 import Resisc45
 from .food101 import Food101
 from .sun397 import SUN397
 from .caltech101 import Caltech101
+from .cifar import CIFAR10, CIFAR100
 
 __all__ = ['ImageList', 'Office31', 'OfficeHome', "VisDA2017", "OfficeCaltech", "DomainNet", "ImageNetR",
            "ImageNetSketch", "Aircraft", "cub200", "StanfordCars", "StanfordDogs", "COCO70", "OxfordIIITPets", "PACS",
