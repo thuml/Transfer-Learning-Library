@@ -36,6 +36,7 @@ Supported methods include:
 - [Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results (Mean Teacher, NIPS 2017)](https://arxiv.org/abs/1703.01780)
 - [Unsupervised Data Augmentation for Consistency Training (UDA, NIPS 2020)](https://arxiv.org/pdf/1904.12848v4.pdf)
 - [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (FixMatch, 2020 NIPS)](https://arxiv.org/abs/2001.07685)
+- [Self-Tuning for Data-Efficient Deep Learning (self-tuning, ICML 2021)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf)
 
 ## Usage
 
@@ -111,5 +112,12 @@ If you use these methods in your research, please consider citing.
     author={Sohn, Kihyuk and Berthelot, David and Carlini, Nicholas and Zhang, Zizhao and Zhang, Han and Raffel, Colin A and Cubuk, Ekin Dogus and Kurakin, Alexey and Li, Chun-Liang},
     booktitle={NIPS},
     year={2020}
+}
+
+@inproceedings{SelfTuning,
+    title={Self-tuning for data-efficient deep learning},
+    author={Wang, Ximei and Gao, Jinghan and Long, Mingsheng and Wang, Jianmin},
+    booktitle={ICML},
+    year={2021}
 }
 ```

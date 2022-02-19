@@ -95,3 +95,11 @@ The above mentioned loss functions are listed below, more details can be found i
 .. autoclass:: tllib.vision.models.reid.loss.CrossEntropyLoss
 
 
+.. _SelfTuning:
+
+Self Tuning
+-----------------------------
+
+.. autoclass:: tllib.self_training.self_tuning.Classifier
+
+.. autoclass:: tllib.self_training.self_tuning.SelfTuning
