@@ -35,7 +35,7 @@ Supported methods include:
 - [Temporal Ensembling for Semi-Supervised Learning (Pi Model, ICLR 2017)](https://arxiv.org/abs/1610.02242)
 - [Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results (Mean Teacher, NIPS 2017)](https://arxiv.org/abs/1703.01780)
 - [Unsupervised Data Augmentation for Consistency Training (UDA, NIPS 2020)](https://arxiv.org/pdf/1904.12848v4.pdf)
-- [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (FixMatch, 2020 NIPS)](https://arxiv.org/abs/2001.07685)
+- [FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence (FixMatch, NIPS 2020)](https://arxiv.org/abs/2001.07685)
 - [Self-Tuning for Data-Efficient Deep Learning (self-tuning, ICML 2021)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf)
 
 ## Usage
@@ -50,8 +50,12 @@ For example, if you want to train UDA on CIFAR100, use the following script
 # or you are glad to download the datasets automatically from the Internet to this path
 CUDA_VISIBLE_DEVICES=0 python uda.py data/cifar100 -d CIFAR100 --train-resizing 'cifar' --val-resizing 'cifar' \
   --norm-mean 0.5071 0.4867 0.4408 --norm-std 0.2675 0.2565 0.2761 --num-samples-per-class 4 --finetune --lr 0.01 \
-  -a resnet50 --seed 0 --log logs/uda/cifar100_4_labels_per_class
+  -a resnet50 --seed 0 --log logs/uda/cifar100_4_labels_per_class  
 ```
+Following common practice in semi-supervised learning, we select a class-balanced subset as the labeled dataset and 
+treat other samples as unlabeled data. In the above command, `num-samples-per-class` specifies how many 
+labeled samples for each class. Note that the labeled subset is **deterministic with the same random seed**. Hence, if
+you want to compare different algorithms with the same labeled subset, you can simply pass in the same random seed.
 
 ### Semi-supervised learning with unsupervised pre-trained model
 Take MoCo as an example.
