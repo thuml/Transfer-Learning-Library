@@ -78,17 +78,15 @@ def main(args: argparse.Namespace):
                               bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer,
                               finetune=args.finetune).to(device)
     print(classifier_q)
-    classifier_q = nn.DataParallel(classifier_q)
 
     backbone_k = utils.get_model(args.arch)
     classifier_k = Classifier(backbone_k, num_classes, projection_dim=args.projection_dim,
                               bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
-    classifier_k = nn.DataParallel(classifier_k)
 
     selftuning = SelfTuning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T).to(device)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier_q.module.get_parameters(args.lr), args.lr, momentum=0.9, weight_decay=args.wd,
+    optimizer = SGD(classifier_q.get_parameters(args.lr), args.lr, momentum=0.9, weight_decay=args.wd,
                     nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, gamma=args.lr_gamma)
 
@@ -162,6 +160,9 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         # measure data loading time
         data_time.update(time.time() - end)
 
+        # clear grad
+        optimizer.zero_grad()
+
         # compute output
         pgc_logits_labeled, pgc_labels_labeled, y_l = selftuning(l_q, l_k, labels_l)
         # cross entropy loss
@@ -169,24 +170,23 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
 
         # pgc loss on labeled samples
         pgc_loss_labeled = criterion_kl(pgc_logits_labeled, pgc_labels_labeled)
+        (cls_loss + pgc_loss_labeled).backward()
 
         # pgc loss on unlabeled samples
         _, y_pred = selftuning.encoder_q(u_q)
         _, pseudo_labels = torch.max(y_pred, dim=1)
         pgc_logits_unlabeled, pgc_labels_unlabeled, _ = selftuning(u_q, u_k, pseudo_labels)
         pgc_loss_unlabeled = criterion_kl(pgc_logits_unlabeled, pgc_labels_unlabeled)
-
-        loss = cls_loss + pgc_loss_labeled + pgc_loss_unlabeled
+        pgc_loss_unlabeled.backward()
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
         optimizer.step()
 
         # measure accuracy and record loss
         cls_losses.update(cls_loss.item(), batch_size)
         pgc_losses_labeled.update(pgc_loss_labeled.item(), batch_size)
         pgc_losses_unlabeled.update(pgc_loss_unlabeled.item(), batch_size)
+        loss = cls_loss + pgc_loss_labeled + pgc_loss_unlabeled
         losses.update(loss.item(), batch_size)
 
         cls_acc = accuracy(y_l, labels_l)[0]

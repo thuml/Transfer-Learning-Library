@@ -122,7 +122,7 @@ class SelfTuning(nn.Module):
             param_k.requires_grad = False
 
         # create the queue
-        self.register_buffer("queue_list", torch.randn(encoder_q.module.projection_dim, K * self.num_classes))
+        self.register_buffer("queue_list", torch.randn(encoder_q.projection_dim, K * self.num_classes))
         self.queue_list = normalize(self.queue_list, dim=0)
         self.register_buffer("queue_ptr", torch.zeros(self.num_classes, dtype=torch.long))
 
