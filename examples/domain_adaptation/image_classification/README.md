@@ -157,6 +157,17 @@ for three times and report their average accuracy.
 | MDD         | /      | 48.8 | 68.7 | 29.7 | 58.2 | 9.7  | 69.4 | 56.9 |
 | Oracle      | 63.0   | 69.1 | 78.2 | 40.7 | 71.6 | 69.7 | 83.8 | 70.6 |
 
+### Performance on WILDS-FMoW (DenseNet-121)
+
+| Methods | Val Avg Acc | Test Avg Acc | Val Worst-region Acc | Test Worst-region Acc |
+|---------|-------------|--------------|----------------------|-----------------------|
+| ERM     | 59.8        | 53.3         | 50.2                 | 32.2                  |
+| DANN    | 60.6        | 54.2         | 49.1                 | 34.8                  |
+| DAN     | 61.7        | 55.5         | 48.3                 | 35.3                  |
+| JAN     | 61.5        | 55.3         | 50.6                 | 36.3                  |
+| CDAN    | 60.7        | 55           | 47.4                 | 35.5                  |
+| MDD     | 60.1        | 55.1         | 49.3                 | 35.9                  |
+
 ## Visualization
 
 
