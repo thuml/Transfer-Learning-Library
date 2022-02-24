@@ -35,12 +35,10 @@ The arguments of latter two end with ``-c`` and ``-b`` respectively.
 If you use these methods in your research, please consider citing.
 
 ```
-@misc{jiang2021decoupled,
-      title={Decoupled Adaptation for Cross-Domain Object Detection}, 
-      author={Junguang Jiang and Baixu Chen and Jianmin Wang and Mingsheng Long},
-      year={2021},
-      eprint={2110.02578},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@inproceedings{jiang2021decoupled,
+  title     = {Decoupled Adaptation for Cross-Domain Object Detection},
+  author    = {Junguang Jiang and Baixu Chen and Jianmin Wang and Mingsheng Long},
+  booktitle = {ICLR},
+  year      = {2022}
 }
 ```

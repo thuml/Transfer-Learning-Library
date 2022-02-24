@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -20,7 +19,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans, DBSCAN
 
-sys.path.append('../../..')
+import utils
 import tllib.vision.datasets.reid as datasets
 from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
 from tllib.vision.models.reid.identifier import ReIdentifier
@@ -30,9 +29,6 @@ from tllib.utils.data import ForeverDataIterator, RandomMultipleGallerySampler
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

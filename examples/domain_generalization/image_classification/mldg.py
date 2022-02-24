@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -19,15 +18,12 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import higher
 
-sys.path.append('../../..')
+import utils
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import tsne, a_distance
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
