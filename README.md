@@ -1,5 +1,23 @@
 <img src="/TransLearn.png"/>
 
+## Updates 
+### 2022.2
+We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
+
+_API_ is divided by methods. Specifically, 
+- dalib.adaptation => tllib.aligment  (domain alignment methods)
+- dalib.translation => tllib.translation (domain translation methods)
+- dalib.modules, common.modules => tllib.modules
+- talib => tllib.regularization (regularization methods)
+- common.vision => tllib.vision
+- common.utils => tllib.utils
+
+We also add some new method division,
+- tllib.normalization
+- tllib.self_training
+
+_examples_ is still divided by learning setup.
+
 ## Introduction
 *TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
