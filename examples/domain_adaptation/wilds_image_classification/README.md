@@ -39,6 +39,19 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/wilds -d "fmow" --aa "v0" --arch "dens
   --lr 0.1 --opt-level O1 --deterministic --vflip 0.5 --log logs/erm/fmow/lr_0_1_aa_v0_densenet121
 ```
 
+## Results
+### Performance on WILDS-FMoW (DenseNet-121)
+
+| Methods | Val Avg Acc | Test Avg Acc | Val Worst-region Acc | Test Worst-region Acc |
+|---------|-------------|--------------|----------------------|-----------------------|
+| ERM     | 59.8        | 53.3         | 50.2                 | 32.2                  |
+| DANN    | 60.6        | 54.2         | 49.1                 | 34.8                  |
+| DAN     | 61.7        | 55.5         | 48.3                 | 35.3                  |
+| JAN     | 61.5        | 55.3         | 50.6                 | 36.3                  |
+| CDAN    | 60.7        | 55           | 47.4                 | 35.5                  |
+| MDD     | 60.1        | 55.1         | 49.3                 | 35.9                  |
+
+
 ### Visualization
 We use tensorboard to record the training process and visualize the outputs of the models. 
 ```
