@@ -24,15 +24,14 @@ def HScore(source_feature: np.ndarray, target_label: np.ndarray):
         return cov
         
     covf = covariance(f)
-    covg = covariance(g)
-
     K = int(y.max() + 1)
     g = np.zeros_like(f)
 
-    for i in K:
+    for i in range(K):
         Ef_i = np.mean(f[y == i, :], axis=0)
         g[y == i] = Ef_i
 
+    covg = covariance(g)
     score = np.trace(np.dot(np.linalg.pinv(covf, rcond=1e-15), covg))
 
     return score

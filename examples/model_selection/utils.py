@@ -7,21 +7,50 @@ from PIL import Image
 import timm
 import numpy as np
 import random
-import sys
+import sys, os
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import Subset
 import torchvision.transforms as T
-from torch.optim import SGD, Adam
+from torchvision import datasets
 
 sys.path.append('../../..')
-import tllib.vision.datasets as datasets
 import tllib.vision.models as models
-from tllib.utils.metric import accuracy
-from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.vision.transforms import Denormalize
+
+
+import os
+import sys
+import time
+
+class Logger(object):
+    """Writes stream output to external text file.
+
+    Args:
+        filename (str): the file to write stream output
+        stream: the stream to read from. Default: sys.stdout
+    """
+    def __init__(self, data_name, model_name, metric_name, stream=sys.stdout):
+        self.terminal = stream
+        self.save_dir = os.path.join(data_name, model_name)
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.log = open(os.path.join(data_name, f'{metric_name}.txt'), 'a')
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.flush()
+
+    def get_savedir(self):
+        return self.save_dir
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.terminal.close()
+        self.log.close()
 
 
 def get_model_names():
@@ -49,13 +78,12 @@ def get_score_dataset(dataset_name, root, transform, sample_rate=100, num_sample
         if num_samples_per_classes is not None, e.g. 5, then sample 5 images for each class, and use them to train the model;
         otherwise, keep all the data.
     """
-    dataset = datasets.__dict__[dataset_name]
     if sample_rate < 100:
         score_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=transform)
-        num_classes = score_dataset.num_classes
+        num_classes = len(score_dataset.classes)
     else:
-        score_dataset = dataset(root=root, split='train', download=True, transform=transform)
-        num_classes = score_dataset.num_classes
+        score_dataset = datasets.ImageFolder(os.path.join(root, 'train'), transform=transform)
+        num_classes = len(score_dataset.classes)
         if num_samples_per_classes is not None:
             samples = list(range(len(score_dataset)))
             random.shuffle(samples)

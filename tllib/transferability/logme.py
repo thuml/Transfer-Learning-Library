@@ -46,7 +46,10 @@ def LogME(source_feature: np.ndarray, target: np.ndarray, regression=False, retu
             evidences.append(evidence)
             weights.append(weight)
 
-    return np.mean(evidences), np.vstack(weights)
+    if return_weight:
+        return np.mean(evidences), np.vstack(weights)
+    else:
+        return np.mean(evidences)
 
 
 def each_evidence(y_, f, fh, v, s, vh, N, D):

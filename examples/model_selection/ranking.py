@@ -3,6 +3,7 @@
 @contact: liuyong1095556447@163.com
 """
 
+import os
 import sys
 import argparse
 import numpy as np
@@ -11,12 +12,14 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
+sys.path.append('../..')
 from tllib.transferability import LogME, LEEP, NCE, HScore
-from tllib.utils.logger import CompleteLogger
 
 sys.path.append('.')
+from utils import Logger
 import utils
+
+
 
 metric_dict = {
     'LogME': LogME,
@@ -28,9 +31,39 @@ metric_dict = {
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+
+def main(args):
+    logger = Logger(args.data, args.arch, args.metric)
+    print(args)
+
+    try:
+        features = np.load(os.path.join(logger.get_savedir(), 'features.npy'))
+        predictions = np.load(os.path.join(logger.get_savedir(), 'preds.npy'))
+        targets = np.load(os.path.join(logger.get_savedir(), 'targets.npy'))
+        print('Loaded extracted features')
+    except:
+        print('Conducting feature extraction')
+        score_transform = utils.get_score_transform(resizing='default')
+        print("score_transform: ", score_transform)
+        model = utils.get_model(args.arch, args.pretrained).to(device)
+        score_dataset, num_classes = utils.get_score_dataset(args.data, args.root, score_transform, args.sample_rate, args.num_samples_per_classes)
+        score_loader = DataLoader(score_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
+        print(f'Using {len(score_dataset)} samples for ranking')
+        features, predictions, targets = forward_pass(score_loader, model, eval(f'model.{args.layer}'))
+        if args.save_features:
+            np.save(os.path.join(logger.get_savedir(), 'features.npy'), features)
+            np.save(os.path.join(logger.get_savedir(), 'preds.npy'), predictions)
+            np.save(os.path.join(logger.get_savedir(), 'targets.npy'), targets)
+
+    result = score_model(features, predictions, targets)
+    
+    logger.write(f'# {args.arch}:\t{result}\n')
+    logger.close()
+
+
 def forward_pass(score_loader, model, fc_layer):
     """
-    A forward forcasting on dataset
+    A forward forcasting on full dataset
 
     :params score_loader: the dataloader for scoring transferability
     :params model: the model for scoring transferability
@@ -38,7 +71,7 @@ def forward_pass(score_loader, model, fc_layer):
     
     returns
         features: extracted features of model
-        outputs: outputs of model
+        prediction: probability outputs of model
         targets: ground-truth labels of dataset
     """
     features = []
@@ -59,44 +92,25 @@ def forward_pass(score_loader, model, fc_layer):
             _ = model(data)
     
     forward_hook.remove()
+
     features = torch.cat([x for x in features]).numpy()
-    outputs = torch.cat([x for x in outputs]).numpy()
+    outputs = torch.cat([x for x in outputs])
+    predictions = F.softmax(outputs, dim=-1).numpy()
     targets = torch.cat([x for x in targets]).numpy()
     
-    return features, outputs, targets
+    return features, predictions, targets
 
 
-def main(args):
-    logger = CompleteLogger(args.log, args.phase)
-    print(args)
+def score_model(features, predictions, targets):
+    print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
-    score_transform = utils.get_score_transform(resizing='default')
-    print("score_transform: ", score_transform)
-
-    score_dataset, num_classes = utils.get_dataset(args.data, args.root, score_transform, args.sample_rate, args.num_samples_per_classes)
-    score_loader = DataLoader(score_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
-    model = utils.get_model(args.arch, args.pretrained).to(device)
-    
-    result = score_model(args, score_loader)
-    print(f'{args.metric} of {args.model}: {result}\n')
-
-    logger.close()
-
-
-
-def score_model(score_loader, model, args):
-    print(f'Calc Transferabilities of {args.model} on {args.dataset}')
-    print('Conducting features extraction...')
-    features, outputs, targets = forward_pass(score_loader, model, args.layer)
-    predictions = F.softmax(outputs)
-
-    print('Conducting transferability calculation...')
+    print('Conducting transferability calculation')
     if args.metric in ['LogME', 'HScore']:
         score = metric_dict[args.metric](features, targets)
     elif args.metric== 'LEEP':
         score = metric_dict[args.metric](predictions, targets)
     elif args.metric== 'NCE':
-        score = metric_dict[args.metric](np.max(predictions, axis=1)[1], targets)
+        score = metric_dict[args.metric](np.max(predictions, axis=1), targets)
     else:
         raise NotImplementedError
 
@@ -105,8 +119,6 @@ def score_model(score_loader, model, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Ranking pre-trained models')
-    parser.add_argument('-b', '--batch-size', default=48, type=int,
-                        metavar='N', help='mini-batch size (default: 48)')
 
     # dataset
     parser.add_argument('root', metavar='DIR',
@@ -119,7 +131,9 @@ if __name__ == '__main__':
                         help='sample rate of training dataset (default: 100)')
     parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
                         help='number of samples per classes.')
-    
+    parser.add_argument('-b', '--batch-size', default=48, type=int,
+                    metavar='N', help='mini-batch size (default: 48)')
+
     # model
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
@@ -136,6 +150,9 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--metric', type=str, default='LogME',
                     choices=['LogME', 'LEEP', 'NCE', 'HScore'],
                     help='metrics to rank the model (default: LogME)')
+    
+    parser.add_argument("--save_features", action='store_true',
+                    help="where to save extracted features")
 
     args = parser.parse_args()
     main(args)
