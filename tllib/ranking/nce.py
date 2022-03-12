@@ -5,9 +5,9 @@
 import numpy as np
 
 
-__all__ = ['NCE']
+__all__ = ['negative_conditional_entropy']
 
-def NCE(source_label: np.ndarray, target_label: np.ndarray):
+def negative_conditional_entropy(source_label: np.ndarray, target_label: np.ndarray):
     """
     Negative Conditional Entropy in `Transferability and Hardness of Supervised 
     Classification Tasks (ICCV 2019) <https://arxiv.org/pdf/1908.08142v1.pdf>`

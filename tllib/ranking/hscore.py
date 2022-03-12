@@ -5,9 +5,9 @@
 import numpy as np
 
 
-__all__ = ['HScore']
+__all__ = ['h_score']
 
-def HScore(source_feature: np.ndarray, target_label: np.ndarray):
+def h_score(source_feature: np.ndarray, target_label: np.ndarray):
     """
     H-score in `An Information-theoretic Approach to Transferability in Task Transfer Learning (ICIP 2019) 
     <http://yangli-feasibility.com/home/media/icip-19.pdf>`

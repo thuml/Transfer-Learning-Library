@@ -3,11 +3,13 @@
 @contact: liuyong1095556447@163.com
 """
 import numpy as np
+from numba import njit
 
 
-__all__ = ['LogME']
+__all__ = ['log_maximum_evidence']
 
-def LogME(source_feature: np.ndarray, target: np.ndarray, regression=False, return_weight=False):
+
+def log_maximum_evidence(source_feature: np.ndarray, target: np.ndarray, regression=False, return_weight=False):
     """
     Log Maximum Evidence in `LogME: Practical Assessment of Pre-trained Models
      for Transfer Learning (ICML 2021) <https://arxiv.org/pdf/2102.11005.pdf>`
@@ -52,6 +54,7 @@ def LogME(source_feature: np.ndarray, target: np.ndarray, regression=False, retu
         return np.mean(evidences)
 
 
+@njit
 def each_evidence(y_, f, fh, v, s, vh, N, D):
     """
     compute the maximum evidence for each class

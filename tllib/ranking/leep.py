@@ -6,9 +6,9 @@
 import numpy as np
 
 
-__all__ = ['LEEP']
+__all__ = ['log_expected_empirical_prediction']
 
-def LEEP(source_pred: np.ndarray, target_label: np.ndarray):
+def log_expected_empirical_prediction(source_pred: np.ndarray, target_label: np.ndarray):
     """
     Log Expected Empirical Prediction in 'LEEP: A New Measure to 
     Evaluate Transferability of Learned Representations (ICML 2020)
