@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'hscore')
+    logger = utils.Logger(args.data, args.arch, 'results_hscore')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -48,7 +48,7 @@ def main(args):
     print('Conducting transferability calculation')
     result = h_score(features, targets)
     
-    logger.write(f'# {args.arch}:\t{result}\n')
+    logger.write(f'# {result}\t - {args.arch}\n')
     print(f'Results saved in {logger.get_result_dir()}')
     logger.close()
     

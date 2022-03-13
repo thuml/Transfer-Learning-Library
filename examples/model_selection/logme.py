@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'logme')
+    logger = utils.Logger(args.data, args.arch, 'results_logme')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -49,7 +49,7 @@ def main(args):
     print('Conducting transferability calculation')
     result = logme(features, targets)
     
-    logger.write(f'# {args.arch}:\t{result}\n')
+    logger.write(f'# {result}\t - {args.arch}\n')
     logger.close()
     
 

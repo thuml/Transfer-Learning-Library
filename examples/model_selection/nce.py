@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'nce')
+    logger = utils.Logger(args.data, args.arch, 'results_nce')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -46,9 +46,9 @@ def main(args):
             np.save(os.path.join(logger.get_save_dir(), 'targets.npy'), targets)
     
     print('Conducting transferability calculation')
-    result = nce(np.max(predictions, axis=1), targets)
+    result = nce(np.argmax(predictions, axis=1), targets)
     
-    logger.write(f'# {args.arch}:\t{result}\n')
+    logger.write(f'# {result}\t - {args.arch}\n')
     logger.close()
     
 
