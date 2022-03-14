@@ -6,6 +6,7 @@ import random
 import sys, os
 
 import torch
+import timm
 from torch.utils.data import Subset
 import torchvision.transforms as T
 import torch.nn.functional as F
@@ -51,8 +52,10 @@ class Logger(object):
 
 def get_model_names():
     return sorted(
-        name for name in models.__dict__ if callable(models.__dict__[name])
-    )
+        name for name in models.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(models.__dict__[name])
+    ) + timm.list_models()
 
 
 def forwarding_dataset(score_loader, model, layer, device):
@@ -95,9 +98,14 @@ def forwarding_dataset(score_loader, model, layer, device):
     return features, predictions, targets
 
 
-def get_model(model_name, pretrained_checkpoint=None):
-    # load models from pytorch-image-models
-    backbone = models.__dict__[model_name](pretrained=True)
+def get_model(model_name, pretrained=True, pretrained_checkpoint=None):
+
+    if model_name in get_model_names():
+        # load models from common.vision.models
+        backbone = models.__dict__[model_name](pretrained=pretrained)
+    else:
+        # load models from pytorch-image-models
+        backbone = timm.create_model(model_name, pretrained=pretrained)
     if pretrained_checkpoint:
         print("=> loading pre-trained model from '{}'".format(pretrained_checkpoint))
         pretrained_dict = torch.load(pretrained_checkpoint)

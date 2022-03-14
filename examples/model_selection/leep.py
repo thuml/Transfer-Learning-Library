@@ -82,7 +82,7 @@ if __name__ == '__main__':
                     help="pretrained checkpoint of the backbone. "
                     "(default: None, use the ImageNet supervised pretrained backbone)")    
     parser.add_argument("--save_features", action='store_true',
-                    help="where to save extracted features")
+                    help="whether to save extracted features")
 
     args = parser.parse_args()
     main(args)
