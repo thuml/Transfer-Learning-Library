@@ -34,7 +34,7 @@ The currently supported algorithms include:
 - **BSP** - Transferability vs. Discriminability: Batch Spectral Penalization for Adversarial Domain Adaptation [[ICML 2019]](http://proceedings.mlr.press/v97/chen19i/chen19i.pdf) [[Code]](/examples/domain_adaptation/image_classification/bsp.py) 
 - **MCC** - Minimum Class Confusion for Versatile Domain Adaptation [[ECCV 2020]](http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123660460.pdf) [[Code]](/examples/domain_adaptation/image_classification/mcc.py)
 
-##### Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/keypoint_detection)
+##### Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection)
 - **CycleGAN** - Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks [[ICCV 2017]](https://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf) [[Code]](/examples/domain_adaptation/object_detection/cycle_gan.py)
 - **D-adapt** - Decoupled Adaptation for Cross-Domain Object Detection [[ICLR 2022]](https://openreview.net/pdf?id=VNqaB1g9393) [[Code]](/examples/domain_adaptation/object_detection/d_adapt)
 
