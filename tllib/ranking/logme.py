@@ -9,22 +9,27 @@ from numba import njit
 __all__ = ['log_maximum_evidence']
 
 
-def log_maximum_evidence(source_feature: np.ndarray, target: np.ndarray, regression=False, return_weight=False):
+def log_maximum_evidence(features: np.ndarray, targets: np.ndarray, regression=False, return_weights=False):
     """
     Log Maximum Evidence in `LogME: Practical Assessment of Pre-trained Models
-     for Transfer Learning (ICML 2021) <https://arxiv.org/pdf/2102.11005.pdf>`
+    for Transfer Learning (ICML 2021) <https://arxiv.org/pdf/2102.11005.pdf>`
+    
+    Args:
+        - features (np.ndarray): feature matrix from pre-trained model.
+        - targets (np.ndarray): targets labels/values.
+        - regression: whether to apply in regression setting.
+        - return_weights: whether to return bayesian weight.
 
-    :param source_feature: [N, F], feature matrix from pre-trained model
-    :param target: target labels/values
-        For classification, y has shape [N] with element in [0, C_t).
-        For regression, y has shape [N, C] with C regression-labels
-    :param regression: whether regression
-    :return: LogME score
+    Shape:
+        - features: [N, F] with element in [0, C_t)  and feature dimension F.
+        - targets: [N] or [N, C], with C regression-labels.
+        - weights: [F, C_t].
+        - score: scaler.
     """
-    f = source_feature.astype(np.float64)
-    y = target
+    f = features.astype(np.float64)
+    y = targets
     if regression:
-        y = target.astype(np.float64)
+        y = targets.astype(np.float64)
 
     fh = f
     f = f.transpose()
@@ -34,24 +39,27 @@ def log_maximum_evidence(source_feature: np.ndarray, target: np.ndarray, regress
     evidences = []
     weights = []
     if regression:
-        K = y.shape[1]
-        for i in range(K):
+        C = y.shape[1]
+        for i in range(C):
             y_ = y[:, i]
             evidence, weight = each_evidence(y_, f, fh, v, s, vh, N, D)
             evidences.append(evidence)
             weights.append(weight)
     else:
-        K = int(y.max() + 1)
-        for i in range(K):
+        C = int(y.max() + 1)
+        for i in range(C):
             y_ = (y == i).astype(np.float64)
             evidence, weight = each_evidence(y_, f, fh, v, s, vh, N, D)
             evidences.append(evidence)
             weights.append(weight)
+            
+    score = np.mean(evidences)
+    weights = np.vstack(weights)
 
-    if return_weight:
-        return np.mean(evidences), np.vstack(weights)
+    if return_weights:
+        return score, weights
     else:
-        return np.mean(evidences)
+        return score
 
 
 @njit

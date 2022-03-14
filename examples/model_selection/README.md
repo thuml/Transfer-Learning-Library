@@ -44,7 +44,7 @@ The shell files give the scripts to ranking pre-trained models on a given datase
 CUDA_VISIBLE_DEVICES=0 python logme.py ./data/FGVCAircraft -d Aircraft -a resnet50 -l fc --save_features
 ```
 
-We use LEEP, NCE HScore and LogME to compute scores by applying 10 pre-trained models to diffenrent datasets. The correlation([Weighted kendall Tau](https://vigna.di.unimi.it/ftp/papers/WeightedTau.pdf)/Pearson Correlation) between scores and fine-tuned accuracies
+We use LEEP, NCE HScore and LogME to compute scores by applying 10 pre-trained models to different datasets. The correlation([Weighted kendall Tau](https://vigna.di.unimi.it/ftp/papers/WeightedTau.pdf)/Pearson Correlation) between scores and fine-tuned accuracies
 are presented.
 
 #### Model Ranking Benchmark on Aircraft

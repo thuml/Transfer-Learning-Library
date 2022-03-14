@@ -7,16 +7,29 @@ import numpy as np
 
 __all__ = ['h_score']
 
-def h_score(source_feature: np.ndarray, target_label: np.ndarray):
+def h_score(features: np.ndarray, labels: np.ndarray):
     """
     H-score in `An Information-theoretic Approach to Transferability in Task Transfer Learning (ICIP 2019) 
     <http://yangli-feasibility.com/home/media/icip-19.pdf>`
-    :param source_feature: [N, F], feature matrix from pre-trained model
-    :param target_label: [N], target label, elements in [0, C_t)
-    :return: H-score
+    
+    The H-Score :math:`\mathcal{H}` can be described as:
+
+    .. math::
+        \mathcal{H}=\operatorname{tr}\left(\operatorname{cov}(f)^{-1} \operatorname{cov}\left(\mathbb{E}[f \mid y]\right)\right)
+    
+    where :math:`f` is the features extracted by the model to be ranked, math:`y` is the groud-truth label vector
+
+    Args:
+        - features (np.ndarray):features extracted by pre-trained model.
+        - labels (np.ndarray):  groud-truth labels.
+
+    Shape:
+        - features: [N, F], with number of samples N and feature dimension F.
+        - labels: [N] elements in [0, C_t), with target class number C_t.
+        - score: scalar.
     """
-    f = source_feature
-    y = target_label
+    f = features
+    y = labels
 
     def covariance(X):
         X_mean = X - np.mean(X, axis=0, keepdims=True)
@@ -24,10 +37,10 @@ def h_score(source_feature: np.ndarray, target_label: np.ndarray):
         return cov
         
     covf = covariance(f)
-    K = int(y.max() + 1)
+    C = int(y.max() + 1)
     g = np.zeros_like(f)
 
-    for i in range(K):
+    for i in range(C):
         Ef_i = np.mean(f[y == i, :], axis=0)
         g[y == i] = Ef_i
 
