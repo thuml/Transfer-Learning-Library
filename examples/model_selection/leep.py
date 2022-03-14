@@ -48,7 +48,7 @@ def main(args):
     print('Conducting transferability calculation')
     result = leep(predictions, targets)
     
-    logger.write(f'# {result}\t - {args.arch}\n')
+    logger.write(f'# {result:.4f} # data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n')
     logger.close()
     
 
