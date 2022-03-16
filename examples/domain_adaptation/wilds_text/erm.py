@@ -48,7 +48,6 @@ def main(args):
         print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
-    best_prec1 = 0
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
@@ -116,11 +115,11 @@ def main(args):
     optimizer = AdamW(params, lr=args.lr)
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
-    model, optimizer = amp.initialize(model, optimizer,
-                                      opt_level=args.opt_level,
-                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
-                                      loss_scale=args.loss_scale
-                                      )
+    # model, optimizer = amp.initialize(model, optimizer,
+    #                                   opt_level=args.opt_level,
+    #                                   keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+    #                                   loss_scale=args.loss_scale
+    #                                   )
     lr_scheduler = get_linear_schedule_with_warmup(optimizer,
                                                    num_training_steps=len(train_labeled_loader) * args.epochs,
                                                    num_warmup_steps=0)
@@ -128,10 +127,7 @@ def main(args):
     lr_scheduler.use_metric = False
 
     # define loss function (criterion)
-    if args.smoothing:
-        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
-    else:
-        criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss().cuda()
 
     if args.phase == 'test':
         # resume from the latest checkpoint
@@ -143,6 +139,8 @@ def main(args):
             utils.validate(d, model, -1, writer, args)
         return
 
+    best_val_metric = 0
+    best_test_metric = 0
     for epoch in range(args.epochs):
 
         lr_scheduler.step(epoch)
@@ -155,15 +153,20 @@ def main(args):
         for n, d in zip(args.test_list, test_datasets):
             if args.local_rank == 0:
                 print(n)
-            prec1 = utils.validate(d, model, epoch, writer, args)
+            if n == 'val':
+                val_metric = utils.validate(d, model, epoch, writer, args)
+            elif n == 'test':
+                test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best prec@1 and save checkpoint
         if args.local_rank == 0:
-            is_best = prec1 > best_prec1
-            best_prec1 = max(prec1, best_prec1)
+            is_best = val_metric > best_val_metric
+            best_val_metric = max(val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
+                best_test_metric = test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+    print("best val performance: {:.3f}\n test performance: {:.3f}".format(best_val_metric, best_test_metric))
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, args):
@@ -183,8 +186,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
         # compute gradient and do optimizer step
         optimizer.zero_grad()
-        with amp.scale_loss(loss, optimizer) as scaled_loss:
-            scaled_loss.backward()
+        # with amp.scale_loss(loss, optimizer) as scaled_loss:
+            # scaled_loss.backward()
+        loss.backward()
         optimizer.step()
 
         if i % args.print_freq == 0:
@@ -245,8 +249,6 @@ if __name__ == '__main__':
                              ' | '.join(model_names) +
                              ' (default: resnet50)')
     parser.add_argument('--max_token_length', type=int, default=300)
-    parser.add_argument('--smoothing', type=float, default=0.1,
-                        help='Label smoothing (default: 0.1)')
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR',

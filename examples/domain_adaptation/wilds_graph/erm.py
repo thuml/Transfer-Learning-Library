@@ -144,7 +144,8 @@ def main(args):
         return
 
     # start training
-    best_metric = 10000
+    best_val_metric = 0
+    best_test_metric = 0
     for epoch in range(args.epochs):
         if args.distributed:
             train_labeled_sampler.set_epoch(epoch)
@@ -155,15 +156,20 @@ def main(args):
         for n, d in zip(args.test_list, test_datasets):
             if args.local_rank == 0:
                 print(n)
-            metric = utils.validate(d, model, epoch, writer, args)
+            if n == 'val':
+                val_metric = utils.validate(d, model, epoch, writer, args)
+            elif n == 'test':
+                test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best mse and save checkpoint
         if args.local_rank == 0:
-            is_best = metric > best_metric
-            best_metric = min(metric, best_metric)
+            is_best = val_metric > best_val_metric
+            best_val_metric = max(val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
+                best_test_metric = test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+    print("best val performance: {:.3f}\n test performance: {:.3f}".format(best_val_metric, best_test_metric))
 
     logger.close()
     writer.close()
@@ -295,8 +301,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
-                        help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
     parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default=None)

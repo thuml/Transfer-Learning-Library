@@ -143,7 +143,7 @@ def main(args):
         return
 
     # start training
-    best_metric = 10000
+    best_metric = 0
     for epoch in range(args.epochs):
         if args.distributed:
             train_labeled_sampler.set_epoch(epoch)
@@ -164,10 +164,12 @@ def main(args):
         # remember best mse and save checkpoint
         if args.local_rank == 0:
             is_best = metric > best_metric
-            best_metric = min(metric, best_metric)
+            best_metric = max(metric, best_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+    
+    print("best performance: {:.3f}".format(best_metric))
 
     logger.close()
     writer.close()
