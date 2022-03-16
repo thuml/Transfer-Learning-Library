@@ -143,7 +143,8 @@ def main(args):
         return
 
     # start training
-    best_metric = 0
+    best_val_metric = 0
+    related_test_metric = 0
     for epoch in range(args.epochs):
         if args.distributed:
             train_labeled_sampler.set_epoch(epoch)
@@ -159,17 +160,21 @@ def main(args):
         for n, d in zip(args.test_list, test_datasets):
             if args.local_rank == 0:
                 print(n)
-            metric = utils.validate(d, model, epoch, writer, args)
+            if n == 'val':
+                val_metric = utils.validate(d, model, epoch, writer, args)
+            elif n == 'test':
+                test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best mse and save checkpoint
         if args.local_rank == 0:
-            is_best = metric > best_metric
-            best_metric = max(metric, best_metric)
+            is_best = val_metric > best_val_metric
+            best_val_metric = max(val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
+                related_test_metric = test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
     
-    print("best performance: {:.3f}".format(best_metric))
+    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, related_test_metric))
 
     logger.close()
     writer.close()
@@ -240,24 +245,6 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=['test_unlabeled', ])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='r_wg')
-    # parser.add_argument('--img-size', type=int, default=(224, 224), metavar='N', nargs='+',
-    #                     help='Image patch size (default: None => model default)')
-    # parser.add_argument('--crop-pct', default=utils.DEFAULT_CROP_PCT, type=float,
-    #                     metavar='N', help='Input image center crop percent (for validation only)')
-    # parser.add_argument('--interpolation', default='bicubic', type=str, metavar='NAME',
-    #                     help='Image resize interpolation type (overrides model)')
-    # parser.add_argument('--scale', type=float, nargs='+', default=[0.5, 1.0], metavar='PCT',
-    #                     help='Random resize scale (default: 0.08 1.0)')
-    # parser.add_argument('--ratio', type=float, nargs='+', default=[3./4., 4./3.], metavar='RATIO',
-    #                     help='Random resize aspect ratio (default: 0.75 1.33)')
-    # parser.add_argument('--hflip', type=float, default=0.5,
-    #                     help='Horizontal filp training aug probability')
-    # parser.add_argument('--vflip', type=float, default=0.,
-    #                     help='Vertical flip training aug probability')
-    # parser.add_argument('--color-jitter', type=float, default=0.4, metavar='PCT',
-    #                     help='Color jitter factor (default: 0.4)')
-    # parser.add_argument('--aa', type=str, default=None, metavar='NAME',
-    #                     help='Use AutoAugment policy. "v0" or "original". (default: None)')
     # model parameters
     parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50',
                         choices=model_names,

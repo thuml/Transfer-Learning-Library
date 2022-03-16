@@ -95,13 +95,6 @@ def main(args):
         lr=args.lr, weight_decay=args.weight_decay
     )
 
-    # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
-    # for convenient interoperation with argparse.
-    # model, optimizer = amp.initialize(model, optimizer,
-                                    #   opt_level=args.opt_level,
-                                    #   keep_batchnorm_fp32=args.keep_batchnorm_fp32,
-                                    #   loss_scale=args.loss_scale
-                                    #   )
     lr_scheduler = None
 
     # For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
@@ -169,7 +162,7 @@ def main(args):
             if is_best:
                 best_test_metric = test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-    print("best val performance: {:.3f}\n test performance: {:.3f}".format(best_val_metric, best_test_metric))
+    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, best_test_metric))
 
     logger.close()
     writer.close()
@@ -218,7 +211,6 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
-            global_step = epoch * len(train_loader) + i
 
             torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
@@ -247,24 +239,6 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=['test_unlabeled', ])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='ap')
-    # parser.add_argument('--img-size', type=int, default=(224, 224), metavar='N', nargs='+',
-    #                     help='Image patch size (default: None => model default)')
-    # parser.add_argument('--crop-pct', default=utils.DEFAULT_CROP_PCT, type=float,
-    #                     metavar='N', help='Input image center crop percent (for validation only)')
-    # parser.add_argument('--interpolation', default='bicubic', type=str, metavar='NAME',
-    #                     help='Image resize interpolation type (overrides model)')
-    # parser.add_argument('--scale', type=float, nargs='+', default=[0.5, 1.0], metavar='PCT',
-    #                     help='Random resize scale (default: 0.08 1.0)')
-    # parser.add_argument('--ratio', type=float, nargs='+', default=[3./4., 4./3.], metavar='RATIO',
-    #                     help='Random resize aspect ratio (default: 0.75 1.33)')
-    # parser.add_argument('--hflip', type=float, default=0.5,
-    #                     help='Horizontal filp training aug probability')
-    # parser.add_argument('--vflip', type=float, default=0.,
-    #                     help='Vertical flip training aug probability')
-    # parser.add_argument('--color-jitter', type=float, default=0.4, metavar='PCT',
-    #                     help='Color jitter factor (default: 0.4)')
-    # parser.add_argument('--aa', type=str, default=None, metavar='NAME',
-    #                     help='Use AutoAugment policy. "v0" or "original". (default: None)')
     # model parameters
     parser.add_argument('--arch', '-a', metavar='ARCH', default='gin-virtual',
                         choices=model_names,
@@ -309,5 +283,6 @@ if __name__ == '__main__':
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
+
     args = parser.parse_args()
     main(args)

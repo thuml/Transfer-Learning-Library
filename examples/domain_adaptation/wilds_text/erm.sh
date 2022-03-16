@@ -1,5 +1,4 @@
 # civilcomments
-# group by ['y', 'black'] and reweight
 CUDA_VISIBLE_DEVICES=1 python erm.py /data/wilds -d "civilcomments" --lr 1e-05  --opt-level O1 --deterministic \
     --log logs/erm/civilcomments --unlabeled-list "extra_unlabeled" --metric "acc_wg" --seed 0 \
     --max_token_length 300 --wd 0.01 --uniform_over_groups --groupby_fields y black

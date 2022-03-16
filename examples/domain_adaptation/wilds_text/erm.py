@@ -140,7 +140,7 @@ def main(args):
         return
 
     best_val_metric = 0
-    best_test_metric = 0
+    related_test_metric = 0
     for epoch in range(args.epochs):
 
         lr_scheduler.step(epoch)
@@ -164,9 +164,9 @@ def main(args):
             best_val_metric = max(val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
-                best_test_metric = test_metric
+                related_test_metric = test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-    print("best val performance: {:.3f}\n test performance: {:.3f}".format(best_val_metric, best_test_metric))
+    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, related_test_metric))
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, args):
@@ -209,7 +209,6 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
             top1.update(to_python_float(prec1), input.size(0))
-            global_step = epoch * len(train_loader) + i
 
             torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
