@@ -8,8 +8,6 @@ import pprint
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
@@ -18,8 +16,6 @@ import wilds
 try:
     from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
-    from apex import amp, optimizers
-    from apex.multi_tensor_apply import multi_tensor_applier
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
@@ -63,39 +59,33 @@ def main(args):
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # Data loading code
-    # Images in povertyMap dataset have 8 channels and traditional data augmentataion
-    # methods have no effect on performance.
+    # There are no well-developed data augmentation techniques for molecular graphs.
     train_transform = None
     val_transform = None
     if args.local_rank == 0:
-        print("train_transform: ", train_transform)
-        print("val_transform", val_transform)
+        print("train_transform:", train_transform)
+        print("val_transform:", val_transform)
     
-    train_labeled_dataset, test_datasets, args.num_classes, args.class_names, args.target_size = \
-        utils.get_dataset(args.data, args.data_dir, args.test_list,
-                          train_transform, val_transform, verbose=args.local_rank == 0)
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=args.local_rank == 0)
     
     # create model
     if args.local_rank == 0:
-        if not args.scratch:
-            print("=> using pretrained model '{}'".format(args.arch))
-        else:
-            print("=> creating model '{}'".format(args.arch))
-    model = utils.get_model(args.arch, args.target_size)
+        print("=> creating model '{}'".format(args.arch))
+
+    model = utils.get_model(args.arch, args.num_classes)
     if args.sync_bn:
         import apex
         if args.local_rank == 0:
             print("using apex synced BN")
         model = apex.parallel.convert_syncbn_model(model)
-
-    model = model.cuda().to() 
+    model = model.cuda().to()
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr, weight_decay=args.weight_decay
     )
-
-    lr_scheduler = None
 
     # For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
     # This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
@@ -117,14 +107,8 @@ def main(args):
         train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, collate_fn=train_labeled_dataset.collate)
 
-    loss_func = nn.BCEWithLogitsLoss(reduction='none').cuda()
     # define loss function (criterion)
-    def criterion(y_pred, y_target):
-        is_labeled = ~torch.isnan(y_target)
-        flattened_y_pred = y_pred[is_labeled].float()
-        flattened_y_target = y_target[is_labeled].float()
-        flattened_metrics = loss_func(flattened_y_pred, flattened_y_target)
-        return flattened_metrics.mean()
+    criterion = utils.get_criterion(dataset_name=args.data)
 
     if args.phase == 'test':
         # resume from the latest checkpoint
@@ -138,7 +122,7 @@ def main(args):
 
     # start training
     best_val_metric = 0
-    best_test_metric = 0
+    test_metric = 0
     for epoch in range(args.epochs):
         if args.distributed:
             train_labeled_sampler.set_epoch(epoch)
@@ -150,19 +134,20 @@ def main(args):
             if args.local_rank == 0:
                 print(n)
             if n == 'val':
-                val_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_val_metric = utils.validate(d, model, epoch, writer, args)
             elif n == 'test':
-                test_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best mse and save checkpoint
         if args.local_rank == 0:
-            is_best = val_metric > best_val_metric
-            best_val_metric = max(val_metric, best_val_metric)
+            is_best = tmp_val_metric > best_val_metric
+            best_val_metric = max(tmp_val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
-                best_test_metric = test_metric
+                test_metric = tmp_test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, best_test_metric))
+    print("best val performance: {:.3f}".format(best_val_metric))
+    print("test performance: {:.3f}".format(test_metric))
 
     logger.close()
     writer.close()
@@ -177,46 +162,37 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
     for i, (input, target, metadata) in enumerate(train_loader):
         
-        # time1 = time.time()
         # compute output
         output = model(input.cuda())
         loss = criterion(output, target.cuda())
 
-        # time2 = time.time()
-
         # compute gradient and do optimizer step
         optimizer.zero_grad()
-        # with amp.scale_loss(loss, optimizer) as scaled_loss:
-            # scaled_loss.backward()
         loss.backward()
         optimizer.step()
-
-        # time3 = time.time()
-
-        # print('compute loss time: {:.3f}, update gradient time: {:.3f}'.format(time2-time1, time3-time2))
-        # exit(0)
 
         if i % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.
             # For best performance, it doesn't make sense to print these metrics every
             # iteration, since they incur an allreduce and some host<->device syncs.
 
-
-            # Average loss and accuracy across processes for logging
+            # Average loss across processes for logging
             if args.distributed:
                 reduced_loss = utils.reduce_tensor(loss.data, args.world_size)
-                prec1 = utils.reduce_tensor(prec1, args.world_size)
             else:
                 reduced_loss = loss.data
 
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
+            global_step = epoch * len(train_loader) + i
 
             torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
             if args.local_rank == 0:
+                writer.add_scalar('train/loss', to_python_float(reduced_loss), global_step)
+
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Speed {3:.3f} ({4:.3f})\t'
@@ -228,43 +204,32 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
 
 if __name__ == '__main__':
-    model_names = ['gin-virtual']
+    model_names = utils.get_model_names()
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='poverty', choices=wilds.supported_datasets,
                         help='dataset: ' + ' | '.join(wilds.supported_datasets) +
-                             ' (default: poverty)')
-    parser.add_argument('--unlabeled-list', nargs='+', default=['test_unlabeled', ])
+                             ' (default: ogb-molpcba)')
+    parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='ap')
     # model parameters
-    parser.add_argument('--arch', '-a', metavar='ARCH', default='gin-virtual',
+    parser.add_argument('--arch', '-a', metavar='ARCH', default='gin_virtual',
                         choices=model_names,
                         help='model architecture: ' +
                              ' | '.join(model_names) +
-                             ' (default: gin-virtual)')
-    parser.add_argument('--no-pool', action='store_true',
-                        help='no pool layer after the feature extractor.')
-    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
-    parser.add_argument('--smoothing', type=float, default=0.1,
-                        help='Label smoothing (default: 0.1)')
+                             ' (default: gin_virtual)')
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                        metavar='LR',
-                        help='Inital learning rate. Will be scaled by <global batch size>/256: '
-                             'args.lr = args.lr*float(args.batch_size*args.world_size)/256.')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum')
-    parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
-                        metavar='W', help='weight decay (default: 1e-4)')
-    parser.add_argument('--min-lr', type=float, default=1e-6, metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0 (1e-5)')
+                        metavar='LR', help='Learning rate')
+    parser.add_argument('--weight-decay', '--wd', default=0.0, type=float,
+                        metavar='W', help='weight decay (default: 0.0)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=60, type=int, metavar='N',
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=(64, 64), type=int, nargs='+',
                         metavar='N', help='mini-batch size per process for source'
@@ -275,6 +240,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument('--sync_bn', action='store_true',
+                        help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
     parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default=None)
@@ -283,6 +250,8 @@ if __name__ == '__main__':
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
 
     args = parser.parse_args()
     main(args)

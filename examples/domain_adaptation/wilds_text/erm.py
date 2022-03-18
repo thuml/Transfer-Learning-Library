@@ -3,25 +3,20 @@ import os
 import shutil
 import time
 import pprint
-import math
 
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torchvision.models as models
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
-from timm.loss.cross_entropy import LabelSmoothingCrossEntropy
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
-    from apex import amp, optimizers
-    from apex.multi_tensor_apply import multi_tensor_applier
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
@@ -74,22 +69,26 @@ def main(args):
     train_transform = utils.get_transform(args.arch, args.max_token_length)
     val_transform = utils.get_transform(args.arch, args.max_token_length)
 
-    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names, labeled_dataset = \
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, labeled_dataset, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
-                          train_transform, val_transform, verbose=args.local_rank == 0)
+                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=args.local_rank == 0)
 
     # create model
     if args.local_rank == 0:
-        print("=> using pre-trained model '{}'".format(args.arch))
-    model = DistilBertClassifier.from_pretrained(args.arch, num_labels=args.num_classes)
+        print("=> using model '{}'".format(args.arch))
+
+    model = utils.get_model(args.arch, args.num_classes)
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
     model = model.cuda().to()
 
     # Data loading code
     train_labeled_sampler = None
-    train_unlabeled_sampler = None
     if args.distributed:
         train_labeled_sampler = DistributedSampler(train_labeled_dataset)
-        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
     elif args.uniform_over_groups:
         train_grouper = CombinatorialGrouper(dataset=labeled_dataset, groupby_fields=args.groupby_fields)
         groups, group_counts = train_grouper.metadata_to_group(train_labeled_dataset.metadata_array, return_counts=True)
@@ -101,10 +100,6 @@ def main(args):
         train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler
     )
-    train_unlabeled_loader = DataLoader(
-        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_labeled_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler
-    )
 
     no_decay = ['bias', 'LayerNorm.weight']
     params = [
@@ -113,13 +108,7 @@ def main(args):
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer = AdamW(params, lr=args.lr)
-    # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
-    # for convenient interoperation with argparse.
-    # model, optimizer = amp.initialize(model, optimizer,
-    #                                   opt_level=args.opt_level,
-    #                                   keep_batchnorm_fp32=args.keep_batchnorm_fp32,
-    #                                   loss_scale=args.loss_scale
-    #                                   )
+
     lr_scheduler = get_linear_schedule_with_warmup(optimizer,
                                                    num_training_steps=len(train_labeled_loader) * args.epochs,
                                                    num_warmup_steps=0)
@@ -140,7 +129,7 @@ def main(args):
         return
 
     best_val_metric = 0
-    related_test_metric = 0
+    test_metric = 0
     for epoch in range(args.epochs):
 
         lr_scheduler.step(epoch)
@@ -154,19 +143,23 @@ def main(args):
             if args.local_rank == 0:
                 print(n)
             if n == 'val':
-                val_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_val_metric = utils.validate(d, model, epoch, writer, args)
             elif n == 'test':
-                test_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best prec@1 and save checkpoint
         if args.local_rank == 0:
-            is_best = val_metric > best_val_metric
-            best_val_metric = max(val_metric, best_val_metric)
+            is_best = tmp_val_metric > best_val_metric
+            best_val_metric = max(tmp_val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
-                related_test_metric = test_metric
+                test_metric = tmp_test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, related_test_metric))
+    print('best val performance: {:.3f}'.format(best_val_metric))
+    print('test performance: {:.3f}'.format(test_metric))
+
+    logger.close()
+    writer.close()
 
 
 def train(train_loader, model, criterion, optimizer, epoch, writer, args):
@@ -186,8 +179,6 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
         # compute gradient and do optimizer step
         optimizer.zero_grad()
-        # with amp.scale_loss(loss, optimizer) as scaled_loss:
-            # scaled_loss.backward()
         loss.backward()
         optimizer.step()
 
@@ -228,9 +219,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
 
 if __name__ == '__main__':
-    model_names = sorted(name for name in models.__dict__
-                         if name.islower() and not name.startswith('__')
-                         and callable(models.__dict__[name]))
+    model_names = utils.get_model_names()
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
@@ -238,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', metavar='DATA', default='civilcomments', choices=wilds.supported_datasets,
                         help='dataset: ' + ' | '.join(wilds.supported_datasets) +
                              ' (default: civilcomments)')
-    parser.add_argument('--unlabeled-list', nargs='+', default=["test_unlabeled", ])
+    parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
     parser.add_argument('--metric', default='acc_wg')
     # model parameters
@@ -246,19 +235,13 @@ if __name__ == '__main__':
                         choices=model_names,
                         help='model architecture: ' +
                              ' | '.join(model_names) +
-                             ' (default: resnet50)')
+                             ' (default: distilbert-base-uncased)')
     parser.add_argument('--max_token_length', type=int, default=300)
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                        metavar='LR',
-                        help='Initial learning rate.  Will be scaled by <global batch size>/256: '
-                             'args.lr = args.lr*float(args.batch_size*args.world_size)/256')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum')
+                        metavar='LR', help='Learning rate.')
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
-    parser.add_argument('--min-lr', type=float, default=1e-6, metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0 (1r-5)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -266,7 +249,7 @@ if __name__ == '__main__':
                         help='number of total epochs to run')
     parser.add_argument('-b', '--batch-size', default=(16, 16), type=int, nargs='+',
                         metavar='N', help='mini-batch size per process for source'
-                                          ' and target domain (default: (64, 64))')
+                                          ' and target domain (default: (16, 16))')
     parser.add_argument('--print-freq', '-p', default=200, type=int,
                         metavar='N', help='print frequency (default: 200)')
     parser.add_argument('--deterministic', action='store_true')
@@ -286,5 +269,8 @@ if __name__ == '__main__':
     parser.add_argument('--uniform_over_groups', action='store_true',
                         help='sample examples such that batches are uniform over groups')
     parser.add_argument('--groupby_fields', nargs='+')
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
+
     args = parser.parse_args()
     main(args)

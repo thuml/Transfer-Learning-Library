@@ -16,8 +16,7 @@ import wilds
 try:
     from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
-    from apex import amp, optimizers
-    from apex.multi_tensor_apply import multi_tensor_applier
+    from apex import amp
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
@@ -77,21 +76,19 @@ def main(args):
 
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.num_channels = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,
-                          train_transform, val_transform, verbose=args.local_rank == 0, fold=args.fold)
+                          train_transform, val_transform, use_unlabeled=args.use_unlabeled,
+                          verbose=args.local_rank == 0, fold=args.fold)
 
     # create model
     if args.local_rank == 0:
-        if not args.scratch:
-            print("=> using pretrained model '{}'".format(args.arch))
-        else:
-            print("=> creating model '{}'".format(args.arch))
+        print("=> creating model '{}'".format(args.arch))
+
     model = utils.get_model(args.arch, args.num_classes, args.num_channels)
     if args.sync_bn:
         import apex
         if args.local_rank == 0:
             print("using apex synced BN")
         model = apex.parallel.convert_syncbn_model(model)
-
     model = model.cuda().to(memory_format=memory_format)
 
     optimizer = torch.optim.Adam(
@@ -120,17 +117,12 @@ def main(args):
 
     # Data loading code
     train_labeled_sampler = None
-    train_unlabeled_sampler = None
     if args.distributed:
         train_labeled_sampler = DistributedSampler(train_labeled_dataset)
-        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
 
     train_labeled_loader = DataLoader(
         train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler)
-    train_unlabeled_loader = DataLoader(
-        train_unlabeled_dataset, batch_size=args.batch_size[0], shuffle=(train_unlabeled_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler)
 
     if args.phase == 'test':
         # resume from the latest checkpoint
@@ -144,11 +136,10 @@ def main(args):
 
     # start training
     best_val_metric = 0
-    related_test_metric = 0
+    test_metric = 0
     for epoch in range(args.epochs):
         if args.distributed:
             train_labeled_sampler.set_epoch(epoch)
-            train_unlabeled_sampler.set_epoch(epoch)
 
         lr_scheduler.step(epoch)
         if args.local_rank == 0:
@@ -161,20 +152,20 @@ def main(args):
             if args.local_rank == 0:
                 print(n)
             if n == 'val':
-                val_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_val_metric = utils.validate(d, model, epoch, writer, args)
             elif n == 'test':
-                test_metric = utils.validate(d, model, epoch, writer, args)
+                tmp_test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best mse and save checkpoint
         if args.local_rank == 0:
-            is_best = val_metric > best_val_metric
-            best_val_metric = max(val_metric, best_val_metric)
+            is_best = tmp_val_metric > best_val_metric
+            best_val_metric = max(tmp_val_metric, best_val_metric)
             torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
             if is_best:
-                related_test_metric = test_metric
+                test_metric = tmp_test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
-    
-    print("best val performance: {:.3f}\nrelated test performance: {:.3f}".format(best_val_metric, related_test_metric))
+    print('best val performance: {:.3f}'.format(best_val_metric))
+    print('test performance: {:.3f}'.format(test_metric))
 
     logger.close()
     writer.close()
@@ -234,7 +225,7 @@ def train(train_loader, model, optimizer, epoch, writer, args):
 
 
 if __name__ == '__main__':
-    model_names = ['resnet18_ms', 'resnet34_ms', 'resnet50_ms', 'resnet101_ms', 'resnet152_ms']
+    model_names = utils.get_model_names()
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
@@ -242,31 +233,20 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', metavar='DATA', default='poverty', choices=wilds.supported_datasets,
                         help='dataset: ' + ' | '.join(wilds.supported_datasets) +
                              ' (default: poverty)')
-    parser.add_argument('--unlabeled-list', nargs='+', default=['test_unlabeled', ])
+    parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='r_wg')
     # model parameters
-    parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50',
+    parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet18_ms',
                         choices=model_names,
                         help='model architecture: ' +
                              ' | '.join(model_names) +
-                             ' (default: resnet50)')
-    parser.add_argument('--no-pool', action='store_true',
-                        help='no pool layer after the feature extractor.')
-    parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
-    parser.add_argument('--smoothing', type=float, default=0.1,
-                        help='Label smoothing (default: 0.1)')
+                             ' (default: resnet18_ms)')
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                        metavar='LR',
-                        help='Inital learning rate. Will be scaled by <global batch size>/256: '
-                             'args.lr = args.lr*float(args.batch_size*args.world_size)/256.')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum')
+                        metavar='LR', help='Learning rate')
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
-    parser.add_argument('--min-lr', type=float, default=1e-6, metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0 (1e-5)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -299,6 +279,8 @@ if __name__ == '__main__':
                              'Choices are dataset-specific.')
     parser.add_argument('--fold', type=str, default='A',
                         choices=['A', 'B', 'C', 'D', 'E'], help='Fold for poverty dataset.')
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
 
     args = parser.parse_args()
     main(args)

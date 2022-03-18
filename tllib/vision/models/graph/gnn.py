@@ -6,6 +6,8 @@ import torch.nn.functional as F
 
 from ogb.graphproppred.mol_encoder import AtomEncoder,BondEncoder
 
+__all__ = ['gin_virtual']
+
 class GINVirtual(torch.nn.Module):
     """
     Graph Isomorphism Network augmented with virtual node for multi-task binary graph classification
@@ -178,3 +180,7 @@ class GINConv(MessagePassing):
 
     def update(self, aggr_out):
         return aggr_out
+
+def gin_virtual(num_tasks, dropout=0.5):
+    model = GINVirtual(num_tasks=num_tasks, dropout=dropout)
+    return model

@@ -1,8 +1,8 @@
 # Adapted from "https://github.com/p-lambda/wilds"
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
+__all__ = ['resnet18_ms', 'resnet34_ms', 'resnet50_ms', 'resnet101_ms', 'resnet152_ms']
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
@@ -224,20 +224,24 @@ class ResNet18(ResNet):
         super().__init__(
             BasicBlock, [2, 2, 2, 2], num_classes=num_classes, num_channels=num_channels)
 
+
 class ResNet34(ResNet):
     def __init__(self, num_classes=10, num_channels=3):
         super().__init__(
             BasicBlock, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
+
 
 class ResNet50(ResNet):
     def __init__(self, num_classes=10, num_channels=3):
         super().__init__(
             Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
 
+
 class ResNet101(ResNet):
     def __init__(self, num_classes=10, num_channels=3):
         super().__init__(
             Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
+
 
 class ResNet152(ResNet):
     def __init__(self, num_classes=10, num_channels=3):
@@ -245,5 +249,26 @@ class ResNet152(ResNet):
             Bottleneck, [3, 8, 36, 3], num_classes=num_classes, num_channels=num_channels)
 
 
-DEPTH_TO_MODEL = {18: ResNet18, 34: ResNet34, 50: ResNet50, 101: ResNet101, 152: ResNet152}
+def resnet18_ms(num_classes=10, num_channels=3):
+    model = ResNet18(num_classes=num_classes, num_channels=num_channels)
+    return model
 
+
+def resnet34_ms(num_classes=10, num_channels=3):
+    model = ResNet34(num_classes=num_classes, num_channels=num_channels)
+    return model
+
+
+def resnet50_ms(num_classes=10, num_channels=3):
+    model = ResNet50(num_classes=num_classes, num_channels=num_channels)
+    return model
+
+
+def resnet101_ms(num_classes=10, num_channels=3):
+    model = ResNet101(num_classes=num_classes, num_channels=num_channels)
+    return model
+
+
+def resnet152_ms(num_classes=10, num_channels=3):
+    model = ResNet152(num_classes=num_classes, num_channels=num_channels)
+    return model

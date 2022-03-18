@@ -203,3 +203,8 @@ def compute_rerank_dist(target_features, k1=30, k2=6):
     pos_bool = (jaccard_dist < 0)
     jaccard_dist[pos_bool] = 0.0
     return jaccard_dist
+
+if __name__ == '__main__':
+    a = sorted(name for name in models.__dict__ if
+                  name.islower() and not name.startswith("__"))
+    print(a)

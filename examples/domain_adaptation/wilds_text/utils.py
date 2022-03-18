@@ -5,12 +5,11 @@ import tqdm
 import sys
 
 import torch
-import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader, ConcatDataset
-from transformers import BertTokenizerFast, DistilBertTokenizerFast
-from transformers import DistilBertForSequenceClassification, DistilBertModel
+from transformers import DistilBertTokenizerFast
+from transformers import DistilBertForSequenceClassification
 
 import wilds
 sys.path.append('../../..')
@@ -34,33 +33,11 @@ class DistilBertClassifier(DistilBertForSequenceClassification):
         return outputs
 
 
-class DistilBertFeaturizer(DistilBertModel):
-    """
-    Adapted from https://github.com/p-lambda/wilds
-    """
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.d_out = config.hidden_size
-
-    def __call__(self, x):
-        input_ids = x[:, :, 0]
-        attention_mask = x[:, :, 1]
-        hidden_state = super().__call__(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-        )[0]
-        pooled_output = hidden_state[:, 0]
-        return pooled_output
-
-
 def get_transform(arch, max_token_length):
     """
     Adapted from https://github.com/p-lambda/wilds
     """
-    if arch == 'bert-base-uncased':
-        tokenizer = BertTokenizerFast.from_pretrained(arch)
-    elif arch == 'distilbert-base-uncased':
+    if arch == 'distilbert-base-uncased':
         tokenizer = DistilBertTokenizerFast.from_pretrained(arch)
     else:
         raise ValueError("Model: {arch} not recognized".format(arch))
@@ -68,7 +45,7 @@ def get_transform(arch, max_token_length):
     def transform(text):
         tokens = tokenizer(text, padding='max_length', truncation=True,
                            max_length=max_token_length, return_tensors='pt')
-        if arch == 'bert-base-uncased':
+        if arch == 'bert_base_uncased':
             x = torch.stack(
                 (
                     tokens["input_ids"],
@@ -86,27 +63,30 @@ def get_transform(arch, max_token_length):
 
 
 def get_dataset(dataset_name, root, unlabeled_list=('extra_unlabeled',), test_list=('test',),
-                transform_train=None, transform_test=None, verbose=True):
+                transform_train=None, transform_test=None, use_unlabeled=True, verbose=True):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
-    unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
-    num_classes = labeled_dataset.n_classes
     train_labeled_dataset = labeled_dataset.get_subset('train', transform=transform_train)
 
-    train_unlabeled_datasets = [
-        unlabeled_dataset.get_subset(u, transform=transform_train)
-        for u in unlabeled_list
-    ]
-    train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
+    if use_unlabeled:
+        unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
+        train_unlabeled_datasets = [
+            unlabeled_dataset.get_subset(u, transform=transform_train)
+            for u in unlabeled_list
+        ]
+        train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
+    else:
+        unlabeled_list = []
+        unlabeled_dataset = None
+        train_unlabeled_datasets = []
+        train_unlabeled_dataset = None
+
     test_datasets = [
         labeled_dataset.get_subset(t, transform=transform_test)
         for t in test_list
     ]
 
-    if dataset_name == 'fmow':
-        from wilds.datasets.fmow_dataset import categories
-        class_names = categories
-    else:
-        class_names = list(range(num_classes))
+    num_classes = labeled_dataset.n_classes
+    class_names = list(range(num_classes))
 
     if verbose:
         print('Datasets')
@@ -115,7 +95,19 @@ def get_dataset(dataset_name, root, unlabeled_list=('extra_unlabeled',), test_li
             print('\t{}:{}'.format(n, len(d)))
         print('\t#classes:', num_classes)
 
-    return train_labeled_dataset, train_unlabeled_dataset, test_datasets, num_classes, class_names, labeled_dataset
+    return train_labeled_dataset, train_unlabeled_dataset, test_datasets, labeled_dataset, num_classes, class_names
+
+
+def get_model_names():
+    return ['distilbert-base-uncased']
+
+
+def get_model(arch, num_classes):
+    if arch == 'distilbert-base-uncased':
+        model = DistilBertClassifier.from_pretrained(arch, num_labels=num_classes)
+    else:
+        raise ValueError('{} is not supported'.format(arch))
+    return model
 
 
 def reduce_tensor(tensor, world_size):
@@ -162,11 +154,6 @@ def validate(val_dataset, model, epoch, writer, args):
     all_y_pred = []
     all_metadata = []
 
-    sampled_inputs = []
-    sampled_outputs = []
-    sampled_targets = []
-    sampled_metadata = []
-
     # switch to evaluate mode
     model.eval()
 
@@ -178,11 +165,6 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_true.append(target)
         all_y_pred.append(output.argmax(1))
         all_metadata.append(metadata)
-
-        sampled_inputs.append(input[0:1])
-        sampled_targets.append(target[0:1])
-        sampled_outputs.append(output[0:1])
-        sampled_metadata.append(metadata[0:1])
 
     if args.local_rank == 0:
 

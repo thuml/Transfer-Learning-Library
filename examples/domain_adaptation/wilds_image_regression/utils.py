@@ -9,49 +9,38 @@ from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
 import wilds
-import resnet_multispectral
 
 sys.path.append('../../..')
-
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, DEFAULT_CROP_PCT
-
-
-def get_model(arch, num_classes, num_channels):
-    if arch == 'resnet18_ms':
-        model = resnet_multispectral.ResNet18(num_classes=num_classes, num_channels=num_channels)
-    elif arch == 'resnet34_ms':
-        model = resnet_multispectral.ResNet34(num_classes=num_classes, num_channels=num_channels)
-    elif arch == 'resnet50_ms':
-        model = resnet_multispectral.ResNet50(num_classes=num_classes, num_channels=num_channels)
-    elif arch == 'resnet101_ms':
-        model = resnet_multispectral.ResNet101(num_classes=num_classes, num_channels=num_channels)
-    elif arch == 'resnet152_ms':
-        model = resnet_multispectral.ResNet152(num_classes=num_classes, num_channels=num_channels)
-    else:
-        raise ValueError('{} is not supported'.format(arch))
-
-    return model
-
+import tllib.vision.models.image_regression as models
 
 def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_list=("test",),
-                split_scheme='official', transform_train=None, transform_test=None, verbose=True,
-                **kwargs):
+                split_scheme='official', transform_train=None, transform_test=None, use_unlabeled=True,
+                verbose=True, **kwargs):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, split_scheme=split_scheme, **kwargs)
-    unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
-    num_classes = 1 if labeled_dataset.n_classes is None else labeled_dataset.n_classes
     train_labeled_dataset = labeled_dataset.get_subset("train", transform=transform_train)
-
-    train_unlabeled_datasets = [
-        unlabeled_dataset.get_subset(u, transform=transform_train)
-        for u in unlabeled_list
-    ]
-    train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
+    
+    if use_unlabeled:
+        unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
+        train_unlabeled_datasets = [
+            unlabeled_dataset.get_subset(u, transform=transform_train)
+            for u in unlabeled_list
+        ]
+        train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
+    else:
+        unlabeled_list = []
+        unlabeled_dataset = None
+        train_unlabeled_datasets = []
+        train_unlabeled_dataset = None
+    
     test_datasets = [
         labeled_dataset.get_subset(t, transform=transform_test)
         for t in test_list
     ]
 
+    # 1 class for regression tasks
+    num_classes = 1 if labeled_dataset.n_classes is None else labeled_dataset.n_classes
     num_channels = labeled_dataset.get_input(0).size()[0]
+
     if verbose:
         print("Datasets")
         for n, d in zip(["train"] + unlabeled_list + test_list,
@@ -59,6 +48,19 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
             print("\t{}:{}".format(n, len(d)))
 
     return train_labeled_dataset, train_unlabeled_dataset, test_datasets, num_classes, num_channels
+
+
+def get_model_names():
+    return sorted(name for name in models.__dict__ if 
+                  name.islower() and not name.startswith('__') and callable(models.__dict__[name]))
+
+
+def get_model(arch, num_classes, num_channels):
+    if arch in models.__dict__:
+        model = models.__dict__[arch](num_classes=num_classes, num_channels=num_channels)
+    else:
+        raise ValueError('{} is not supported'.format(arch))
+    return model
 
 
 def collate_list(vec):
@@ -98,11 +100,6 @@ def validate(val_dataset, model, epoch, writer, args):
     all_y_pred = []
     all_metadata = []
 
-    sampled_inputs = []
-    sampled_outputs = []
-    sampled_targets = []
-    sampled_metadata = []
-
     # switch to evaluate mode
     model.eval()
 
@@ -114,11 +111,6 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_true.append(target)
         all_y_pred.append(output)
         all_metadata.append(metadata)
-
-        sampled_inputs.append(input[0:1])
-        sampled_targets.append(target[0:1])
-        sampled_outputs.append(output[0:1])
-        sampled_metadata.append(metadata[0:1])
 
     if args.local_rank == 0:
 

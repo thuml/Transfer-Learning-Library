@@ -9,42 +9,67 @@ from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
 import wilds
-from gnn import GINVirtual
 
 sys.path.append('../../..')
+import tllib.vision.models.graph as models
+import tllib.vision.models.graph.loss as loss
 
-def get_dataset(dataset_name, root, test_list=('test',),
-                transform_train=None, transform_test=None, verbose=True):
+def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled', ), test_list=('test',),
+                transform_train=None, transform_test=None, use_unlabeled=True, verbose=True):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
-    num_classes = labeled_dataset.n_classes
-    target_size = labeled_dataset.y_size
     train_labeled_dataset = labeled_dataset.get_subset('train', transform=transform_train)
+
+    if use_unlabeled:
+        unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
+        train_unlabeled_datasets = [
+            unlabeled_dataset.get_subset(u, transform=transform_train)
+            for u in unlabeled_list
+        ]
+        train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
+    else:
+        unlabeled_list = []
+        unlabeled_dataset = None
+        train_unlabeled_datasets = []
+        train_unlabeled_dataset = None
 
     test_datasets = [
         labeled_dataset.get_subset(t, transform=transform_test)
         for t in test_list
     ]
 
-    if dataset_name == 'fmow':
-        from wilds.datasets.fmow_dataset import categories
-        class_names = categories
+    if dataset_name == 'ogb-molpcba':
+        num_classes = labeled_dataset.y_size
     else:
-        class_names = list(range(num_classes))
+        num_classes = labeled_dataset.n_classes
+    class_names = list(range(num_classes))
 
     if verbose:
         print('Datasets')
-        for n, d in zip(['train'] + test_list,
-                        [train_labeled_dataset, ] + test_datasets):
+        for n, d in zip(['train'] + unlabeled_list + test_list,
+                        [train_labeled_dataset, ] + train_unlabeled_datasets + test_datasets):
             print('\t{}:{}'.format(n, len(d)))
         print('\t#classes:', num_classes)
 
-    return train_labeled_dataset, test_datasets, num_classes, class_names, target_size
+    return train_labeled_dataset, train_unlabeled_dataset, test_datasets, num_classes, class_names
+
+
+def get_model_names():
+    return sorted(name for name in models.__dict__ if 
+                  name.islower() and not name.startswith('__') and callable(models.__dict__[name]))
 
 
 def get_model(arch, num_classes):
-    if arch == 'gin-virtual':
-        model = GINVirtual(num_tasks=num_classes, dropout=0.5)
+    if arch in models.__dict__:
+        model = models.__dict__[arch](num_tasks=num_classes)
+    else:
+        raise ValueError('{} is not supported'.format(arch))
     return model
+
+
+def get_criterion(dataset_name):
+    if dataset_name == 'ogb-molpcba':
+        criterion = loss.obgBCEWithLogitsLoss
+    return criterion
 
 
 def collate_list(vec):
@@ -84,11 +109,6 @@ def validate(val_dataset, model, epoch, writer, args):
     all_y_pred = []
     all_metadata = []
 
-    sampled_inputs = []
-    sampled_outputs = []
-    sampled_targets = []
-    sampled_metadata = []
-
     # switch to evaluate mode
     model.eval()
 
@@ -100,11 +120,6 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_true.append(target)
         all_y_pred.append(output)
         all_metadata.append(metadata)
-
-        sampled_inputs.append(input[0:1])
-        sampled_targets.append(target[0:1])
-        sampled_outputs.append(output[0:1])
-        sampled_metadata.append(metadata[0:1])
 
     if args.local_rank == 0:
 
