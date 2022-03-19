@@ -219,56 +219,26 @@ class ResNet(nn.Module):
         return self._forward_impl(x, with_feats)
 
 
-class ResNet18(ResNet):
-    def __init__(self, num_classes=10, num_channels=3):
-        super().__init__(
-            BasicBlock, [2, 2, 2, 2], num_classes=num_classes, num_channels=num_channels)
-
-
-class ResNet34(ResNet):
-    def __init__(self, num_classes=10, num_channels=3):
-        super().__init__(
-            BasicBlock, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
-
-
-class ResNet50(ResNet):
-    def __init__(self, num_classes=10, num_channels=3):
-        super().__init__(
-            Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
-
-
-class ResNet101(ResNet):
-    def __init__(self, num_classes=10, num_channels=3):
-        super().__init__(
-            Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
-
-
-class ResNet152(ResNet):
-    def __init__(self, num_classes=10, num_channels=3):
-        super().__init__(
-            Bottleneck, [3, 8, 36, 3], num_classes=num_classes, num_channels=num_channels)
-
-
 def resnet18_ms(num_classes=10, num_channels=3):
-    model = ResNet18(num_classes=num_classes, num_channels=num_channels)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, num_channels=num_channels)
     return model
 
 
 def resnet34_ms(num_classes=10, num_channels=3):
-    model = ResNet34(num_classes=num_classes, num_channels=num_channels)
+    model = ResNet(BasicBlock, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
     return model
 
 
 def resnet50_ms(num_classes=10, num_channels=3):
-    model = ResNet50(num_classes=num_classes, num_channels=num_channels)
+    model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
     return model
 
 
 def resnet101_ms(num_classes=10, num_channels=3):
-    model = ResNet101(num_classes=num_classes, num_channels=num_channels)
+    model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
     return model
 
 
 def resnet152_ms(num_classes=10, num_channels=3):
-    model = ResNet152(num_classes=num_classes, num_channels=num_channels)
+    model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes, num_channels=num_channels)
     return model

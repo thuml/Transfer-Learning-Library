@@ -6,7 +6,6 @@ import sys
 
 import torch
 import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader, ConcatDataset
 from transformers import DistilBertTokenizerFast
 from transformers import DistilBertForSequenceClassification
@@ -19,9 +18,6 @@ class DistilBertClassifier(DistilBertForSequenceClassification):
     """
     Adapted from https://github.com/p-lambda/wilds
     """
-
-    def __init__(self, config):
-        super().__init__(config)
 
     def __call__(self, x):
         input_ids = x[:, :, 0]
@@ -143,9 +139,6 @@ def collate_list(vec):
 
 def validate(val_dataset, model, epoch, writer, args):
     val_sampler = None
-    if args.distributed:
-        val_sampler = DistributedSampler(val_dataset)
-
     val_loader = DataLoader(
         val_dataset, batch_size=args.batch_size[0], shuffle=False,
         num_workers=args.workers, pin_memory=True, sampler=val_sampler)

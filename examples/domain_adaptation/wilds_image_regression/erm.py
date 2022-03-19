@@ -68,11 +68,11 @@ def main(args):
     # Data loading code
     # Images in povertyMap dataset have 8 channels and traditional data augmentataion
     # methods have no effect on performance.
-    train_transform = transforms.Compose([])
+    train_transform = None
     val_transform = None
     if args.local_rank == 0:
         print("train_transform: ", train_transform)
-        print("val_transform", val_transform)
+        print("val_transform: ", val_transform)
 
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.num_channels = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,

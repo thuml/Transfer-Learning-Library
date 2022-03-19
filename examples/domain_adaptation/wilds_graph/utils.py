@@ -6,13 +6,11 @@ import sys
 
 import torch
 from torch.utils.data import DataLoader, ConcatDataset
-from torch.utils.data.distributed import DistributedSampler
 
 import wilds
 
 sys.path.append('../../..')
 import tllib.vision.models.graph as models
-import tllib.vision.models.graph.loss as loss
 
 def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled', ), test_list=('test',),
                 transform_train=None, transform_test=None, use_unlabeled=True, verbose=True):
@@ -66,12 +64,6 @@ def get_model(arch, num_classes):
     return model
 
 
-def get_criterion(dataset_name):
-    if dataset_name == 'ogb-molpcba':
-        criterion = loss.obgBCEWithLogitsLoss
-    return criterion
-
-
 def collate_list(vec):
     """
     Adapted from https://github.com/p-lambda/wilds
@@ -98,9 +90,6 @@ def collate_list(vec):
 
 def validate(val_dataset, model, epoch, writer, args):
     val_sampler = None
-    if args.distributed:
-        val_sampler = DistributedSampler(val_dataset)
-
     val_loader = DataLoader(
         val_dataset, batch_size=args.batch_size[0], shuffle=False,
         num_workers=args.workers, pin_memory=True, sampler=val_sampler, collate_fn=val_dataset.collate)

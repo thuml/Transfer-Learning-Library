@@ -10,12 +10,10 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 try:
-    from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
@@ -24,7 +22,6 @@ import wilds
 from wilds.common.grouper import CombinatorialGrouper
 
 import utils
-from utils import DistilBertClassifier
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.meter import AverageMeter
 from tllib.utils.metric import accuracy
@@ -36,10 +33,6 @@ def main(args):
     pprint.pprint(args)
 
     if args.local_rank == 0:
-        print("opt_level = {}".format(args.opt_level))
-        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
-        print("loss_scale = {}".format(args.loss_scale, type(args.loss_scale)))
-
         print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
@@ -49,25 +42,17 @@ def main(args):
         torch.manual_seed(args.seed)
         torch.set_printoptions(precision=10)
 
-    args.distributed = False
-    if 'WORLD_SIZE' in os.environ:
-        args.distributed = int(os.environ['WORLD_SIZE']) > 1
-
     args.gpu = 0
     args.world_size = 1
-
-    if args.distributed:
-        args.gpu = args.local_rank
-        torch.cuda.set_device(args.gpu)
-        torch.distributed.init_process_group(backend='ncc1',
-                                             init_method='env://')
-        args.world_size = torch.distributed.get_world_size()
 
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # Data loading code
     train_transform = utils.get_transform(args.arch, args.max_token_length)
     val_transform = utils.get_transform(args.arch, args.max_token_length)
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
 
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, labeled_dataset, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
@@ -78,18 +63,11 @@ def main(args):
         print("=> using model '{}'".format(args.arch))
 
     model = utils.get_model(args.arch, args.num_classes)
-    if args.sync_bn:
-        import apex
-        if args.local_rank == 0:
-            print("using apex synced BN")
-        model = apex.parallel.convert_syncbn_model(model)
     model = model.cuda().to()
 
     # Data loading code
     train_labeled_sampler = None
-    if args.distributed:
-        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
-    elif args.uniform_over_groups:
+    if args.uniform_over_groups:
         train_grouper = CombinatorialGrouper(dataset=labeled_dataset, groupby_fields=args.groupby_fields)
         groups, group_counts = train_grouper.metadata_to_group(train_labeled_dataset.metadata_array, return_counts=True)
         group_weights = 1 / group_counts
@@ -102,10 +80,16 @@ def main(args):
     )
 
     no_decay = ['bias', 'LayerNorm.weight']
+    decay_params = []
+    no_decay_params = []
+    for names, params in model.named_parameters():
+        if any(nd in names for nd in no_decay):
+            no_decay_params.append(params)
+        else:
+            decay_params.append(params)
     params = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-         'weight_decay': args.weight_decay},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': decay_params, 'weight_decay': args.weight_decay},
+        {'params': no_decay_params, 'weight_decay': 0.0}
     ]
     optimizer = AdamW(params, lr=args.lr)
 
@@ -191,11 +175,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             prec1, = accuracy(output.data, target.cuda(), topk=(1,))
 
             # Average loss and accuracy across processes for logging
-            if args.distributed:
-                reduced_loss = utils.reduce_tensor(loss.data, args.world_size)
-                prec1 = utils.reduce_tensor(prec1, args.world_size)
-            else:
-                reduced_loss = loss.data
+            reduced_loss = loss.data
 
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
@@ -256,11 +236,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
-                        help='enabling apex sync BN.')
-    parser.add_argument('--opt-level', type=str)
-    parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
-    parser.add_argument('--loss-scale', type=str, default=None)
     parser.add_argument('--log', type=str, default='src_only',
                         help='Where to save logs, checkpoints and debugging images.')
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],

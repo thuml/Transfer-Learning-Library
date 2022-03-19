@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-def obgBCEWithLogitsLoss(y_pred, y_target):
+def reduced_bce_logit_loss(y_pred, y_target):
     """
     Compute loss for obg-colpcba dataset. 
     There are 128 tasks for ogb-colpcba which predict the presence or

@@ -9,12 +9,10 @@ import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
 import wilds
 
 try:
-    from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
@@ -22,6 +20,7 @@ except ImportError:
 import utils
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.meter import AverageMeter
+import tllib.vision.models.graph.loss as loss
 
 def main(args):
     logger = CompleteLogger(args.log, args.phase)
@@ -29,10 +28,6 @@ def main(args):
     pprint.pprint(args)
 
     if args.local_rank == 0:
-        print("opt_level = {}".format(args.opt_level))
-        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
-        print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
-
         print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
@@ -42,20 +37,9 @@ def main(args):
         torch.manual_seed(args.seed)
         torch.set_printoptions(precision=10)
     
-    args.distributed = False
-    if 'WORLD_SIZE' in os.environ:
-        args.distributed = int(os.environ['WORLD_SIZE']) > 1
-    
     args.gpu = 0
     args.world_size = 1
 
-    if args.distributed:
-        args.gpu = args.local_rank
-        torch.cuda.set_device(args.gpu)
-        torch.distributed.init_process_group(backend='nccl',
-                                             init_method='env://')
-        args.world_size = torch.distributed.get_world_size()
-    
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # Data loading code
@@ -63,8 +47,8 @@ def main(args):
     train_transform = None
     val_transform = None
     if args.local_rank == 0:
-        print("train_transform:", train_transform)
-        print("val_transform:", val_transform)
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
     
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
@@ -75,11 +59,6 @@ def main(args):
         print("=> creating model '{}'".format(args.arch))
 
     model = utils.get_model(args.arch, args.num_classes)
-    if args.sync_bn:
-        import apex
-        if args.local_rank == 0:
-            print("using apex synced BN")
-        model = apex.parallel.convert_syncbn_model(model)
     model = model.cuda().to()
 
     optimizer = torch.optim.Adam(
@@ -87,28 +66,14 @@ def main(args):
         lr=args.lr, weight_decay=args.weight_decay
     )
 
-    # For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
-    # This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
-    # before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
-    # the types of model's parameters in a way that disrupts or destroys DDP's allreduce hooks.
-    if args.distributed:
-        # By default, apex.parallel.DistributedDataParallel overlaps communication with
-        # computation in the backward pass.
-        # model = DDP(model)
-        # delay_allreduce delays all communication to the end of the backward pass.
-        model = DDP(model, delay_allreduce=True)
-
     # Data loading code
     train_labeled_sampler = None
-    if args.distributed:
-        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
-    
     train_labeled_loader = DataLoader(
         train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, collate_fn=train_labeled_dataset.collate)
 
     # define loss function (criterion)
-    criterion = utils.get_criterion(dataset_name=args.data)
+    criterion = loss.reduced_bce_logit_loss
 
     if args.phase == 'test':
         # resume from the latest checkpoint
@@ -124,8 +89,6 @@ def main(args):
     best_val_metric = 0
     test_metric = 0
     for epoch in range(args.epochs):
-        if args.distributed:
-            train_labeled_sampler.set_epoch(epoch)
 
         # train for one epoch
         train(train_labeled_loader, model, criterion, optimizer, epoch, writer, args)
@@ -177,10 +140,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             # iteration, since they incur an allreduce and some host<->device syncs.
 
             # Average loss across processes for logging
-            if args.distributed:
-                reduced_loss = utils.reduce_tensor(loss.data, args.world_size)
-            else:
-                reduced_loss = loss.data
+            reduced_loss = loss.data
 
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
@@ -209,7 +169,7 @@ if __name__ == '__main__':
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='poverty', choices=wilds.supported_datasets,
+    parser.add_argument('-d', '--data', metavar='DATA', default='ogb-molpcba', choices=wilds.supported_datasets,
                         help='dataset: ' + ' | '.join(wilds.supported_datasets) +
                              ' (default: ogb-molpcba)')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
@@ -240,11 +200,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
-                        help='enabling apex sync BN.')
-    parser.add_argument('--opt-level', type=str)
-    parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
-    parser.add_argument('--loss-scale', type=str, default=None)
     parser.add_argument('--log', type=str, default='src_only',
                         help='Where to save logs, checkpoints and debugging images.')
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
