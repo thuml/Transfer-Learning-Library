@@ -110,19 +110,17 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_pred.append(output)
         all_metadata.append(metadata)
 
-    if args.local_rank == 0:
+    # evaluate
+    results = val_dataset.eval(
+        collate_list(all_y_pred),
+        collate_list(all_y_true),
+        collate_list(all_metadata)
+    )
+    print(results[1])
 
-        # evaluate
-        results = val_dataset.eval(
-            collate_list(all_y_pred),
-            collate_list(all_y_true),
-            collate_list(all_metadata)
-        )
-        print(results[1])
+    for k, v in results[0].items():
+        if v == 0 or "Other" in k:
+            continue
+        writer.add_scalar("test/{}".format(k), v, global_step=epoch)
 
-        for k, v in results[0].items():
-            if v == 0 or "Other" in k:
-                continue
-            writer.add_scalar("test/{}".format(k), v, global_step=epoch)
-
-        return results[0][args.metric]
+    return results[0][args.metric]

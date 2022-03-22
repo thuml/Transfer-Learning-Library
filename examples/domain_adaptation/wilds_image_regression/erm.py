@@ -6,7 +6,6 @@ import pprint
 
 import torch
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -164,9 +163,9 @@ def main(args):
             if is_best:
                 test_metric = tmp_test_metric
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+
     print('best val performance: {:.3f}'.format(best_val_metric))
     print('test performance: {:.3f}'.format(test_metric))
-
     logger.close()
     writer.close()
 
@@ -236,6 +235,13 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='r_wg')
+    parser.add_argument('--split_scheme', type=str,
+                        help='Identifies how the train/val/test split is constructed.'
+                             'Choices are dataset-specific.')
+    parser.add_argument('--fold', type=str, default='A',
+                        choices=['A', 'B', 'C', 'D', 'E'], help='Fold for poverty dataset.')
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
     # model parameters
     parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet18_ms',
                         choices=model_names,
@@ -274,13 +280,6 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     parser.add_argument('--gamma', type=int, default=0.96, help='parameter for StepLR scheduler')
     parser.add_argument('--step_size', type=int, default=1, help='parameter for StepLR scheduler')
-    parser.add_argument('--split_scheme', type=str,
-                        help='Identifies how the train/val/test split is constructed.'
-                             'Choices are dataset-specific.')
-    parser.add_argument('--fold', type=str, default='A',
-                        choices=['A', 'B', 'C', 'D', 'E'], help='Fold for poverty dataset.')
-    parser.add_argument('--use-unlabeled', action='store_true',
-                        help='Whether use unlabeled data for training or not.')
 
     args = parser.parse_args()
     main(args)

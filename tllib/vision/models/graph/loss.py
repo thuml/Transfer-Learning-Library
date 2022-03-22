@@ -3,11 +3,9 @@ import torch.nn as nn
 
 def reduced_bce_logit_loss(y_pred, y_target):
     """
-    Compute loss for obg-colpcba dataset. 
-    There are 128 tasks for ogb-colpcba which predict the presence or
-    absence of 128 different kinds of biological activities.
-    y_target could contain NaN values, indicating that the corresponding
-    biological assays were not performed on the given molecule
+    Every item of y_target has n elements which may be labeled by nan.
+    Nan values should not be used while calculating loss.
+    So extract elements which are not nan first, and then calculate loss.
     """
     loss = nn.BCEWithLogitsLoss(reduction='none').cuda()
     is_labeled = ~torch.isnan(y_target)

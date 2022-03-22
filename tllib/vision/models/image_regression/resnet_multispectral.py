@@ -1,111 +1,31 @@
-# Adapted from "https://github.com/p-lambda/wilds"
+"""
+Modified based on torchvision.models.resnet
+"""
 import torch
 import torch.nn as nn
+from torch import Tensor
+from torchvision.models.resnet import BasicBlock, Bottleneck, conv1x1
+from typing import Type, Callable, Union, List, Optional
 
 __all__ = ['resnet18_ms', 'resnet34_ms', 'resnet50_ms', 'resnet101_ms', 'resnet152_ms']
 
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-def conv1x1(in_planes, out_planes, stride=1):
-    """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-
-class BasicBlock(nn.Module):
-    expansion = 1
-    __constants__ = ['downsample']
-
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
-        super(BasicBlock, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        if groups != 1 or base_width != 64:
-            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
-        if dilation > 1:
-            raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
-        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = norm_layer(planes)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
-        self.bn2 = norm_layer(planes)
-        self.downsample = downsample
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out += identity
-        out = self.relu(out)
-
-        return out
-
-
-class Bottleneck(nn.Module):
-    expansion = 4
-    __constants__ = ['downsample']
-
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
-        super(Bottleneck, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.)) * groups
-        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv1x1(inplanes, width)
-        self.bn1 = norm_layer(width)
-        self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        self.bn2 = norm_layer(width)
-        self.conv3 = conv1x1(width, planes * self.expansion)
-        self.bn3 = norm_layer(planes * self.expansion)
-        self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-
-        out = self.conv3(out)
-        out = self.bn3(out)
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out += identity
-        out = self.relu(out)
-
-        return out
-
-
-class ResNet(nn.Module):
-
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
-                 groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, num_channels=3):
-        super(ResNet, self).__init__()
+class ResNetMS(nn.Module):
+    """
+    ResNet Multispectral: ResNet with input channels parameter.
+    """
+    def __init__(
+        self,
+        block: Type[Union[BasicBlock, Bottleneck]],
+        layers: List[int],
+        num_classes: int = 1000,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        replace_stride_with_dilation: Optional[List[bool]] = None,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        in_channels: int = 3,
+    ) -> None:
+        super(ResNetMS, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
@@ -121,7 +41,7 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(num_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
@@ -134,12 +54,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        if num_classes is not None:
-            self.fc = nn.Linear(512 * block.expansion, num_classes)
-            self.d_out = num_classes
-        else:
-            self.fc = None
-            self.d_out = 512 * block.expansion
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -154,11 +69,12 @@ class ResNet(nn.Module):
         if zero_init_residual:
             for m in self.modules():
                 if isinstance(m, Bottleneck):
-                    nn.init.constant_(m.bn3.weight, 0)
+                    nn.init.constant_(m.bn3.weight, 0)  # type: ignore[arg-type]
                 elif isinstance(m, BasicBlock):
-                    nn.init.constant_(m.bn2.weight, 0)
+                    nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+    def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int,
+                    stride: int = 1, dilate: bool = False) -> nn.Sequential:
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -182,7 +98,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def get_feats(self, x, layer=4):
+    def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
         x = self.conv1(x)
         x = self.bn1(x)
@@ -190,55 +106,40 @@ class ResNet(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
-        if layer == 1:
-            return x
         x = self.layer2(x)
-        if layer == 2:
-            return x
         x = self.layer3(x)
-        if layer == 3:
-            return x
         x = self.layer4(x)
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
+        x = self.fc(x)
+
         return x
 
-
-    def _forward_impl(self, x, with_feats=False):
-        x = feats = self.get_feats(x)
-        if self.fc is not None:
-            x = self.fc(feats)
-
-        if with_feats:
-            return x, feats
-        else:
-            return x
-
-    def forward(self, x, with_feats=False):
-        return self._forward_impl(x, with_feats)
+    def forward(self, x: Tensor) -> Tensor:
+        return self._forward_impl(x)
 
 
 def resnet18_ms(num_classes=10, num_channels=3):
-    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, num_channels=num_channels)
+    model = ResNetMS(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, in_channels=num_channels)
     return model
 
 
 def resnet34_ms(num_classes=10, num_channels=3):
-    model = ResNet(BasicBlock, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
+    model = ResNetMS(BasicBlock, [3, 4, 6, 3], num_classes=num_classes, in_channels=num_channels)
     return model
 
 
 def resnet50_ms(num_classes=10, num_channels=3):
-    model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, num_channels=num_channels)
+    model = ResNetMS(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, in_channels=num_channels)
     return model
 
 
 def resnet101_ms(num_classes=10, num_channels=3):
-    model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes=num_classes, num_channels=num_channels)
+    model = ResNetMS(Bottleneck, [3, 4, 23, 3], num_classes=num_classes, in_channels=num_channels)
     return model
 
 
 def resnet152_ms(num_classes=10, num_channels=3):
-    model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes, num_channels=num_channels)
+    model = ResNetMS(Bottleneck, [3, 8, 36, 3], num_classes=num_classes, in_channels=num_channels)
     return model

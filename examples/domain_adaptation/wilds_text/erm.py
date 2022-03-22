@@ -1,5 +1,4 @@
 import argparse
-import os
 import shutil
 import time
 import pprint
@@ -12,11 +11,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AdamW, get_linear_schedule_with_warmup
-
-try:
-    from apex.fp16_utils import *
-except ImportError:
-    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 import wilds
 from wilds.common.grouper import CombinatorialGrouper
@@ -32,8 +26,7 @@ def main(args):
     writer = SummaryWriter(args.log)
     pprint.pprint(args)
 
-    if args.local_rank == 0:
-        print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
     if args.deterministic:
@@ -42,26 +35,18 @@ def main(args):
         torch.manual_seed(args.seed)
         torch.set_printoptions(precision=10)
 
-    args.gpu = 0
-    args.world_size = 1
-
-    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
-
     # Data loading code
     train_transform = utils.get_transform(args.arch, args.max_token_length)
     val_transform = utils.get_transform(args.arch, args.max_token_length)
-    if args.local_rank == 0:
-        print("train_transform: ", train_transform)
-        print("val_transform: ", val_transform)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
 
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, labeled_dataset, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
-                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=args.local_rank == 0)
+                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=True)
 
     # create model
-    if args.local_rank == 0:
-        print("=> using model '{}'".format(args.arch))
-
+    print("=> using model '{}'".format(args.arch))
     model = utils.get_model(args.arch, args.num_classes)
     model = model.cuda().to()
 
@@ -107,41 +92,36 @@ def main(args):
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         model.load_state_dict(checkpoint)
         for n, d in zip(args.test_list, test_datasets):
-            if args.local_rank == 0:
-                print(n)
+            print(n)
             utils.validate(d, model, -1, writer, args)
         return
 
     best_val_metric = 0
     test_metric = 0
     for epoch in range(args.epochs):
-
         lr_scheduler.step(epoch)
-        if args.local_rank == 0:
-            print(lr_scheduler.get_last_lr())
-            writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        print(lr_scheduler.get_last_lr())
+        writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
         # train for one epoch
         train(train_labeled_loader, model, criterion, optimizer, epoch, writer, args)
         # evaluate on validation set
         for n, d in zip(args.test_list, test_datasets):
-            if args.local_rank == 0:
-                print(n)
+            print(n)
             if n == 'val':
                 tmp_val_metric = utils.validate(d, model, epoch, writer, args)
             elif n == 'test':
                 tmp_test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best prec@1 and save checkpoint
-        if args.local_rank == 0:
-            is_best = tmp_val_metric > best_val_metric
-            best_val_metric = max(tmp_val_metric, best_val_metric)
-            torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
-            if is_best:
-                test_metric = tmp_test_metric
-                shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+        is_best = tmp_val_metric > best_val_metric
+        best_val_metric = max(tmp_val_metric, best_val_metric)
+        torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
+        if is_best:
+            test_metric = tmp_test_metric
+            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+
     print('best val performance: {:.3f}'.format(best_val_metric))
     print('test performance: {:.3f}'.format(test_metric))
-
     logger.close()
     writer.close()
 
@@ -174,28 +154,23 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             # Measure accuracy
             prec1, = accuracy(output.data, target.cuda(), topk=(1,))
 
-            # Average loss and accuracy across processes for logging
-            reduced_loss = loss.data
-
-            # to_python_float incurs a host<->device sync
-            losses.update(to_python_float(reduced_loss), input.size(0))
-            top1.update(to_python_float(prec1), input.size(0))
+            losses.update(loss, input.size(0))
+            top1.update(prec1, input.size(0))
 
             torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
-            if args.local_rank == 0:
-                print('Epoch: [{0}][{1}/{2}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Speed {3:.3f} ({4:.3f})\t'
-                      'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
-                    epoch, i, len(train_loader),
-                    args.world_size * args.batch_size[0] / batch_time.val,
-                    args.world_size * args.batch_size[0] / batch_time.avg,
-                    batch_time=batch_time,
-                    loss=losses, top1=top1))
+            print('Epoch: [{0}][{1}/{2}]\t'
+                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Speed {3:.3f} ({4:.3f})\t'
+                    'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
+                    'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
+                epoch, i, len(train_loader),
+                args.batch_size[0] / batch_time.val,
+                args.batch_size[0] / batch_time.avg,
+                batch_time=batch_time,
+                loss=losses, top1=top1))
 
 
 if __name__ == '__main__':
@@ -210,6 +185,11 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
     parser.add_argument('--metric', default='acc_wg')
+    parser.add_argument('--uniform_over_groups', action='store_true',
+                        help='sample examples such that batches are uniform over groups')
+    parser.add_argument('--groupby_fields', nargs='+')
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
     # model parameters
     parser.add_argument('--arch', '-a', metavar='ARCH', default='distilbert-base-uncased',
                         choices=model_names,
@@ -235,17 +215,11 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
     parser.add_argument('--log', type=str, default='src_only',
                         help='Where to save logs, checkpoints and debugging images.')
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis'm only analysis the model.")
-    parser.add_argument('--uniform_over_groups', action='store_true',
-                        help='sample examples such that batches are uniform over groups')
-    parser.add_argument('--groupby_fields', nargs='+')
-    parser.add_argument('--use-unlabeled', action='store_true',
-                        help='Whether use unlabeled data for training or not.')
 
     args = parser.parse_args()
     main(args)

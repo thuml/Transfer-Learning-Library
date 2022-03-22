@@ -1,21 +1,13 @@
 import argparse
-import os
 import shutil
-from tabnanny import verbose
 import time
 import pprint
 
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import wilds
-
-try:
-    from apex.fp16_utils import *
-except ImportError:
-    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 import utils
 from tllib.utils.logger import CompleteLogger
@@ -27,8 +19,7 @@ def main(args):
     writer = SummaryWriter(args.log)
     pprint.pprint(args)
 
-    if args.local_rank == 0:
-        print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
     if args.deterministic:
@@ -36,28 +27,20 @@ def main(args):
         cudnn.deterministic = True
         torch.manual_seed(args.seed)
         torch.set_printoptions(precision=10)
-    
-    args.gpu = 0
-    args.world_size = 1
-
-    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # Data loading code
     # There are no well-developed data augmentation techniques for molecular graphs.
     train_transform = None
     val_transform = None
-    if args.local_rank == 0:
-        print("train_transform: ", train_transform)
-        print("val_transform: ", val_transform)
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
     
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
-                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=args.local_rank == 0)
+                          train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=True)
     
     # create model
-    if args.local_rank == 0:
-        print("=> creating model '{}'".format(args.arch))
-
+    print("=> creating model '{}'".format(args.arch))
     model = utils.get_model(args.arch, args.num_classes)
     model = model.cuda().to()
 
@@ -80,8 +63,7 @@ def main(args):
         checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
         model.load_state_dict(checkpoint)
         for n, d in zip(args.test_list, test_datasets):
-            if args.local_rank == 0:
-                print(n)
+            print(n)
             utils.validate(d, model, -1, writer, args)
         return
 
@@ -89,29 +71,26 @@ def main(args):
     best_val_metric = 0
     test_metric = 0
     for epoch in range(args.epochs):
-
         # train for one epoch
         train(train_labeled_loader, model, criterion, optimizer, epoch, writer, args)
         # evaluate on validation set
         for n, d in zip(args.test_list, test_datasets):
-            if args.local_rank == 0:
-                print(n)
+            print(n)
             if n == 'val':
                 tmp_val_metric = utils.validate(d, model, epoch, writer, args)
             elif n == 'test':
                 tmp_test_metric = utils.validate(d, model, epoch, writer, args)
 
         # remember best mse and save checkpoint
-        if args.local_rank == 0:
-            is_best = tmp_val_metric > best_val_metric
-            best_val_metric = max(tmp_val_metric, best_val_metric)
-            torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
-            if is_best:
-                test_metric = tmp_test_metric
-                shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+        is_best = tmp_val_metric > best_val_metric
+        best_val_metric = max(tmp_val_metric, best_val_metric)
+        torch.save(model.state_dict(), logger.get_checkpoint_path('latest'))
+        if is_best:
+            test_metric = tmp_test_metric
+            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+
     print("best val performance: {:.3f}".format(best_val_metric))
     print("test performance: {:.3f}".format(test_metric))
-
     logger.close()
     writer.close()
 
@@ -136,31 +115,22 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
         if i % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.
-            # For best performance, it doesn't make sense to print these metrics every
-            # iteration, since they incur an allreduce and some host<->device syncs.
-
-            # Average loss across processes for logging
-            reduced_loss = loss.data
-
-            # to_python_float incurs a host<->device sync
-            losses.update(to_python_float(reduced_loss), input.size(0))
+            losses.update(loss, input.size(0))
             global_step = epoch * len(train_loader) + i
 
-            torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
-            if args.local_rank == 0:
-                writer.add_scalar('train/loss', to_python_float(reduced_loss), global_step)
+            writer.add_scalar('train/loss', loss, global_step)
 
-                print('Epoch: [{0}][{1}/{2}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Speed {3:.3f} ({4:.3f})\t'
-                      'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
-                    epoch, i, len(train_loader),
-                    args.world_size * args.batch_size[0] / batch_time.val,
-                    args.world_size * args.batch_size[0] / batch_time.avg,
-                    batch_time=batch_time, loss=losses))
+            print('Epoch: [{0}][{1}/{2}]\t'
+                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Speed {3:.3f} ({4:.3f})\t'
+                    'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
+                epoch, i, len(train_loader),
+                args.batch_size[0] / batch_time.val,
+                args.batch_size[0] / batch_time.avg,
+                batch_time=batch_time, loss=losses))
 
 
 if __name__ == '__main__':
@@ -175,6 +145,8 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='ap')
+    parser.add_argument('--use-unlabeled', action='store_true',
+                        help='Whether use unlabeled data for training or not.')
     # model parameters
     parser.add_argument('--arch', '-a', metavar='ARCH', default='gin_virtual',
                         choices=model_names,
@@ -199,14 +171,11 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
     parser.add_argument('--log', type=str, default='src_only',
                         help='Where to save logs, checkpoints and debugging images.')
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
-    parser.add_argument('--use-unlabeled', action='store_true',
-                        help='Whether use unlabeled data for training or not.')
 
     args = parser.parse_args()
     main(args)
