@@ -5,6 +5,7 @@ import time
 import pprint
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -20,6 +21,7 @@ except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 import utils
+from utils import Regressor
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.meter import AverageMeter
 
@@ -81,8 +83,10 @@ def main(args):
     # create model
     if args.local_rank == 0:
         print("=> creating model '{}'".format(args.arch))
+    backbone = utils.get_model(args.arch, args.num_classes, args.num_channels)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Regressor(backbone, args.num_classes, pool_layer=pool_layer, finetune=False)
 
-    model = utils.get_model(args.arch, args.num_classes, args.num_channels)
     if args.sync_bn:
         import apex
         if args.local_rank == 0:
@@ -181,7 +185,7 @@ def train(train_loader, model, optimizer, epoch, writer, args):
     for i, (input, target, metadata) in enumerate(train_loader):
 
         # compute output
-        output = model(input.cuda())
+        output, _ = model(input.cuda())
         loss = F.mse_loss(output, target.cuda())
 
         # compute gradient and do optimizer step
@@ -248,6 +252,8 @@ if __name__ == '__main__':
                         help='model architecture: ' +
                              ' | '.join(model_names) +
                              ' (default: resnet18_ms)')
+    parser.add_argument('--no-pool', action='store_true',
+                        help='no pool layer after the feature extractor.')
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR', help='Learning rate')

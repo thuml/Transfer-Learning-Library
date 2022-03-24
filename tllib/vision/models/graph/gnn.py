@@ -41,7 +41,7 @@ class GINVirtual(torch.nn.Module):
             raise ValueError("Number of GNN layers must be greater than 1.")
 
         # GNN to generate node embeddings
-        self.gnn_node = GINVirtual_node(num_layers, emb_dim, dropout = dropout)
+        self.gnn_node = GINVirtualNode(num_layers, emb_dim, dropout = dropout)
 
         # Pooling function to generate whole-graph embeddings
         self.pool = global_mean_pool
@@ -61,7 +61,7 @@ class GINVirtual(torch.nn.Module):
             return self.graph_pred_linear(h_graph)
 
 
-class GINVirtual_node(torch.nn.Module):
+class GINVirtualNode(torch.nn.Module):
     """
     Helper function of Graph Isomorphism Network augmented with virtual node for multi-task binary graph classification
     This will generate node embeddings
@@ -80,7 +80,7 @@ class GINVirtual_node(torch.nn.Module):
             - dropout (float): dropout ratio applied to hidden channels
         '''
 
-        super(GINVirtual_node, self).__init__()
+        super(GINVirtualNode, self).__init__()
         self.num_layers = num_layers
         self.dropout = dropout
 
