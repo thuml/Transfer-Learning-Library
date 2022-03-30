@@ -185,9 +185,11 @@ if __name__ == '__main__':
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
     parser.add_argument('--metric', default='acc_wg')
-    parser.add_argument('--uniform_over_groups', action='store_true',
+    parser.add_argument('--uniform-over-groups', action='store_true',
                         help='sample examples such that batches are uniform over groups')
-    parser.add_argument('--groupby_fields', nargs='+')
+    parser.add_argument('--groupby-fields', nargs='+',
+                        help='Group data by given fields. It means that items which have the same' 
+                             'values in those fields should be grouped.')
     parser.add_argument('--use-unlabeled', action='store_true',
                         help='Whether use unlabeled data for training or not.')
     # model parameters
@@ -196,7 +198,8 @@ if __name__ == '__main__':
                         help='model architecture: ' +
                              ' | '.join(model_names) +
                              ' (default: distilbert-base-uncased)')
-    parser.add_argument('--max_token_length', type=int, default=300)
+    parser.add_argument('--max-token-length', type=int, default=300,
+                        help='The maximum size of a sequence.')
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR', help='Learning rate.')

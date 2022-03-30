@@ -12,7 +12,6 @@ import wilds
 import utils
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.meter import AverageMeter
-import tllib.vision.models.graph.loss as loss
 
 def main(args):
     logger = CompleteLogger(args.log, args.phase)
@@ -35,6 +34,7 @@ def main(args):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
     
+    args.data = 'ogb-molpcba'
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=True)
@@ -56,7 +56,7 @@ def main(args):
         num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, collate_fn=train_labeled_dataset.collate)
 
     # define loss function (criterion)
-    criterion = loss.reduced_bce_logit_loss
+    criterion = utils.reduced_bce_logit_loss
 
     if args.phase == 'test':
         # resume from the latest checkpoint
@@ -167,7 +167,7 @@ if __name__ == '__main__':
                         metavar='N', help='mini-batch size per process for source'
                                           ' and target domain (default: (64, 64))')
     parser.add_argument('--print-freq', '-p', default=50, type=int,
-                        metavar='N', help='print frequency (default: 200)')
+                        metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')

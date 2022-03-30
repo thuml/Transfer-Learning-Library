@@ -75,6 +75,7 @@ def main(args):
         print("train_transform: ", train_transform)
         print("val_transform: ", val_transform)
 
+    args.data = 'poverty'
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.num_channels = \
         utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled,
@@ -233,17 +234,15 @@ if __name__ == '__main__':
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
                         help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='poverty', choices=wilds.supported_datasets,
-                        help='dataset: ' + ' | '.join(wilds.supported_datasets) +
-                             ' (default: poverty)')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
     parser.add_argument('--metric', default='r_wg')
     parser.add_argument('--split_scheme', type=str,
                         help='Identifies how the train/val/test split is constructed.'
                              'Choices are dataset-specific.')
-    parser.add_argument('--fold', type=str, default='A',
-                        choices=['A', 'B', 'C', 'D', 'E'], help='Fold for poverty dataset.')
+    parser.add_argument('--fold', type=str, default='A', choices=['A', 'B', 'C', 'D', 'E'],
+                        help='Fold for poverty dataset. Poverty has 5 different cross validation folds,'
+                             'each splitting the countries differently.')
     parser.add_argument('--use-unlabeled', action='store_true',
                         help='Whether use unlabeled data for training or not.')
     # model parameters
@@ -259,6 +258,8 @@ if __name__ == '__main__':
                         metavar='LR', help='Learning rate')
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
+    parser.add_argument('--gamma', type=int, default=0.96, help='parameter for StepLR scheduler')
+    parser.add_argument('--step_size', type=int, default=1, help='parameter for StepLR scheduler')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -268,7 +269,7 @@ if __name__ == '__main__':
                         metavar='N', help='mini-batch size per process for source'
                                           ' and target domain (default: (64, 64))')
     parser.add_argument('--print-freq', '-p', default=50, type=int,
-                        metavar='N', help='print frequency (default: 200)')
+                        metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
@@ -284,8 +285,6 @@ if __name__ == '__main__':
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
-    parser.add_argument('--gamma', type=int, default=0.96, help='parameter for StepLR scheduler')
-    parser.add_argument('--step_size', type=int, default=1, help='parameter for StepLR scheduler')
 
     args = parser.parse_args()
     main(args)

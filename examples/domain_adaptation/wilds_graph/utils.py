@@ -1,16 +1,27 @@
-import math
-import matplotlib.pyplot as plt
-import numpy as np
 import tqdm
 import sys
 
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, ConcatDataset
 
 import wilds
 
 sys.path.append('../../..')
-import tllib.vision.models.graph as models
+import gin as models
+
+def reduced_bce_logit_loss(y_pred, y_target):
+    """
+    Every item of y_target has n elements which may be labeled by nan.
+    Nan values should not be used while calculating loss.
+    So extract elements which are not nan first, and then calculate loss.
+    """
+    loss = nn.BCEWithLogitsLoss(reduction='none').cuda()
+    is_labeled = ~torch.isnan(y_target)
+    y_pred = y_pred[is_labeled].float()
+    y_target = y_target[is_labeled].float()
+    metrics = loss(y_pred, y_target)
+    return metrics.mean()
 
 def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled', ), test_list=('test',),
                 transform_train=None, transform_test=None, use_unlabeled=True, verbose=True):

@@ -4,13 +4,14 @@ import sys
 from typing import Tuple, Optional, List, Dict
 import torch
 import torch.nn as nn
+import torch.distributed as dist
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
 import wilds
 
 sys.path.append('../../..')
-import tllib.vision.models.image_regression as models
+import resnet_ms as models
 
 
 class Regressor(nn.Module):
@@ -27,12 +28,12 @@ class Regressor(nn.Module):
     .. note::
         Different regressors are used in different domain adaptation algorithms to achieve better accuracy
         respectively, and we provide a suggested `Regressor` for different algorithms.
-        Remember they are not the core of algorithms. You can implement your own `Classifier` and combine it with
+        Remember they are not the core of algorithms. You can implement your own `Regressor` and combine it with
         the domain adaptation algorithm in this algorithm library.
 
     .. note::
         The learning rate of this regressor is set 10 times to that of the feature extractor for better accuracy
-        by default. If you have other optimization strategies, please over-ride :meth:`~Classifier.get_parameters`.
+        by default. If you have other optimization strategies, please over-ride :meth:`~Regressor.get_parameters`.
 
     Inputs:
         - x (tensor): input data fed to `backbone`
@@ -175,6 +176,11 @@ def collate_list(vec):
     else:
         raise TypeError("Elements of the list to collate must be tensors or dicts.")
 
+def reduce_tensor(tensor, world_size):
+    rt = tensor.clone()
+    dist.all_reduce(rt, op=dist.reduce_op.SUM)
+    rt /= world_size
+    return rt
 
 def validate(val_dataset, model, epoch, writer, args):
     val_sampler = None
