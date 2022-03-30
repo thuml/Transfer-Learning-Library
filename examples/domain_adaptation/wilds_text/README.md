@@ -1,4 +1,4 @@
-# Unsupervised Domain Adapatation for WILDS (Molecule classification)
+# Unsupervised Domain Adapatation for WILDS (Text Classification)
 
 ## Installation
 It's suggeste to use **pytorch==1.10.1** in order to reproduce the benchmark results.
