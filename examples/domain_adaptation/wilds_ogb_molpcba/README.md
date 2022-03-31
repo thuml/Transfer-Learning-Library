@@ -3,8 +3,7 @@
 ## Installation
 It's suggeste to use **pytorch==1.10.1** in order to reproduce the benchmark results.
 
-You need to install apex following `https://github.com/NVIDIA/apex`.
-Then run
+You need to run
 ```
 pip install -r requirements.txt
 ```
@@ -29,13 +28,13 @@ CUDA_VISIBLE_DEVICES=0 python erm.py /data/wilds --arch 'gin_virtual' \
 ## Results
 
 ### Performance on WILDS-OGB-MolPCBA (GIN-virtual)
-| Methods | Val Avg Precision | Test Avg Precision |
-| --- | --- | --- |
-| ERM | 29.0 | 28.0 |
+| Methods | Val Avg Precision | Test Avg Precision | GPU Memory Usage(GB)|
+| --- | --- | --- | --- |
+| ERM | 29.0 | 28.0 | 17.8 |
 
 ### Visuialization
 We use tensorboard to record the training process and visualize the outputs of the models. 
 ```
 tensorboard --logdir=logs
 ```
-
+<img src="./fig/ogb-molpcba_train_loss.png" width="300"/>

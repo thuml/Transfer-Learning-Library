@@ -34,9 +34,8 @@ def main(args):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
     
-    args.data = 'ogb-molpcba'
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
-        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+        utils.get_dataset('ogb-molpcba', args.data_dir, args.unlabeled_list, args.test_list,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=True)
     
     # create model
@@ -144,7 +143,8 @@ if __name__ == '__main__':
                              ' (default: ogb-molpcba)')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
-    parser.add_argument('--metric', default='ap')
+    parser.add_argument('--metric', default='ap',
+                        help='metric used to evaluate model performance. (default: average precision)')
     parser.add_argument('--use-unlabeled', action='store_true',
                         help='Whether use unlabeled data for training or not.')
     # model parameters

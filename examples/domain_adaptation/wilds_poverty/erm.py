@@ -75,9 +75,8 @@ def main(args):
         print("train_transform: ", train_transform)
         print("val_transform: ", val_transform)
 
-    args.data = 'poverty'
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.num_channels = \
-        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,
+        utils.get_dataset('poverty', args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled,
                           verbose=args.local_rank == 0, fold=args.fold)
 
@@ -236,7 +235,9 @@ if __name__ == '__main__':
                         help='root path of dataset')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=['val', 'test'])
-    parser.add_argument('--metric', default='r_wg')
+    parser.add_argument('--metric', default='r_wg',
+                        help='metric used to evaluate model performance.'
+                             '(default: worst-U/R Pearson r)')
     parser.add_argument('--split_scheme', type=str,
                         help='Identifies how the train/val/test split is constructed.'
                              'Choices are dataset-specific.')

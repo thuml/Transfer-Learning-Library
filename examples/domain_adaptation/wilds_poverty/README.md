@@ -34,9 +34,9 @@ CUDA_VISIBLE_DEVICES=0 python erm.py /data/wilds --arch 'resnet18_ms' \
 ## Results
 
 ### Performance on WILDS-PovertyMap (ResNet18-MultiSpectral)
-| Method | Val Pearson r | Test Pearson r | Val Worst-U/R Pearson r | Test Worst-U/R Pearson r |
-| --- | --- | --- | --- | --- |
-| ERM | 0.80 | 0.80 | 0.54 | 0.50 |
+| Method | Val Pearson r | Test Pearson r | Val Worst-U/R Pearson r | Test Worst-U/R Pearson r | GPU Memory Usage(GB) |
+| --- | --- | --- | --- | --- | --- |
+| ERM | 0.80 | 0.80 | 0.54 | 0.50 | 3.5 |
 
 ### Distributed training
 
@@ -52,3 +52,4 @@ We use tensorboard to record the training process and visualize the outputs of t
 ```
 tensorboard --logdir=logs
 ```
+<img src="./fig/poverty_train_loss.png" width="300"/>

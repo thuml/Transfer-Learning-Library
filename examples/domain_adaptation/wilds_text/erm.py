@@ -156,10 +156,12 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
 
             losses.update(loss, input.size(0))
             top1.update(prec1, input.size(0))
+            global_step = epoch * len(train_loader) + i
 
-            torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
+
+            writer.add_scalar("train/loss", loss, global_step)
 
             print('Epoch: [{0}][{1}/{2}]\t'
                     'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -184,7 +186,8 @@ if __name__ == '__main__':
                              ' (default: civilcomments)')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
-    parser.add_argument('--metric', default='acc_wg')
+    parser.add_argument('--metric', default='acc_wg', 
+                        help='metric used to evaluate model performance. (default: worst group accuracy)')
     parser.add_argument('--uniform-over-groups', action='store_true',
                         help='sample examples such that batches are uniform over groups')
     parser.add_argument('--groupby-fields', nargs='+',
