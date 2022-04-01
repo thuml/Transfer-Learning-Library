@@ -51,6 +51,13 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/wilds -d "fmow" --aa "v0" --arch "dens
 | CDAN    | 60.7        | 55           | 47.4                 | 35.5                  |
 | MDD     | 60.1        | 55.1         | 49.3                 | 35.9                  |
 
+### Performance on WILDS-IWildCAM (ResNet50)
+
++---------+-------------+--------------+--------------+---------------+
+| Methods | Val Avg Acc | Test Avg Acc | Val F1 macro | Test F1 macro |
++---------+-------------+--------------+--------------+---------------+
+| ERM     | 61.6        | 653          | 36.7         | 34.2          |
++---------+-------------+--------------+--------------+---------------+
 
 ### Visualization
 We use tensorboard to record the training process and visualize the outputs of the models. 
