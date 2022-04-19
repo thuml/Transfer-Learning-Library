@@ -131,3 +131,9 @@ exp/*
 trash/*
 examples/domain_adaptation/digits/logs/*
 examples/domain_adaptation/digits/data/*
+examples/domain_adaptation/digits/data/*
+examples/model_adapption/model_tuning/data/*
+examples/model_adapption/model_tuning/pretrained_models/*
+examples/model_adapption/model_tuning/logs/*
+examples/model_adapption/model_selection/data/*
+examples/model_adapption/model_selection/logs/*
