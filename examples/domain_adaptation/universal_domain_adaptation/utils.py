@@ -314,7 +314,7 @@ def evaluate_source_common(val_loader, model, esem, source_classes, args, device
 
             output, f = model(images)
             output = F.softmax(output, -1) / temperature
-            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f)
+            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f, -1)
             confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
@@ -335,7 +335,7 @@ def evaluate_source_common(val_loader, model, esem, source_classes, args, device
         if all_score[i] >= args.src_threshold:
             source_weight += all_output[i]
             cnt += 1
-        if all_labels[i] in source_classes:
+        if all_labels[i].item() in source_classes:
             common.append(all_score[i])
         else:
             target_private.append(all_score[i])
@@ -372,12 +372,12 @@ def pretrain(train_source_iter: ForeverDataIterator, esem_iters, model, esem, op
         cls_loss = F.cross_entropy(y_s, labels_s)
 
         esem_losses = []
-        for i, esem_iter in enumerate(esem_iters):
+        for j, esem_iter in enumerate(esem_iters):
             x_se, labels_se = next(esem_iter)
             x_se = x_se.to(device)
             labels_se = labels_se.to(device)
             y_se, f_se = model(x_se)
-            y_se = esem(f_se, index=i)
+            y_se = esem(f_se, index=j)
             esem_losses.append(F.cross_entropy(y_se, labels_se))
 
         cls_acc = accuracy(y_se, labels_se)[0]
@@ -418,8 +418,6 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        lr_scheduler.step()
-
         x_s, labels_s = next(train_source_iter)
         x_t, _ = next(train_target_iter)
 
@@ -432,7 +430,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         y_t, f_t = model(x_t)
 
         with torch.no_grad():
-            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f_t)
+            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f_t, -1)
             confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
             w_t = (confidence + 1 - entropy) / 2
@@ -461,6 +459,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -484,8 +483,6 @@ def train_esem(train_source_iter, model, esem, optimizer, lr_scheduler, epoch, a
     esem.train()
 
     for i in range(args.iters_per_epoch // 2):
-        lr_scheduler.step()
-
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
@@ -505,6 +502,7 @@ def train_esem(train_source_iter, model, esem, optimizer, lr_scheduler, epoch, a
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         if i % args.print_freq == 0:
             progress.display(i)
@@ -528,7 +526,7 @@ def validate(val_loader, model, esem, source_classes, args, device):
             output, f = model(images)
             values, indices = torch.max(F.softmax(output, -1), 1)
 
-            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f)
+            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f, -1)
             confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
@@ -543,6 +541,7 @@ def validate(val_loader, model, esem, source_classes, args, device):
 
     counters = AccuracyCounter(len(source_classes) + 1)
     for (each_indice, each_label, score) in zip(all_indices, all_labels, all_score):
+        each_label = each_label.item()
         if each_label in source_classes:
             counters.add_total(each_label)
             if score >= args.threshold and each_indice == each_label:

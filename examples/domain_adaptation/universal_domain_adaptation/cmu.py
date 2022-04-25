@@ -203,6 +203,10 @@ if __name__ == '__main__':
     parser.add_argument('--threshold', default=0.8, type=float,
                         help='When class confidence is less than the given threshold, '
                              'model will output "unknown" (default: 0.5)')
+    parser.add_argument('--src-threshold', default=0.8, type=float,
+                        help='threshold for source common class item counting')
+    parser.add_argument('--cut', default=0.2, type=float,
+                        help='cut threshold for common classes identifying')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     # training parameters
