@@ -43,6 +43,7 @@ def universal(dataset_class: ClassVar, public_classes: Sequence[str],
                 if class_name in all_classes:
                     samples.append((path, label))
             self.samples = samples
+            self.targets = [s[1] for s in self.samples]
             self.classes = all_classes
             self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
 

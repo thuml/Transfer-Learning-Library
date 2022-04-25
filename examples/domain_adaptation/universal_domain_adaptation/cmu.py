@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import utils
 from examples.domain_adaptation.openset_domain_adaptation.utils import get_model, get_train_transform, \
     get_val_transform, get_dataset_names, get_model_names
-from tllib.alignment.dann import DomainAdversarialLoss, ImageClassifier
+from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 from tllib.utils.data import ForeverDataIterator
@@ -66,8 +66,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(
-        device)
+    classifier = utils.ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer)\
+        .to(device)
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
     esem = utils.Ensemble(classifier.features_dim, train_source_dataset.num_classes).to(device)
 
@@ -90,16 +90,13 @@ def main(args: argparse.Namespace):
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
-    _, ds, src = args.source.split('/')
-    _, _, tgt = args.target.split('/')
+    if not os.path.exists(f"{args.log}/stage1_models"):
+        os.mkdir(f"{args.log}/stage1_models")
 
-    if not os.path.exists(f"/tmp/{ds}"):
-        os.mkdir(f"/tmp/{ds}")
-
-    pretrain_model_path = f"/tmp/{ds}/scw_{src[:-4]}_pretrain.pth"
+    pretrain_model_path = f"{args.log}/stage1_models/scw_{args.source}_pretrain.pth"
     if not os.path.exists(pretrain_model_path):
         best_f1 = 0
-        for epoch in range(args.pre_epochs):
+        for epoch in range(args.epochs):
             utils.pretrain(train_source_iter, esem_iters, classifier, esem, optimizer_pre, args, epoch,
                            lr_scheduler_pre, device)
 
@@ -212,7 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.004, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
@@ -223,7 +220,7 @@ if __name__ == '__main__':
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=30, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='Number of iterations per epoch')
@@ -233,7 +230,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='dann',
+    parser.add_argument("--log", type=str, default='cmu',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

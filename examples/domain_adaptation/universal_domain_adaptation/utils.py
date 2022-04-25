@@ -5,7 +5,7 @@
 import argparse
 import sys
 import time
-from typing import Dict
+from typing import Dict, Optional, Tuple
 from typing import List
 
 import numpy as np
@@ -17,13 +17,13 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 from torchvision.transforms.transforms import *
 
+sys.path.append('../../..')
 from tllib.alignment.dann import ImageClassifier, DomainAdversarialLoss
 from tllib.utils import ForeverDataIterator, AverageMeter, ProgressMeter
 from tllib.utils.metric import accuracy
 from tllib.vision.datasets.universal import default_universal as universal
-
-sys.path.append('../../..')
 import tllib.vision.datasets.openset as datasets
+from tllib.modules.classifier import Classifier as ClassifierBase
 
 
 class AccuracyCounter:
@@ -76,19 +76,14 @@ class Ensemble(nn.Module):
     def forward(self, x, index):
         if index == 0:
             y = self.fc1(x)
-            # y = nn.Softmax(dim=-1)(y_1)
         elif index == 1:
             y = self.fc2(x)
-            # y = nn.Softmax(dim=-1)(y_2)
         elif index == 2:
             y = self.fc3(x)
-            # y = nn.Softmax(dim=-1)(y_3)
         elif index == 3:
             y = self.fc4(x)
-            # y = nn.Softmax(dim=-1)(y_4)
         elif index == 4:
             y = self.fc5(x)
-            # y = nn.Softmax(dim=-1)(y_5)
         else:
             y_1 = self.fc1(x)
             y_1 = nn.Softmax(dim=-1)(y_1)
@@ -260,7 +255,6 @@ def cal_f1(val_loader, model, esem, source_classes, device):
     model.eval()
     esem.eval()
 
-    # all_confidence = list()
     all_marginal_confidence = list()
     all_entropy = list()
     all_labels = list()
@@ -270,14 +264,14 @@ def cal_f1(val_loader, model, esem, source_classes, device):
             images = images.to(device)
 
             _, f = model(images)
-            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f)
+            yt_1, yt_2, yt_3, yt_4, yt_5 = esem(f, -1)
             marginal_confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
             # all_confidence.extend(confidence)
             all_marginal_confidence.extend(marginal_confidence)
             all_entropy.extend(entropy)
-            all_labels.extend(labels)
+            all_labels.extend([label.item() for label in labels])
 
     all_marginal_confidence = norm(torch.tensor(all_marginal_confidence))
     all_entropy = norm(torch.tensor(all_entropy))
@@ -371,8 +365,6 @@ def pretrain(train_source_iter: ForeverDataIterator, esem_iters, model, esem, op
     esem.train()
 
     for i in range(args.iters_per_epoch):
-        lr_scheduler.step()
-
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
@@ -381,14 +373,14 @@ def pretrain(train_source_iter: ForeverDataIterator, esem_iters, model, esem, op
 
         esem_losses = []
         for i, esem_iter in enumerate(esem_iters):
-            x_s1, labels_s1 = next(esem_iter)
-            x_s1 = x_s1.to(device)
-            labels_s1 = labels_s1.to(device)
-            y_s1, f_s1 = model(x_s1)
-            y_s1 = esem(f_s1, index=i)
-            esem_losses.append(F.cross_entropy(y_s1, labels_s1))
+            x_se, labels_se = next(esem_iter)
+            x_se = x_se.to(device)
+            labels_se = labels_se.to(device)
+            y_se, f_se = model(x_se)
+            y_se = esem(f_se, index=i)
+            esem_losses.append(F.cross_entropy(y_se, labels_se))
 
-        cls_acc = accuracy(y_s1, labels_s1)[0]
+        cls_acc = accuracy(y_se, labels_se)[0]
         cls_accs.update(cls_acc.item(), args.batch_size)
 
         loss = sum(esem_losses) + cls_loss
@@ -398,6 +390,7 @@ def pretrain(train_source_iter: ForeverDataIterator, esem_iters, model, esem, op
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         if i % (args.print_freq) == 0:
             progress.display(i)
@@ -565,3 +558,21 @@ def validate(val_loader, model, esem, source_classes, args, device):
     print(counters.h_score())
 
     return counters.mean_accuracy(), counters.h_score()
+
+class ImageClassifier(ClassifierBase):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim: Optional[int] = 256, **kwargs):
+        bottleneck = nn.Sequential(
+            # nn.AdaptiveAvgPool2d(output_size=(1, 1)),
+            # nn.Flatten(),
+            nn.Linear(backbone.out_features, bottleneck_dim),
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU()
+        )
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """"""
+        f = self.pool_layer(self.backbone(x))
+        f = self.bottleneck(f)
+        predictions = self.head(f)
+        return predictions, f
