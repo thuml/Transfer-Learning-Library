@@ -77,12 +77,12 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
         labeled_train_dataset.num_classes = base_dataset.num_classes
         # unlabeled subset
-        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=True)
         unlabeled_train_dataset = ConcatDataset([
             Subset(base_dataset, unlabeled_idxes),
-            dataset(root=root, split='validation', download=False, transform=unlabeled_train_transform)
+            dataset(root=root, split='validation', download=True, transform=unlabeled_train_transform)
         ])
-        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
+        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
     else:
         dataset = datasets.__dict__[dataset_name]
         base_dataset = dataset(root=root, split='train', transform=labeled_train_transform, download=True)
@@ -93,9 +93,9 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
         labeled_train_dataset.num_classes = base_dataset.num_classes
         # unlabeled subset
-        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=True)
         unlabeled_train_dataset = Subset(base_dataset, unlabeled_idxes)
-        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
+        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
     return labeled_train_dataset, unlabeled_train_dataset, val_dataset
 
 
