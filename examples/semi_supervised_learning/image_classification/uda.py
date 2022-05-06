@@ -228,9 +228,9 @@ if __name__ == '__main__':
     # training parameters
     parser.add_argument('--trade-off-cls-strong', default=0.1, type=float,
                         help='the trade-off hyper-parameter of cls loss on strong augmented labeled data')
-    parser.add_argument('--trade-off-con', default=0.3, type=float,
+    parser.add_argument('--trade-off-con', default=1, type=float,
                         help='the trade-off hyper-parameter of consistency loss')
-    parser.add_argument('--threshold', default=0.9, type=float,
+    parser.add_argument('--threshold', default=0.7, type=float,
                         help='confidence threshold')
     parser.add_argument('--T', default=0.85, type=float,
                         help='temperature')
@@ -248,8 +248,8 @@ if __name__ == '__main__':
                         help='weight decay (default:5e-4)')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run (default: 20)')
+    parser.add_argument('--epochs', default=60, type=int, metavar='N',
+                        help='number of total epochs to run (default: 60)')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='number of iterations per epoch (default: 500)')
     parser.add_argument('-p', '--print-freq', default=100, type=int, metavar='N',

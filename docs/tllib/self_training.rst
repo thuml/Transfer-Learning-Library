@@ -8,7 +8,7 @@ Self Training Methods
 Pseudo Label
 -----------------------------
 
-.. autoclass:: tllib.self_training.pseudo_label.ConfidenceRegularizedSelfTrainingLoss
+.. autoclass:: tllib.self_training.pseudo_label.ConfidenceBasedSelfTrainingLoss
 
 .. _PiModel:
 

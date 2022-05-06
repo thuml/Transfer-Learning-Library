@@ -7,10 +7,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class ConfidenceRegularizedSelfTrainingLoss(nn.Module):
+class ConfidenceBasedSelfTrainingLoss(nn.Module):
     """
-    Self training loss with confidence threshold from `Pseudo-Label : The Simple and Efficient Semi-Supervised Learning
-    Method for Deep Neural Networks (ICML 2013)
+    Self training loss that adopts confidence threshold to select reliable pseudo labels from
+    `Pseudo-Label : The Simple and Efficient Semi-Supervised Learning Method for Deep Neural Networks (ICML 2013)
     <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.664.3543&rep=rep1&type=pdf>`_.
 
     Args:
@@ -34,7 +34,7 @@ class ConfidenceRegularizedSelfTrainingLoss(nn.Module):
     """
 
     def __init__(self, threshold: float):
-        super(ConfidenceRegularizedSelfTrainingLoss, self).__init__()
+        super(ConfidenceBasedSelfTrainingLoss, self).__init__()
         self.threshold = threshold
 
     def forward(self, y, y_target):

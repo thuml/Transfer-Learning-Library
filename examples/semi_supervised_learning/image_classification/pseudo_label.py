@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 import utils
-from tllib.self_training.pseudo_label import ConfidenceRegularizedSelfTrainingLoss
+from tllib.self_training.pseudo_label import ConfidenceBasedSelfTrainingLoss
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -140,7 +140,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         [batch_time, data_time, losses, cls_losses, self_training_losses, cls_accs, pseudo_label_accs],
         prefix="Epoch: [{}]".format(epoch))
 
-    self_training_criterion = ConfidenceRegularizedSelfTrainingLoss(args.threshold).to(device)
+    self_training_criterion = ConfidenceBasedSelfTrainingLoss(args.threshold).to(device)
     # switch to train mode
     model.train()
 
@@ -237,8 +237,8 @@ if __name__ == '__main__':
                         help='the trade-off hyper-parameter of cls loss on strong augmented labeled data')
     parser.add_argument('--trade-off-self-training', default=1, type=float,
                         help='the trade-off hyper-parameter of self training loss')
-    parser.add_argument('--threshold', default=0.9, type=float,
-                        help='confidence threshold')
+    parser.add_argument('--threshold', default=0.95, type=float,
+                        help='confidence threshold (default: 0.95)')
     parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.003, type=float, metavar='LR', dest='lr',
@@ -253,8 +253,8 @@ if __name__ == '__main__':
                         help='weight decay (default:5e-4)')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run (default: 20)')
+    parser.add_argument('--epochs', default=40, type=int, metavar='N',
+                        help='number of total epochs to run (default: 40)')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='number of iterations per epoch (default: 500)')
     parser.add_argument('-p', '--print-freq', default=100, type=int, metavar='N',

@@ -245,8 +245,8 @@ if __name__ == '__main__':
                         help='weight decay (default:5e-4)')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run (default: 20)')
+    parser.add_argument('--epochs', default=40, type=int, metavar='N',
+                        help='number of total epochs to run (default: 40)')
     parser.add_argument('--warm-up-epochs', default=10, type=int,
                         help='number of epochs to warm up (default: 10)')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
