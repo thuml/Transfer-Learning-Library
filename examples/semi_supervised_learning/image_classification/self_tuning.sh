@@ -51,7 +51,7 @@ CUDA_VISIBLE_DEVICES=0 python self_tuning.py data/pets -d OxfordIIITPets --num-s
 # ======================================================================================================================
 # Oxford Flowers
 CUDA_VISIBLE_DEVICES=0 python self_tuning.py data/flowers -d OxfordFlowers102 --num-samples-per-class 4 -a resnet50 \
-  --lr 0.01 --finetune --seed 0 --log tuning/self_tuning/flowers_4_labels_per_class
+  --lr 0.01 --finetune --seed 0 --log logs/self_tuning/flowers_4_labels_per_class
 
 # ======================================================================================================================
 # Caltech 101
