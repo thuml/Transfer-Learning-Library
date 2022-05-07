@@ -171,7 +171,8 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
 
         # self training loss
         y_u = model(x_u)
-        self_training_loss, mask, pseudo_labels = args.trade_off_self_training * self_training_criterion(y_u, y_u)
+        self_training_loss, mask, pseudo_labels = self_training_criterion(y_u, y_u)
+        self_training_loss = args.trade_off_self_training * self_training_loss
         self_training_loss.backward()
 
         # measure accuracy and record loss

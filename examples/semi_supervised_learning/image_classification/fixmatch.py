@@ -176,8 +176,8 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         with torch.no_grad():
             y_u = model(x_u)
         y_u_strong = model(x_u_strong)
-        self_training_loss, mask, pseudo_labels = args.trade_off_self_training * \
-                                                  self_training_criterion(y_u_strong, y_u)
+        self_training_loss, mask, pseudo_labels = self_training_criterion(y_u_strong, y_u)
+        self_training_loss = args.trade_off_self_training * self_training_loss
         self_training_loss.backward()
 
         # measure accuracy and record loss
