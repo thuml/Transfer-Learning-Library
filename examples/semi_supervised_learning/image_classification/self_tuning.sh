@@ -56,7 +56,7 @@ CUDA_VISIBLE_DEVICES=0 python self_tuning.py data/flowers -d OxfordFlowers102 --
 # ======================================================================================================================
 # Caltech 101
 CUDA_VISIBLE_DEVICES=0 python self_tuning.py data/caltech101 -d Caltech101 --num-samples-per-class 4 -a resnet50 \
-  --lr 0.003 --finetune --seed 0 --log logs/self_tuning/caltech_4_labels_per_class --lr 0.003
+  --lr 0.003 --finetune --seed 0 --log logs/self_tuning/caltech_4_labels_per_class
 
 # ImageNet Unsupervised Pretrain (MoCov2, ResNet50)
 # ======================================================================================================================
