@@ -2,6 +2,7 @@
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
+import copy
 import random
 import time
 import warnings
@@ -14,9 +15,11 @@ import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader
 
 import utils
+from tllib.vision.models.reid.loss import CrossEntropyLoss
+from tllib.modules.classifier import Classifier
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -24,6 +27,29 @@ from tllib.utils.data import ForeverDataIterator
 from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class ImageClassifier(Classifier):
+    def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim=1024, **kwargs):
+        bottleneck = nn.Sequential(
+            nn.Linear(backbone.out_features, bottleneck_dim),
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU()
+        )
+        bottleneck[0].weight.data.normal_(0, 0.005)
+        bottleneck[0].bias.data.fill_(0.1)
+        super(ImageClassifier, self).__init__(backbone, num_classes, bottleneck, bottleneck_dim, **kwargs)
+        self.dropout = nn.Dropout(0.5)
+        self.as_teacher_model = False
+
+    def forward(self, x: torch.Tensor):
+        """"""
+        f = self.pool_layer(self.backbone(x))
+        f = self.bottleneck(f)
+        if not self.as_teacher_model:
+            f = self.dropout(f)
+        predictions = self.head(f)
+        return predictions
 
 
 def main(args: argparse.Namespace):
@@ -48,27 +74,29 @@ def main(args: argparse.Namespace):
     strong_augment = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True,
                                                auto_augment=args.auto_augment,
                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
-    train_transform = MultipleApply([weak_augment, strong_augment])
+    labeled_train_transform = MultipleApply([weak_augment, strong_augment])
+    unlabeled_train_transform = MultipleApply([weak_augment, strong_augment])
     val_transform = utils.get_val_transform(args.val_resizing, norm_mean=args.norm_mean, norm_std=args.norm_std)
-    print('train_transform: ', train_transform)
+    print('labeled_train_transform: ', labeled_train_transform)
+    print('unlabeled_train_transform: ', unlabeled_train_transform)
     print('val_transform:', val_transform)
     labeled_train_dataset, unlabeled_train_dataset, val_dataset = \
         utils.get_dataset(args.data,
                           args.num_samples_per_class,
-                          args.root, train_transform,
+                          args.root, labeled_train_transform,
                           val_transform,
+                          unlabeled_train_transform=unlabeled_train_transform,
                           seed=args.seed)
-    if args.oracle:
-        num_classes = labeled_train_dataset.num_classes
-        labeled_train_dataset = ConcatDataset([labeled_train_dataset, unlabeled_train_dataset])
-        labeled_train_dataset.num_classes = num_classes
-
     print("labeled_dataset_size: ", len(labeled_train_dataset))
+    print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
     print("val_dataset_size: ", len(val_dataset))
 
     labeled_train_loader = DataLoader(labeled_train_dataset, batch_size=args.batch_size, shuffle=True,
                                       num_workers=args.workers, drop_last=True)
+    unlabeled_train_loader = DataLoader(unlabeled_train_dataset, batch_size=args.batch_size, shuffle=True,
+                                        num_workers=args.workers, drop_last=True)
     labeled_train_iter = ForeverDataIterator(labeled_train_loader)
+    unlabeled_train_iter = ForeverDataIterator(unlabeled_train_loader)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     # create model
@@ -76,9 +104,17 @@ def main(args: argparse.Namespace):
     backbone = utils.get_model(args.arch, pretrained_checkpoint=args.pretrained_backbone)
     num_classes = labeled_train_dataset.num_classes
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = utils.ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer,
-                                       finetune=args.finetune).to(device)
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer,
+                                 finetune=args.finetune).to(device)
     print(classifier)
+
+    if args.pretrained_teacher:
+        # load teacher model
+        classifier_teacher = copy.deepcopy(classifier)
+        checkpoint = torch.load(args.pretrained_teacher)
+        classifier_teacher.load_state_dict(checkpoint)
+        classifier_teacher.eval()
+        classifier_teacher.as_teacher_model = True
 
     # define optimizer and lr scheduler
     if args.lr_scheduler == 'exp':
@@ -105,7 +141,12 @@ def main(args: argparse.Namespace):
         print(lr_scheduler.get_lr())
 
         # train for one epoch
-        utils.empirical_risk_minimization(labeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
+        if args.pretrained_teacher:
+            train(labeled_train_iter, unlabeled_train_iter, classifier, classifier_teacher, optimizer, lr_scheduler,
+                  epoch, args)
+        else:
+            utils.empirical_risk_minimization(labeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args,
+                                              device)
 
         # evaluate on validation set
         acc1, avg = utils.validate(val_loader, classifier, args, device, num_classes)
@@ -122,8 +163,79 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
+def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: ForeverDataIterator, model, teacher,
+          optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':2.2f')
+    data_time = AverageMeter('Data', ':2.1f')
+    cls_losses = AverageMeter('Cls Loss', ':3.2f')
+    self_training_losses = AverageMeter('Self Training Loss', ':3.2f')
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_losses, self_training_losses, cls_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    self_training_criterion = CrossEntropyLoss().to(device)
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    batch_size = args.batch_size
+    for i in range(args.iters_per_epoch):
+        (x_l, x_l_strong), labels_l = next(labeled_train_iter)
+        x_l = x_l.to(device)
+        x_l_strong = x_l_strong.to(device)
+        labels_l = labels_l.to(device)
+
+        (x_u, x_u_strong), _ = next(unlabeled_train_iter)
+        x_u = x_u.to(device)
+        x_u_strong = x_u_strong.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # clear grad
+        optimizer.zero_grad()
+
+        # compute output
+        y_l = model(x_l)
+        y_l_strong = model(x_l_strong)
+        # cross entropy loss
+        cls_loss = F.cross_entropy(y_l, labels_l) + args.trade_off_cls_strong * F.cross_entropy(y_l_strong, labels_l)
+        cls_loss.backward()
+
+        # self training loss
+        with torch.no_grad():
+            y_u = teacher(x_u)
+        y_u_strong = model(x_u_strong)
+        self_training_loss = args.trade_off_self_training * self_training_criterion(y_u_strong / args.T, y_u / args.T)
+        self_training_loss.backward()
+
+        # measure accuracy and record loss
+        loss = cls_loss + self_training_loss
+        losses.update(loss.item(), batch_size)
+        cls_losses.update(cls_loss.item(), batch_size)
+        self_training_losses.update(self_training_loss.item(), batch_size)
+
+        cls_acc = accuracy(y_l, labels_l)[0]
+        cls_accs.update(cls_acc.item(), batch_size)
+
+        # compute gradient and do SGD step
+        optimizer.step()
+        lr_scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Baseline for Semi Supervised Learning')
+    parser = argparse.ArgumentParser(description='Noisy Student for Semi Supervised Learning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -139,8 +251,6 @@ if __name__ == '__main__':
                         help='normalization std')
     parser.add_argument('--auto-augment', default='rand-m10-n2-mstd2', type=str,
                         help='AutoAugment policy (default: rand-m10-n2-mstd2)')
-    parser.add_argument('--oracle', action='store_true', default=False,
-                        help='use all data as labeled data (oracle)')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50', choices=utils.get_model_names(),
                         help='backbone architecture: ' + ' | '.join(utils.get_model_names()) + ' (default: resnet50)')
@@ -153,9 +263,15 @@ if __name__ == '__main__':
                              "(default: None, use the ImageNet supervised pretrained backbone)")
     parser.add_argument('--finetune', action='store_true', default=False,
                         help='whether to use 10x smaller lr for backbone')
+    parser.add_argument('--pretrained-teacher', default=None, type=str,
+                        help='pretrained checkpoint of the teacher model')
     # training parameters
     parser.add_argument('--trade-off-cls-strong', default=0.1, type=float,
                         help='the trade-off hyper-parameter of cls loss on strong augmented labeled data')
+    parser.add_argument('--trade-off-self-training', default=1, type=float,
+                        help='the trade-off hyper-parameter of self training loss')
+    parser.add_argument('--T', default=2, type=float,
+                        help='temperature')
     parser.add_argument('-b', '--batch-size', default=32, type=int, metavar='N',
                         help='mini-batch size (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.003, type=float, metavar='LR', dest='lr',
@@ -170,15 +286,15 @@ if __name__ == '__main__':
                         help='weight decay (default:5e-4)')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
-                        help='number of total epochs to run (default: 20)')
+    parser.add_argument('--epochs', default=40, type=int, metavar='N',
+                        help='number of total epochs to run (default: 40)')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
                         help='number of iterations per epoch (default: 500)')
     parser.add_argument('-p', '--print-freq', default=100, type=int, metavar='N',
                         help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training ')
-    parser.add_argument("--log", default='baseline', type=str,
+    parser.add_argument("--log", default='noisy_student', type=str,
                         help="where to save logs, checkpoints and debugging images")
     parser.add_argument("--phase", default='train', type=str, choices=['train', 'test'],
                         help="when phase is 'test', only test the model")
