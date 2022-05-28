@@ -7,4 +7,6 @@ from . import vision
 from . import modules
 from . import ranking
 
+__version__ = '0.4'
+
 __all__ = ['alignment', 'self_training', 'translation', 'regularization', 'utils', 'vision', 'modules', 'ranking']
