@@ -2,8 +2,6 @@
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
-from copy import deepcopy
-from collections import Counter
 import random
 import time
 import warnings
@@ -19,7 +17,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 import utils
-from tllib.self_training.flexmatch import convert_dataset
+from tllib.self_training.flexmatch import DynamicThresholdingModule, convert_dataset
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -104,8 +102,9 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
-    selected_label = torch.ones((len(unlabeled_train_dataset),), dtype=torch.long, ) * -1
-    selected_label = selected_label.to(device)
+    # thresholding module
+    thresholding_module = DynamicThresholdingModule(num_classes, len(unlabeled_train_dataset), warmup=args.warmup,
+                                                    device=device)
 
     # start training
     best_acc1 = 0.0
@@ -115,8 +114,8 @@ def main(args: argparse.Namespace):
         print(lr_scheduler.get_lr())
 
         # train for one epoch
-        train(labeled_train_iter, unlabeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args,
-              selected_label, len(unlabeled_train_dataset))
+        train(labeled_train_iter, unlabeled_train_iter, thresholding_module, classifier, optimizer, lr_scheduler, epoch,
+              args)
 
         # evaluate on validation set
         acc1, avg = utils.validate(val_loader, classifier, args, device, num_classes)
@@ -133,8 +132,9 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: ForeverDataIterator, model, optimizer: SGD,
-          lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace, selected_label, unlabeled_dataset_size):
+def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: ForeverDataIterator,
+          thresholding_module: DynamicThresholdingModule, model, optimizer: SGD, lr_scheduler: LambdaLR, epoch: int,
+          args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':2.2f')
     data_time = AverageMeter('Data', ':2.1f')
     cls_losses = AverageMeter('Cls Loss', ':3.2f')
@@ -150,7 +150,6 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
          pseudo_label_ratios],
         prefix="Epoch: [{}]".format(epoch))
 
-    classwise_acc = torch.zeros((args.num_classes,)).to(device)
     # switch to train mode
     model.train()
 
@@ -186,26 +185,14 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
             y_u = model(x_u)
         y_u_strong = model(x_u_strong)
 
-        pseudo_counter = Counter(selected_label.tolist())
-        # TODO the effect of the following conditional statement
-        if max(pseudo_counter.values()) < unlabeled_dataset_size:
-            if args.warmup:
-                for j in range(args.num_classes):
-                    classwise_acc[j] = pseudo_counter[j] / max(pseudo_counter.values())
-            else:
-                wo_negative_one = deepcopy(pseudo_counter)
-                if -1 in wo_negative_one.keys():
-                    wo_negative_one.pop(-1)
-                for j in range(args.num_classes):
-                    classwise_acc[j] = pseudo_counter[j] / max(wo_negative_one.values())
-
+        learning_status = thresholding_module.get_status()
         confidence, pseudo_labels = torch.softmax(y_u, dim=1).max(dim=1)
+        # calculate threshold using concave function x / (2 - x), where x denotes the estimated learning status
         mask = confidence.ge(
-            args.threshold * (classwise_acc[pseudo_labels] / (2. - classwise_acc[pseudo_labels]))).float()
-        select = (confidence > args.threshold).long()
-
-        if idx_u[select == 1].nelement() != 0:
-            selected_label[idx_u[select == 1]] = pseudo_labels[select == 1]
+            args.threshold * (learning_status[pseudo_labels] / (2. - learning_status[pseudo_labels]))).float()
+        # mask used for updating learning status
+        selected_mask = (confidence > args.threshold).long()
+        thresholding_module.update(idx_u, selected_mask, pseudo_labels)
 
         self_training_loss = args.trade_off_self_training * (
                 F.cross_entropy(y_u_strong, pseudo_labels, reduction='none') * mask).mean()

@@ -1,4 +1,7 @@
-from copy import deepcopy
+"""
+@author: Baixu Chen
+@contact: cbx_99_hasta@outlook.com
+"""
 from collections import Counter
 
 import torch
@@ -24,6 +27,10 @@ def convert_dataset(dataset):
 
 
 class DynamicThresholdingModule(object):
+    r"""
+    Dynamic thresholding module from `FlexMatch: Boosting Semi-Supervised Learning with Curriculum Pseudo Labeling
+    <https://arxiv.org/abs/2110.08263>`_.
+    """
 
     def __init__(self, num_classes, n_unlabeled_samples, warmup, device):
         self.num_classes = num_classes
@@ -35,6 +42,11 @@ class DynamicThresholdingModule(object):
 
     def get_status(self):
         pseudo_counter = Counter(self.net_outputs.tolist())
+        if max(pseudo_counter.values()) == self.n_unlabeled_samples:
+            # In the early stage of training, the network does not output pseudo labels with high confidence.
+            # In this case, the learning status of all categories is simply zero.
+            status = torch.zeros(self.n_unlabeled_samples).to(self.device)
+            return status
         if not self.warmup and -1 in pseudo_counter.keys():
             pseudo_counter.pop(-1)
         max_num = max(pseudo_counter.values())
