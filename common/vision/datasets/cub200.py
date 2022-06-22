@@ -36,9 +36,9 @@ class CUB200(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/fa398a321b094a24a347/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/521ba92bafc04ee69c20/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/cc7ef72081e64bc7a218/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/3ee8eaeb0ebc442aa5cf/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/92e1d91311d84491b8e0/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/c0f9ae3891cd4b1c95a5/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",
