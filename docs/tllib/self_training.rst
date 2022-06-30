@@ -103,3 +103,13 @@ Self Tuning
 .. autoclass:: tllib.self_training.self_tuning.Classifier
 
 .. autoclass:: tllib.self_training.self_tuning.SelfTuning
+
+
+.. _FlexMatch:
+
+FlexMatch
+-----------------------------
+
+.. autoclass:: tllib.self_training.flexmatch.DynamicThresholdingModule
+    :members:
+

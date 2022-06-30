@@ -102,9 +102,9 @@ def main(args: argparse.Namespace):
         print(acc1)
         return
 
-    # thresholding module
-    thresholding_module = DynamicThresholdingModule(num_classes, len(unlabeled_train_dataset), warmup=args.warmup,
-                                                    device=device)
+    # thresholding module with convex mapping function x / (2 - x)
+    thresholding_module = DynamicThresholdingModule(args.threshold, args.warmup, lambda x: x / (2 - x), num_classes,
+                                                    len(unlabeled_train_dataset), device=device)
 
     # start training
     best_acc1 = 0.0
@@ -185,11 +185,9 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
             y_u = model(x_u)
         y_u_strong = model(x_u_strong)
 
-        learning_status = thresholding_module.get_status()
         confidence, pseudo_labels = torch.softmax(y_u, dim=1).max(dim=1)
-        # calculate threshold using concave function x / (2 - x), where x denotes the estimated learning status
-        mask = confidence.ge(
-            args.threshold * (learning_status[pseudo_labels] / (2. - learning_status[pseudo_labels]))).float()
+        dynamic_threshold = thresholding_module.get_threshold(pseudo_labels)
+        mask = (confidence > dynamic_threshold).float()
         # mask used for updating learning status
         selected_mask = (confidence > args.threshold).long()
         thresholding_module.update(idx_u, selected_mask, pseudo_labels)
