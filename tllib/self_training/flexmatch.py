@@ -7,25 +7,6 @@ from collections import Counter
 import torch
 
 
-def convert_dataset(dataset):
-    """
-    Converts a dataset which returns (img, label) pairs into one that returns (index, img, label) triplets.
-    """
-
-    class DatasetWrapper:
-
-        def __init__(self):
-            self.dataset = dataset
-
-        def __getitem__(self, index):
-            return index, self.dataset[index]
-
-        def __len__(self):
-            return len(self.dataset)
-
-    return DatasetWrapper()
-
-
 class DynamicThresholdingModule(object):
     r"""
     Dynamic thresholding module from `FlexMatch: Boosting Semi-Supervised Learning with Curriculum Pseudo Labeling

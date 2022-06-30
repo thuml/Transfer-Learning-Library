@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 import utils
-from tllib.self_training.flexmatch import DynamicThresholdingModule, convert_dataset
+from tllib.self_training.flexmatch import DynamicThresholdingModule
 from tllib.vision.transforms import MultipleApply
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -62,7 +62,7 @@ def main(args: argparse.Namespace):
                           val_transform,
                           unlabeled_train_transform=unlabeled_train_transform,
                           seed=args.seed)
-    unlabeled_train_dataset = convert_dataset(unlabeled_train_dataset)
+    unlabeled_train_dataset = utils.convert_dataset(unlabeled_train_dataset)
     print("labeled_dataset_size: ", len(labeled_train_dataset))
     print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
     print("val_dataset_size: ", len(val_dataset))

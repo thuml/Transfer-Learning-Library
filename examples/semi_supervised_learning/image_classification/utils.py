@@ -168,6 +168,25 @@ def get_val_transform(resizing='default', norm_mean=(0.485, 0.456, 0.406), norm_
     ])
 
 
+def convert_dataset(dataset):
+    """
+    Converts a dataset which returns (img, label) pairs into one that returns (index, img, label) triplets.
+    """
+
+    class DatasetWrapper:
+
+        def __init__(self):
+            self.dataset = dataset
+
+        def __getitem__(self, index):
+            return index, self.dataset[index]
+
+        def __len__(self):
+            return len(self.dataset)
+
+    return DatasetWrapper()
+
+
 class ImageClassifier(Classifier):
     def __init__(self, backbone: nn.Module, num_classes: int, bottleneck_dim=1024, **kwargs):
         bottleneck = nn.Sequential(
