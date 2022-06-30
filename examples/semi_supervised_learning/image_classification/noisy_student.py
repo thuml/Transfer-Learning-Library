@@ -52,6 +52,40 @@ class ImageClassifier(Classifier):
         return predictions
 
 
+def calc_teacher_output(classifier_teacher: ImageClassifier, weak_augmented_unlabeled_dataset):
+    """Compute outputs of the teacher network. Here, we use weak data augmentation and do not introduce an additional
+    dropout layer according to the Noisy Student paper `Self-Training With Noisy Student Improves ImageNet
+    Classification <https://openaccess.thecvf.com/content_CVPR_2020/papers/Xie_Self-Training_With_Noisy_Student_Improves
+    _ImageNet_Classification_CVPR_2020_paper.pdf>`_.
+    """
+
+    data_loader = DataLoader(weak_augmented_unlabeled_dataset, batch_size=args.batch_size, shuffle=False,
+                             num_workers=args.workers, drop_last=False)
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(data_loader),
+        [batch_time],
+        prefix='Computing teacher output: ')
+
+    teacher_output = []
+    with torch.no_grad():
+        end = time.time()
+        for i, (images, _) in enumerate(data_loader):
+            images = images.to(device)
+            output = classifier_teacher(images)
+            teacher_output.append(output)
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if i % args.print_freq == 0:
+                progress.display(i)
+
+    teacher_output = torch.cat(teacher_output, dim=0)
+    return teacher_output
+
+
 def main(args: argparse.Namespace):
     logger = CompleteLogger(args.log, args.phase)
     print(args)
@@ -75,25 +109,35 @@ def main(args: argparse.Namespace):
                                                auto_augment=args.auto_augment,
                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
     labeled_train_transform = MultipleApply([weak_augment, strong_augment])
-    unlabeled_train_transform = MultipleApply([weak_augment, strong_augment])
     val_transform = utils.get_val_transform(args.val_resizing, norm_mean=args.norm_mean, norm_std=args.norm_std)
     print('labeled_train_transform: ', labeled_train_transform)
-    print('unlabeled_train_transform: ', unlabeled_train_transform)
+    print('weak_augment (input transform for teacher model): ', weak_augment)
+    print('strong_augment (input transform for student model): ', strong_augment)
     print('val_transform:', val_transform)
-    labeled_train_dataset, unlabeled_train_dataset, val_dataset = \
+
+    labeled_train_dataset, weak_augmented_unlabeled_dataset, val_dataset = \
         utils.get_dataset(args.data,
                           args.num_samples_per_class,
                           args.root, labeled_train_transform,
                           val_transform,
-                          unlabeled_train_transform=unlabeled_train_transform,
+                          unlabeled_train_transform=weak_augment,
                           seed=args.seed)
+    _, strong_augmented_unlabeled_dataset, _ = \
+        utils.get_dataset(args.data,
+                          args.num_samples_per_class,
+                          args.root, labeled_train_transform,
+                          val_transform,
+                          unlabeled_train_transform=strong_augment,
+                          seed=args.seed)
+
+    strong_augmented_unlabeled_dataset = utils.convert_dataset(strong_augmented_unlabeled_dataset)
     print("labeled_dataset_size: ", len(labeled_train_dataset))
-    print('unlabeled_dataset_size: ', len(unlabeled_train_dataset))
+    print('unlabeled_dataset_size: ', len(weak_augmented_unlabeled_dataset))
     print("val_dataset_size: ", len(val_dataset))
 
     labeled_train_loader = DataLoader(labeled_train_dataset, batch_size=args.batch_size, shuffle=True,
                                       num_workers=args.workers, drop_last=True)
-    unlabeled_train_loader = DataLoader(unlabeled_train_dataset, batch_size=args.batch_size, shuffle=True,
+    unlabeled_train_loader = DataLoader(strong_augmented_unlabeled_dataset, batch_size=args.batch_size, shuffle=True,
                                         num_workers=args.workers, drop_last=True)
     labeled_train_iter = ForeverDataIterator(labeled_train_loader)
     unlabeled_train_iter = ForeverDataIterator(unlabeled_train_loader)
@@ -115,6 +159,9 @@ def main(args: argparse.Namespace):
         classifier_teacher.load_state_dict(checkpoint)
         classifier_teacher.eval()
         classifier_teacher.as_teacher_model = True
+
+        print('compute outputs of the teacher network')
+        teacher_output = calc_teacher_output(classifier_teacher, weak_augmented_unlabeled_dataset)
 
     # define optimizer and lr scheduler
     if args.lr_scheduler == 'exp':
@@ -142,7 +189,7 @@ def main(args: argparse.Namespace):
 
         # train for one epoch
         if args.pretrained_teacher:
-            train(labeled_train_iter, unlabeled_train_iter, classifier, classifier_teacher, optimizer, lr_scheduler,
+            train(labeled_train_iter, unlabeled_train_iter, classifier, teacher_output, optimizer, lr_scheduler,
                   epoch, args)
         else:
             utils.empirical_risk_minimization(labeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args,
@@ -163,7 +210,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: ForeverDataIterator, model, teacher,
+def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: ForeverDataIterator, model, teacher_output,
           optimizer: SGD, lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':2.2f')
     data_time = AverageMeter('Data', ':2.1f')
@@ -189,8 +236,8 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         x_l_strong = x_l_strong.to(device)
         labels_l = labels_l.to(device)
 
-        (x_u, x_u_strong), _ = next(unlabeled_train_iter)
-        x_u = x_u.to(device)
+        idx_u, (x_u_strong, _) = next(unlabeled_train_iter)
+        idx_u = idx_u.to(device)
         x_u_strong = x_u_strong.to(device)
 
         # measure data loading time
@@ -207,8 +254,7 @@ def train(labeled_train_iter: ForeverDataIterator, unlabeled_train_iter: Forever
         cls_loss.backward()
 
         # self training loss
-        with torch.no_grad():
-            y_u = teacher(x_u)
+        y_u = teacher_output[idx_u]
         y_u_strong = model(x_u_strong)
         self_training_loss = args.trade_off_self_training * self_training_criterion(y_u_strong / args.T, y_u / args.T)
         self_training_loss.backward()
