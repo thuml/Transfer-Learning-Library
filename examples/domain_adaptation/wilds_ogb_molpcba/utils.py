@@ -1,3 +1,7 @@
+"""
+@author: Jiaxin Li
+@contact: thulijx@gmail.com
+"""
 import tqdm
 import sys
 
@@ -9,6 +13,7 @@ import wilds
 
 sys.path.append('../../..')
 import gin as models
+
 
 def reduced_bce_logit_loss(y_pred, y_target):
     """
@@ -23,7 +28,8 @@ def reduced_bce_logit_loss(y_pred, y_target):
     metrics = loss(y_pred, y_target)
     return metrics.mean()
 
-def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled', ), test_list=('test',),
+
+def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled',), test_list=('test',),
                 transform_train=None, transform_test=None, use_unlabeled=True, verbose=True):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
     train_labeled_dataset = labeled_dataset.get_subset('train', transform=transform_train)
@@ -63,7 +69,7 @@ def get_dataset(dataset_name, root, unlabeled_list=('test_unlabeled', ), test_li
 
 
 def get_model_names():
-    return sorted(name for name in models.__dict__ if 
+    return sorted(name for name in models.__dict__ if
                   name.islower() and not name.startswith('__') and callable(models.__dict__[name]))
 
 
