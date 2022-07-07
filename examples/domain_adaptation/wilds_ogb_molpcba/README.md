@@ -1,8 +1,8 @@
-# Unsupervised Domain Adapatation for WILDS (Molecule classification)
+# Unsupervised Domain Adaptation for WILDS (Molecule classification)
 
 ## Installation
 
-It's suggeste to use **pytorch==1.10.1** in order to reproduce the benchmark results.
+It's suggested to use **pytorch==1.10.1** in order to reproduce the benchmark results.
 
 Then, you need to run
 
