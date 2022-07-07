@@ -17,6 +17,7 @@ import utils
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.meter import AverageMeter
 
+
 def main(args):
     logger = CompleteLogger(args.log, args.phase)
     writer = SummaryWriter(args.log)
@@ -37,11 +38,11 @@ def main(args):
     val_transform = None
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
-    
+
     train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
         utils.get_dataset('ogb-molpcba', args.data_dir, args.unlabeled_list, args.test_list,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled, verbose=True)
-    
+
     # create model
     print("=> creating model '{}'".format(args.arch))
     model = utils.get_model(args.arch, args.num_classes)
@@ -56,7 +57,8 @@ def main(args):
     train_labeled_sampler = None
     train_labeled_loader = DataLoader(
         train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, collate_fn=train_labeled_dataset.collate)
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler,
+        collate_fn=train_labeled_dataset.collate)
 
     # define loss function (criterion)
     criterion = utils.reduced_bce_logit_loss
@@ -97,6 +99,7 @@ def main(args):
     logger.close()
     writer.close()
 
+
 def train(train_loader, model, criterion, optimizer, epoch, writer, args):
     batch_time = AverageMeter('Time', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -106,7 +109,7 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
     end = time.time()
 
     for i, (input, target, metadata) in enumerate(train_loader):
-        
+
         # compute output
         output = model(input.cuda())
         loss = criterion(output, target.cuda())
@@ -127,9 +130,9 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             writer.add_scalar('train/loss', loss, global_step)
 
             print('Epoch: [{0}][{1}/{2}]\t'
-                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                    'Speed {3:.3f} ({4:.3f})\t'
-                    'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Speed {3:.3f} ({4:.3f})\t'
+                  'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
                 epoch, i, len(train_loader),
                 args.batch_size[0] / batch_time.val,
                 args.batch_size[0] / batch_time.avg,
