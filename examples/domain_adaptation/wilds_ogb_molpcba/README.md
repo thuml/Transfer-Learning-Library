@@ -10,6 +10,8 @@ Then, you need to run
 pip install -r requirements.txt
 ```
 
+At last, you need to install torch_sparse following `https://github.com/rusty1s/pytorch_sparse`.
+
 ## Dataset
 
 Following datasets can be downloaded automatically:
