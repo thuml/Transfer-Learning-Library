@@ -1,2 +1,4 @@
 wilds
+tensorflow
 tensorboard
+transformers

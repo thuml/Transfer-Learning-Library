@@ -1,3 +1,7 @@
+"""
+@author: Jiaxin Li
+@contact: thulijx@gmail.com
+"""
 import argparse
 import shutil
 import time
@@ -164,10 +168,10 @@ def train(train_loader, model, criterion, optimizer, epoch, writer, args):
             writer.add_scalar("train/loss", loss, global_step)
 
             print('Epoch: [{0}][{1}/{2}]\t'
-                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                    'Speed {3:.3f} ({4:.3f})\t'
-                    'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
-                    'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Speed {3:.3f} ({4:.3f})\t'
+                  'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
+                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'.format(
                 epoch, i, len(train_loader),
                 args.batch_size[0] / batch_time.val,
                 args.batch_size[0] / batch_time.avg,
@@ -186,12 +190,12 @@ if __name__ == '__main__':
                              ' (default: civilcomments)')
     parser.add_argument('--unlabeled-list', nargs='+', default=[])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
-    parser.add_argument('--metric', default='acc_wg', 
+    parser.add_argument('--metric', default='acc_wg',
                         help='metric used to evaluate model performance. (default: worst group accuracy)')
     parser.add_argument('--uniform-over-groups', action='store_true',
                         help='sample examples such that batches are uniform over groups')
     parser.add_argument('--groupby-fields', nargs='+',
-                        help='Group data by given fields. It means that items which have the same' 
+                        help='Group data by given fields. It means that items which have the same'
                              'values in those fields should be grouped.')
     parser.add_argument('--use-unlabeled', action='store_true',
                         help='Whether use unlabeled data for training or not.')
@@ -206,8 +210,8 @@ if __name__ == '__main__':
     # Learning rate schedule parameters
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR', help='Learning rate.')
-    parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
-                        metavar='W', help='weight decay (default: 1e-4)')
+    parser.add_argument('--weight-decay', '--wd', default=0.01, type=float,
+                        metavar='W', help='weight decay (default: 0.01)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -226,6 +230,5 @@ if __name__ == '__main__':
     parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis'm only analysis the model.")
-
     args = parser.parse_args()
     main(args)
