@@ -1,3 +1,7 @@
+"""
+@author: Jiaxin Li
+@contact: thulijx@gmail.com
+"""
 import tqdm
 import sys
 
@@ -19,7 +23,6 @@ class Regressor(nn.Module):
 
     Args:
         backbone (torch.nn.Module): Any backbone to extract 2-d features from data
-        num_values (int): Number of regression values.
         bottleneck (torch.nn.Module, optional): Any bottleneck layer. Use no bottleneck by default
         bottleneck_dim (int, optional): Feature dimension of the bottleneck layer. Default: -1
         head (torch.nn.Module, optional): Any regressor head. Use :class:`torch.nn.Linear` by default
@@ -49,11 +52,10 @@ class Regressor(nn.Module):
 
     """
 
-    def __init__(self, backbone: nn.Module, num_values: int, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1, head: Optional[nn.Module] = None, finetune=True, pool_layer=None):
+    def __init__(self, backbone: nn.Module, bottleneck: Optional[nn.Module] = None, bottleneck_dim: Optional[int] = -1,
+                 head: Optional[nn.Module] = None, finetune=True, pool_layer=None):
         super(Regressor, self).__init__()
         self.backbone = backbone
-        self.num_values = num_values
         if pool_layer is None:
             self.pool_layer = nn.Sequential(
                 nn.AdaptiveAvgPool2d(output_size=(1, 1)),
@@ -70,7 +72,7 @@ class Regressor(nn.Module):
             self._features_dim = bottleneck_dim
 
         if head is None:
-            self.head = nn.Linear(self._features_dim, num_values)
+            self.head = nn.Linear(self._features_dim, 1)
         else:
             self.head = head
         self.finetune = finetune
@@ -108,7 +110,7 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
                 verbose=True, **kwargs):
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, split_scheme=split_scheme, **kwargs)
     train_labeled_dataset = labeled_dataset.get_subset("train", transform=transform_train)
-    
+
     if use_unlabeled:
         unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
         train_unlabeled_datasets = [
@@ -118,17 +120,14 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
         train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
     else:
         unlabeled_list = []
-        unlabeled_dataset = None
         train_unlabeled_datasets = []
         train_unlabeled_dataset = None
-    
+
     test_datasets = [
         labeled_dataset.get_subset(t, transform=transform_test)
         for t in test_list
     ]
 
-    # Set num_classes to 1 for regression tasks.
-    num_classes = 1 if labeled_dataset.n_classes is None else labeled_dataset.n_classes
     num_channels = labeled_dataset.get_input(0).size()[0]
 
     if verbose:
@@ -137,17 +136,17 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
                         [train_labeled_dataset, ] + train_unlabeled_datasets + test_datasets):
             print("\t{}:{}".format(n, len(d)))
 
-    return train_labeled_dataset, train_unlabeled_dataset, test_datasets, num_classes, num_channels
+    return train_labeled_dataset, train_unlabeled_dataset, test_datasets, num_channels
 
 
 def get_model_names():
-    return sorted(name for name in models.__dict__ if 
+    return sorted(name for name in models.__dict__ if
                   name.islower() and not name.startswith('__') and callable(models.__dict__[name]))
 
 
-def get_model(arch, num_classes, num_channels):
+def get_model(arch, num_channels):
     if arch in models.__dict__:
-        model = models.__dict__[arch](num_classes=num_classes, num_channels=num_channels)
+        model = models.__dict__[arch](num_channels=num_channels)
     else:
         raise ValueError('{} is not supported'.format(arch))
     return model
@@ -176,11 +175,13 @@ def collate_list(vec):
     else:
         raise TypeError("Elements of the list to collate must be tensors or dicts.")
 
+
 def reduce_tensor(tensor, world_size):
     rt = tensor.clone()
     dist.all_reduce(rt, op=dist.reduce_op.SUM)
     rt /= world_size
     return rt
+
 
 def validate(val_dataset, model, epoch, writer, args):
     val_sampler = None

@@ -1,3 +1,7 @@
+"""
+@author: Jiaxin Li
+@contact: thulijx@gmail.com
+"""
 import argparse
 import os
 import shutil
@@ -11,7 +15,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.tensorboard import SummaryWriter
-import wilds
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -67,7 +70,7 @@ def main(args):
         memory_format = torch.contiguous_format
 
     # Data loading code
-    # Images in povertyMap dataset have 8 channels and traditional data augmentataion
+    # Images in povertyMap dataset have 8 channels and traditional data augmentation
     # methods have no effect on performance.
     train_transform = None
     val_transform = None
@@ -75,7 +78,7 @@ def main(args):
         print("train_transform: ", train_transform)
         print("val_transform: ", val_transform)
 
-    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.num_channels = \
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_channels = \
         utils.get_dataset('poverty', args.data_dir, args.unlabeled_list, args.test_list, args.split_scheme,
                           train_transform, val_transform, use_unlabeled=args.use_unlabeled,
                           verbose=args.local_rank == 0, fold=args.fold)
@@ -83,9 +86,9 @@ def main(args):
     # create model
     if args.local_rank == 0:
         print("=> creating model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch, args.num_classes, args.num_channels)
+    backbone = utils.get_model(args.arch, args.num_channels)
     pool_layer = nn.Identity() if args.no_pool else None
-    model = Regressor(backbone, args.num_classes, pool_layer=pool_layer, finetune=False)
+    model = Regressor(backbone, pool_layer=pool_layer, finetune=False)
 
     if args.sync_bn:
         import apex
@@ -238,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('--metric', default='r_wg',
                         help='metric used to evaluate model performance.'
                              '(default: worst-U/R Pearson r)')
-    parser.add_argument('--split_scheme', type=str,
+    parser.add_argument('--split-scheme', type=str,
                         help='Identifies how the train/val/test split is constructed.'
                              'Choices are dataset-specific.')
     parser.add_argument('--fold', type=str, default='A', choices=['A', 'B', 'C', 'D', 'E'],
@@ -260,7 +263,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('--gamma', type=int, default=0.96, help='parameter for StepLR scheduler')
-    parser.add_argument('--step_size', type=int, default=1, help='parameter for StepLR scheduler')
+    parser.add_argument('--step-size', type=int, default=1, help='parameter for StepLR scheduler')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -274,8 +277,8 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
+    parser.add_argument('--local-rank', default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument('--sync-bn', action='store_true',
                         help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
     parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
