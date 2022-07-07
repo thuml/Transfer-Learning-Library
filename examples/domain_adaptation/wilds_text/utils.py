@@ -1,3 +1,7 @@
+"""
+@author: Jiaxin Li
+@contact: thulijx@gmail.com
+"""
 import tqdm
 import sys
 
@@ -69,7 +73,6 @@ def get_dataset(dataset_name, root, unlabeled_list=('extra_unlabeled',), test_li
         train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
     else:
         unlabeled_list = []
-        unlabeled_dataset = None
         train_unlabeled_datasets = []
         train_unlabeled_dataset = None
 
