@@ -112,7 +112,7 @@ def main(args):
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 pool_layer=pool_layer, finetune=not args.scratch)
+                       pool_layer=pool_layer, finetune=not args.scratch)
 
     if args.sync_bn:
         import apex
@@ -198,7 +198,8 @@ def main(args):
         print(lr_scheduler.get_last_lr())
         writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
         # train for one epoch
-        train(train_labeled_loader, train_unlabeled_loader, model, criterion, mkmmd_loss, optimizer, epoch, writer, args)
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, mkmmd_loss, optimizer, epoch, writer,
+              args)
 
         # evaluate on validation set
         for n, d in zip(args.test_list, test_datasets):
@@ -303,7 +304,7 @@ if __name__ == '__main__':
                          if name.islower() and not name.startswith("__")
                          and callable(models.__dict__[name]))
 
-    parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+    parser = argparse.ArgumentParser(description='DAN')
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
                         help='root path of dataset')
@@ -358,7 +359,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('--min-lr', type=float, default=1e-6, metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0 (1e-5)')
+                        help='lower lr bound for cyclic schedulers that hit 0 (1e-6)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -372,14 +373,14 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
+    parser.add_argument("--local-rank", default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument('--sync-bn', action='store_true',
                         help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
     parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default=None)
     parser.add_argument('--channels-last', type=bool, default=False)
-    parser.add_argument("--log", type=str, default='src_only',
+    parser.add_argument("--log", type=str, default='dan',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
@@ -387,4 +388,3 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
-

@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from torch.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from torch.nn.modules.instancenorm import InstanceNorm1d, InstanceNorm2d, InstanceNorm3d
 
-
 sys.path.append('../../..')
 from tllib.utils.meter import AverageMeter, ProgressMeter
 
@@ -63,4 +62,3 @@ def validate(val_loader, model, args, factors, device):
             print("{} MAE {mae.avg:6.3f}".format(factor, mae=mae_losses[i]))
         mean_mae = sum(l.avg for l in mae_losses) / len(factors)
     return mean_mae
-

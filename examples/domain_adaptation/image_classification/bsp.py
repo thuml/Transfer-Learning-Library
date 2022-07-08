@@ -226,7 +226,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DANN for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='BSP for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
-                        help='number of total epochs(pretrain) to run')
+                        help='number of total epochs(pretrain) to run (default: 3)')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,

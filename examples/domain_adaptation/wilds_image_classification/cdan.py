@@ -112,7 +112,7 @@ def main(args):
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
-                                 pool_layer=pool_layer, finetune=not args.scratch)
+                       pool_layer=pool_layer, finetune=not args.scratch)
     features_dim = model.features_dim
 
     if args.randomized:
@@ -138,10 +138,10 @@ def main(args):
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
     (model, domain_discri), optimizer = amp.initialize([model, domain_discri], optimizer,
-                                      opt_level=args.opt_level,
-                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
-                                      loss_scale=args.loss_scale
-                                      )
+                                                       opt_level=args.opt_level,
+                                                       keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                                       loss_scale=args.loss_scale
+                                                       )
 
     # Use cosine annealing learning rate strategy
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
@@ -207,7 +207,8 @@ def main(args):
             print(lr_scheduler.get_last_lr())
             writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
         # train for one epoch
-        train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv, optimizer, epoch, writer, args)
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv, optimizer, epoch, writer,
+              args)
 
         # evaluate on validation set
         for n, d in zip(args.test_list, test_datasets):
@@ -318,14 +319,14 @@ if __name__ == '__main__':
                          if name.islower() and not name.startswith("__")
                          and callable(models.__dict__[name]))
 
-    parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+    parser = argparse.ArgumentParser(description='CDAN')
     # Dataset parameters
     parser.add_argument('data_dir', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='fmow', choices=wilds.supported_datasets,
                         help='dataset: ' + ' | '.join(wilds.supported_datasets) +
                              ' (default: fmow)')
-    parser.add_argument('--unlabeled-list', nargs='+', default=["test_unlabeled",])
+    parser.add_argument('--unlabeled-list', nargs='+', default=["test_unlabeled", ])
     parser.add_argument('--test-list', nargs='+', default=["val", "test"])
     parser.add_argument('--metric', default="acc_worst_region")
     parser.add_argument('--img-size', type=int, default=(224, 224), metavar='N', nargs='+',
@@ -336,7 +337,7 @@ if __name__ == '__main__':
                         help='Image resize interpolation type (overrides model)')
     parser.add_argument('--scale', type=float, nargs='+', default=[0.5, 1.0], metavar='PCT',
                         help='Random resize scale (default: 0.08 1.0)')
-    parser.add_argument('--ratio', type=float, nargs='+', default=[3./4., 4./3.], metavar='RATIO',
+    parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
                         help='Random resize aspect ratio (default: 0.75 1.33)')
     parser.add_argument('--hflip', type=float, default=0.5,
                         help='Horizontal flip training aug probability')
@@ -375,7 +376,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)')
     parser.add_argument('--min-lr', type=float, default=1e-6, metavar='LR',
-                        help='lower lr bound for cyclic schedulers that hit 0 (1e-5)')
+                        help='lower lr bound for cyclic schedulers that hit 0 (1e-6)')
     # training parameters
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
@@ -389,14 +390,14 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', 0), type=int)
-    parser.add_argument('--sync_bn', action='store_true',
+    parser.add_argument("--local-rank", default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument('--sync-bn', action='store_true',
                         help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
     parser.add_argument('--keep-batchnorm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default=None)
     parser.add_argument('--channels-last', type=bool, default=False)
-    parser.add_argument("--log", type=str, default='src_only',
+    parser.add_argument("--log", type=str, default='cdan',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
@@ -404,4 +405,3 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
-

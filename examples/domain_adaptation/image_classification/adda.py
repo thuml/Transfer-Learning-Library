@@ -278,11 +278,11 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
-                        help='number of total epochs(pretrain) to run')
+                        help='number of total epochs (pretrain) to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -291,7 +291,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='addagrl',
+    parser.add_argument("--log", type=str, default='adda',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

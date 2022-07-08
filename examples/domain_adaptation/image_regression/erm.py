@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -19,7 +18,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
 from tllib.modules.regressor import Regressor
 import tllib.vision.datasets.regression as datasets
 import tllib.vision.models as models
@@ -27,9 +26,6 @@ from tllib.utils.data import ForeverDataIterator
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
-from utils import convert_model, validate
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -64,10 +60,12 @@ def main(args: argparse.Namespace):
     ])
 
     dataset = datasets.__dict__[args.data]
-    train_source_dataset = dataset(root=args.root, task=args.source, split='train', download=True, transform=train_transform)
+    train_source_dataset = dataset(root=args.root, task=args.source, split='train', download=True,
+                                   transform=train_transform)
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
-    train_target_dataset = dataset(root=args.root, task=args.target, split='train', download=True, transform=train_transform)
+    train_target_dataset = dataset(root=args.root, task=args.target, split='train', download=True,
+                                   transform=train_transform)
     train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
     val_dataset = dataset(root=args.root, task=args.target, split='test', download=True, transform=val_transform)
@@ -80,13 +78,13 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = models.__dict__[args.arch](pretrained=True)
     if args.normalization == 'IN':
-        backbone = convert_model(backbone)
+        backbone = utils.convert_model(backbone)
     num_factors = train_source_dataset.num_factors
     regressor = Regressor(backbone=backbone, num_factors=num_factors).to(device)
     print(regressor)
     # define optimizer and lr scheduler
     optimizer = SGD(regressor.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # resume from the best checkpoint
     if args.phase != 'train':
@@ -113,7 +111,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        mae = validate(val_loader, regressor, args, train_source_dataset.factors, device)
+        mae = utils.validate(val_loader, regressor, args, train_source_dataset.factors, device)
         print(mae)
         return
 
@@ -126,7 +124,7 @@ def main(args: argparse.Namespace):
               lr_scheduler, epoch, args)
 
         # evaluate on validation set
-        mae = validate(val_loader, regressor, args, train_source_dataset.factors, device)
+        mae = utils.validate(val_loader, regressor, args, train_source_dataset.factors, device)
 
         # remember best mae and save checkpoint
         torch.save(regressor.state_dict(), logger.get_checkpoint_path('latest'))
@@ -228,7 +226,7 @@ if __name__ == '__main__':
     # training parameters
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
-                        help='mini-batch size (default: 32)')
+                        help='mini-batch size (default: 36)')
     parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.0001, type=float, help='parameter for lr scheduler')
@@ -238,7 +236,7 @@ if __name__ == '__main__':
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
@@ -250,8 +248,7 @@ if __name__ == '__main__':
     parser.add_argument("--log", type=str, default='src_only',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
-                        help="When phase is 'test', only test the model." 
+                        help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

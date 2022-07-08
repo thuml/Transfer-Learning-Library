@@ -69,7 +69,7 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
     if verbose:
         print("Datasets")
         for n, d in zip(["train"] + unlabeled_list + test_list,
-                        [train_labeled_dataset,] + train_unlabeled_datasets + test_datasets):
+                        [train_labeled_dataset, ] + train_unlabeled_datasets + test_datasets):
             print("\t{}:{}".format(n, len(d)))
         print("\t#classes:", num_classes)
 
@@ -104,7 +104,8 @@ def get_train_transform(img_size, scale=None, ratio=None, hflip=0.5, vflip=0.,
                         color_jitter=0.4, auto_augment=None, interpolation='bilinear'):
     scale = tuple(scale or (0.08, 1.0))  # default imagenet scale range
     ratio = tuple(ratio or (3. / 4., 4. / 3.))  # default imagenet ratio range
-    transforms_list = [transforms.RandomResizedCrop(img_size, scale=scale, ratio=ratio, interpolation=_pil_interp(interpolation))]
+    transforms_list = [
+        transforms.RandomResizedCrop(img_size, scale=scale, ratio=ratio, interpolation=_pil_interp(interpolation))]
     if hflip > 0.:
         transforms_list += [transforms.RandomHorizontalFlip(p=hflip)]
     if vflip > 0.:
@@ -202,7 +203,6 @@ def validate(val_dataset, model, epoch, writer, args):
     model.eval()
 
     for input, target, metadata in tqdm.tqdm(val_loader):
-
         # compute output
         with torch.no_grad():
             output = model(input.cuda()).cpu()
@@ -278,7 +278,7 @@ def plot_classes_preds(images, labels, outputs, class_names, metadata, metadata_
     fig = plt.figure(figsize=(12, nrows * 4))
     domains = get_domain_names(metadata, metadata_map)
     for idx in np.arange(min(nrows * 4, len(images))):
-        ax = fig.add_subplot(nrows, 4, idx+1, xticks=[], yticks=[])
+        ax = fig.add_subplot(nrows, 4, idx + 1, xticks=[], yticks=[])
         matplotlib_imshow(images[idx])
         ax.set_title("{0}, {1:.1f}%\n(label: {2}\ndomain: {3})".format(
             class_names[preds[idx]],
