@@ -30,11 +30,12 @@ from tllib.utils.meter import AverageMeter
 
 
 def main(args):
-    logger = CompleteLogger(args.log, args.phase)
-    writer = SummaryWriter(args.log)
-    pprint.pprint(args)
-
+    writer = None
     if args.local_rank == 0:
+        logger = CompleteLogger(args.log, args.phase)
+        if args.phase == 'train':
+            writer = SummaryWriter(args.log)
+        pprint.pprint(args)
         print("opt_level = {}".format(args.opt_level))
         print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
         print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
@@ -173,8 +174,6 @@ def main(args):
 
     print('best val performance: {:.3f}'.format(best_val_metric))
     print('test performance: {:.3f}'.format(test_metric))
-    logger.close()
-    writer.close()
 
 
 def train(train_loader, model, optimizer, epoch, writer, args):
@@ -277,7 +276,7 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--local-rank', default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument('--local_rank', default=os.getenv('LOCAL_RANK', 0), type=int)
     parser.add_argument('--sync-bn', action='store_true',
                         help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)

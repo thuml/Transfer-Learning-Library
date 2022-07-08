@@ -40,15 +40,17 @@ from tllib.utils.metric import accuracy
 
 
 def main(args):
-    logger = CompleteLogger(args.log, args.phase)
-    writer = SummaryWriter(args.log)
-    pprint.pprint(args)
+    writer = None
+    if args.local_rank == 0:
+        logger = CompleteLogger(args.log, args.phase)
+        if args.phase == 'train':
+            writer = SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+        print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
 
-    print("opt_level = {}".format(args.opt_level))
-    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
-    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
-
-    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+        print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
     best_prec1 = 0
@@ -215,9 +217,6 @@ def main(args):
             if is_best:
                 shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
 
-    logger.close()
-    writer.close()
-
 
 def train(train_labeled_loader, train_unlabeled_loader, model, criterion, mkmmd_loss, optimizer, epoch, writer, args):
     batch_time = AverageMeter('Time', ':3.1f')
@@ -373,7 +372,7 @@ if __name__ == '__main__':
     parser.add_argument('--deterministic', action='store_true')
     parser.add_argument('--seed', default=0, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument("--local-rank", default=os.getenv('LOCAL_RANK', 0), type=int)
+    parser.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', 0), type=int)
     parser.add_argument('--sync-bn', action='store_true',
                         help='enabling apex sync BN.')
     parser.add_argument('--opt-level', type=str)
