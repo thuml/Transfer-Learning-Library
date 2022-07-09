@@ -297,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument('--interpolation', default='bicubic', type=str, metavar='NAME',
                         help='Image resize interpolation type (overrides model)')
     parser.add_argument('--scale', type=float, nargs='+', default=[0.5, 1.0], metavar='PCT',
-                        help='Random resize scale (default: 0.08 1.0)')
+                        help='Random resize scale (default: 0.5 1.0)')
     parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
                         help='Random resize aspect ratio (default: 0.75 1.33)')
     parser.add_argument('--hflip', type=float, default=0.5,
