@@ -1,10 +1,11 @@
 # Unsupervised Domain Adaptation for Image Classification
 
 ## Installation
+
 It’s suggested to use **pytorch==1.7.1** and torchvision==0.8.2 in order to reproduce the benchmark results.
 
-Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
-You also need to install timm to use PyTorch-Image-Models.
+Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models). You
+also need to install timm to use PyTorch-Image-Models.
 
 ```
 pip install timm
@@ -14,7 +15,8 @@ pip install timm
 
 Following datasets can be downloaded automatically:
 
-- [MNIST](http://yann.lecun.com/exdb/mnist/), [SVHN](http://ufldl.stanford.edu/housenumbers/), [USPS](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html#usps) 
+- [MNIST](http://yann.lecun.com/exdb/mnist/), [SVHN](http://ufldl.stanford.edu/housenumbers/)
+  , [USPS](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html#usps)
 - [Office31](https://www.cc.gatech.edu/~judy/domainadapt/)
 - [OfficeCaltech](https://www.cc.gatech.edu/~judy/domainadapt/)
 - [OfficeHome](https://www.hemanthdv.org/officeHomeDataset.html)
@@ -22,11 +24,13 @@ Following datasets can be downloaded automatically:
 - [DomainNet](http://ai.bu.edu/M3SDA/)
 
 You need to prepare following datasets manually if you want to use them:
+
 - [ImageNet](https://www.image-net.org/)
 - [ImageNetR](https://github.com/hendrycks/imagenet-r)
 - [ImageNet-Sketch](https://github.com/HaohanWang/ImageNet-Sketch)
 
-and prepare them following [Documentation for ImageNetR](/common/vision/datasets/imagenet_r.py) and [ImageNet-Sketch](/common/vision/datasets/imagenet_sketch.py).
+and prepare them following [Documentation for ImageNetR](/common/vision/datasets/imagenet_r.py)
+and [ImageNet-Sketch](/common/vision/datasets/imagenet_sketch.py).
 
 ## Supported Methods
 
@@ -45,8 +49,8 @@ Supported methods include:
 
 ## Usage
 
-The shell files give the script to reproduce the benchmark with specified hyper-parameters.
-For example, if you want to train DANN on Office31, use the following script
+The shell files give the script to reproduce the benchmark with specified hyper-parameters. For example, if you want to
+train DANN on Office31, use the following script
 
 ```shell script
 # Train a DANN on Office-31 Amazon -> Webcam task using ResNet 50.
@@ -55,15 +59,16 @@ For example, if you want to train DANN on Office31, use the following script
 CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W
 ```
 
-Note that ``-s`` specifies the source domain, ``-t`` specifies the target domain, and ``--log`` specifies where to store results.
+Note that ``-s`` specifies the source domain, ``-t`` specifies the target domain, and ``--log`` specifies where to store
+results.
 
-After running the above command, it will download ``Office-31`` datasets from the Internet if it's the first time you run the code. Directory that stores datasets will be named as
+After running the above command, it will download ``Office-31`` datasets from the Internet if it's the first time you
+run the code. Directory that stores datasets will be named as
 ``examples/domain_adaptation/image_classification/data/<dataset name>``.
 
 If everything works fine, you will see results in following format::
 
     Epoch: [1][ 900/1000]	Time  0.60 ( 0.69)	Data  0.22 ( 0.31)	Loss   0.74 (  0.85)	Cls Acc 96.9 (95.1)	Domain Acc 64.1 (62.6)
-
 
 You can also watch these results in the log file ``logs/dann/Office31_A2W/log.txt``.
 
@@ -73,20 +78,18 @@ After training, you can test your algorithm's performance by passing in ``--phas
 CUDA_VISIBLE_DEVICES=0 python dann.py data/office31 -d Office31 -s A -t W -a resnet50 --epochs 20 --seed 1 --log logs/dann/Office31_A2W --phase test
 ```
 
-
 ## Experiment and Results
 
 **Notations**
+
 - ``Origin`` means the accuracy reported by the original paper.
 - ``Avg`` is the accuracy reported by `TLlib`.
 - ``ERM`` refers to the model trained with data from the source domain.
 - ``Oracle`` refers to the model trained with data from the target domain.
 
-
-We found that the accuracies of adversarial methods (including DANN, ADDA, CDAN, MCD, BSP and MDD) are not stable
-even after the random seed is fixed, thus we repeat running adversarial methods on *Office-31* and *VisDA-2017*
+We found that the accuracies of adversarial methods (including DANN, ADDA, CDAN, MCD, BSP and MDD) are not stable even
+after the random seed is fixed, thus we repeat running adversarial methods on *Office-31* and *VisDA-2017*
 for three times and report their average accuracy.
-
 
 ### Office-31 accuracy on ResNet-50
 
@@ -162,8 +165,8 @@ for three times and report their average accuracy.
 | MDD         | 42.9 | 59.5 | 47.5 | 48.6 | 59.4 | 42.6 | 58.3 | 53.7 | 46.2 | 58.7 | 46.5 | 57.7 | 51.8 |
 | MCC         | 37.7 | 55.7 | 42.6 | 45.4 | 59.8 | 39.9 | 54.4 | 53.1 | 37.0 | 58.1 | 46.3 | 56.2 | 48.9 |
 
-
 ### DomainNet accuracy on ResNet-101 (Multi-Source)
+
 | Methods     | Origin | Avg  | :c   | :i   | :p   | :q   | :r   | :s   |
 |-------------|--------|------|------|------|------|------|------|------|
 | ERM         | 32.9   | 47.0 | 64.9 | 25.2 | 54.4 | 16.9 | 68.2 | 52.3 |
@@ -185,7 +188,6 @@ for three times and report their average accuracy.
 
 ## Visualization
 
-
 After training `DANN`, run the following command
 
 ```
@@ -200,15 +202,15 @@ Following are the t-SNE of representations from ResNet50 trained on source domai
 <img src="./fig/resnet_A2W.png" width="300"/>
 <img src="./fig/dann_A2W.png" width="300"/>
 
-
 ## TODO
+
 1. Support self-training methods
 2. Support translation methods
 3. Add results on ViT
 4. Add results on ImageNet
-5. Add more data augmentation options
 
 ## Citation
+
 If you use these methods in your research, please consider citing.
 
 ```

@@ -5,12 +5,14 @@
 import sys
 import os.path as osp
 import time
+from PIL import Image
 
 import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
+from timm.data.auto_augment import auto_augment_transform, rand_augment_transform
 
 sys.path.append('../../..')
 import tllib.vision.datasets as datasets
@@ -70,13 +72,18 @@ def get_dataset(dataset_name, root, source, target, train_source_transform, val_
 
         def concat_dataset(tasks, start_idx, **kwargs):
             # return ConcatDataset([dataset(task=task, **kwargs) for task in tasks])
-            return MultipleDomainsDataset([dataset(task=task, **kwargs) for task in tasks], tasks, domain_ids=list(range(start_idx, start_idx+len(tasks))))
+            return MultipleDomainsDataset([dataset(task=task, **kwargs) for task in tasks], tasks,
+                                          domain_ids=list(range(start_idx, start_idx + len(tasks))))
 
-        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform, start_idx=0)
-        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform, start_idx=len(source))
-        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform, start_idx=len(source))
+        train_source_dataset = concat_dataset(root=root, tasks=source, download=True, transform=train_source_transform,
+                                              start_idx=0)
+        train_target_dataset = concat_dataset(root=root, tasks=target, download=True, transform=train_target_transform,
+                                              start_idx=len(source))
+        val_dataset = concat_dataset(root=root, tasks=target, download=True, transform=val_transform,
+                                     start_idx=len(source))
         if dataset_name == 'DomainNet':
-            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform, start_idx=len(source))
+            test_dataset = concat_dataset(root=root, tasks=target, split='test', download=True, transform=val_transform,
+                                          start_idx=len(source))
         else:
             test_dataset = val_dataset
         class_names = train_source_dataset.datasets[0].classes
@@ -134,18 +141,20 @@ def validate(val_loader, model, args, device) -> float:
     return top1.avg
 
 
-def get_train_transform(resizing='default', random_horizontal_flip=True, random_color_jitter=False,
-                        resize_size=224, norm_mean=(0.485, 0.456, 0.406), norm_std=(0.229, 0.224, 0.225)):
+def get_train_transform(resizing='default', scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), random_horizontal_flip=True,
+                        random_color_jitter=False, resize_size=224, norm_mean=(0.485, 0.456, 0.406),
+                        norm_std=(0.229, 0.224, 0.225), auto_augment=None):
     """
     resizing mode:
         - default: resize the image to 256 and take a random resized crop of size 224;
         - cen.crop: resize the image to 256 and take the center crop of size 224;
         - res: resize the image to 224;
     """
+    transformed_img_size = 224
     if resizing == 'default':
         transform = T.Compose([
             ResizeImage(256),
-            T.RandomResizedCrop(224)
+            T.RandomResizedCrop(224, scale=scale, ratio=ratio)
         ])
     elif resizing == 'cen.crop':
         transform = T.Compose([
@@ -159,12 +168,23 @@ def get_train_transform(resizing='default', random_horizontal_flip=True, random_
         ])
     elif resizing == 'res.':
         transform = ResizeImage(resize_size)
+        transformed_img_size = resize_size
     else:
         raise NotImplementedError(resizing)
     transforms = [transform]
     if random_horizontal_flip:
         transforms.append(T.RandomHorizontalFlip())
-    if random_color_jitter:
+    if auto_augment:
+        aa_params = dict(
+            translate_const=int(transformed_img_size * 0.45),
+            img_mean=tuple([min(255, round(255 * x)) for x in norm_mean]),
+            interpolation=Image.BILINEAR
+        )
+        if auto_augment.startswith('rand'):
+            transforms.append(rand_augment_transform(auto_augment, aa_params))
+        else:
+            transforms.append(auto_augment_transform(auto_augment, aa_params))
+    elif random_color_jitter:
         transforms.append(T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5))
     transforms.extend([
         T.ToTensor(),

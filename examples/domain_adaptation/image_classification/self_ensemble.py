@@ -49,6 +49,8 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
+    # we find self ensemble is sensitive to data augmentation. The following
+    # data augmentation performs well for evaluated datasets
     normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     train_transform = T.Compose([
         ResizeImage(256),
@@ -255,16 +257,6 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
-    parser.add_argument('--train-resizing', type=str, default='default')
-    parser.add_argument('--val-resizing', type=str, default='default')
-    parser.add_argument('--resize-size', type=int, default=224,
-                        help='the image size after resizing')
-    parser.add_argument('--no-hflip', action='store_true',
-                        help='no random horizontal flipping during training')
-    parser.add_argument('--norm-mean', type=float, nargs='+',
-                        default=(0.485, 0.456, 0.406), help='normalization mean')
-    parser.add_argument('--norm-std', type=float, nargs='+',
-                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
