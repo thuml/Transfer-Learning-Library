@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import os.path as osp
 import shutil

@@ -12,9 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataset import Subset, ConcatDataset
-import torchvision
 import torchvision.transforms as T
-from torchvision.datasets.folder import default_loader
 import timm
 from timm.data.auto_augment import auto_augment_transform, rand_augment_transform
 
