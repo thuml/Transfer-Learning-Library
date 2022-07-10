@@ -44,14 +44,16 @@ def get_model(model_name, pretrain=True):
 
 
 def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_list=("test",),
-                transform_train=None, transform_test=None, verbose=True):
+                transform_train=None, transform_test=None, verbose=True, transform_train_target=None):
+    if transform_train_target is None:
+        transform_train_target = transform_train
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
     unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
     num_classes = labeled_dataset.n_classes
     train_labeled_dataset = labeled_dataset.get_subset("train", transform=transform_train)
 
     train_unlabeled_datasets = [
-        unlabeled_dataset.get_subset(u, transform=transform_train)
+        unlabeled_dataset.get_subset(u, transform=transform_train_target)
         for u in unlabeled_list
     ]
     train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
