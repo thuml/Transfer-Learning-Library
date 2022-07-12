@@ -22,5 +22,5 @@ CUDA_VISIBLE_DEVICES=0 python fixmatch.py data/office-home -d OfficeHome -s Rw -
 CUDA_VISIBLE_DEVICES=0 python fixmatch.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --lr 0.003 --bottleneck-dim 1024 --epochs 20 --seed 0 --log logs/fixmatch/OfficeHome_Rw2Pr
 
 # ResNet101, VisDA-2017, Single Source
-CUDA_VISIBLE_DEVICES=0 python fixmatch.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 \
-    --lr 0.003 --bottleneck-dim 2048 --epochs 20 -ub 64 --seed 0 --per-class-eval --train-resizing cen.crop --log logs/fixmatch/VisDA2017
+CUDA_VISIBLE_DEVICES=0 python fixmatch.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet101 --train-resizing cen.crop \
+    --lr 0.003 --threshold 0.8 --bottleneck-dim 2048 --epochs 20 -ub 64 --seed 0 --per-class-eval --log logs/fixmatch/VisDA2017
