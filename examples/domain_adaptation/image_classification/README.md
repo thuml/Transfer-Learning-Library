@@ -46,6 +46,7 @@ Supported methods include:
 - [Batch Spectral Penalization (BSP)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/batch-spectral-penalization-icml19.pdf)
 - [Margin Disparity Discrepancy (MDD)](https://arxiv.org/abs/1904.05801)
 - [Minimum Class Confusion (MCC)](https://arxiv.org/abs/1912.03699)
+- [FixMatch](https://arxiv.org/abs/2001.07685)
 
 ## Usage
 
@@ -106,6 +107,7 @@ for three times and report their average accuracy.
 | AFN     | 85.7   | 88.6 | 94.0  | 98.9  | 100.0 | 94.4  | 72.9  | 71.1  |
 | MDD     | 88.9   | 89.6 | 95.6  | 98.6  | 100.0 | 94.4  | 76.6  | 72.2  |
 | MCC     | 89.4   | 89.6 | 94.1  | 98.4  | 99.8  | 95.6  | 75.5  | 74.2  |
+| FixMatch| /      | 86.4 | 86.4  | 98.2  | 100.0 | 95.4  | 70.0  | 68.1  |
 
 ### Office-Home accuracy on ResNet-50
 
@@ -122,6 +124,7 @@ for three times and report their average accuracy.
 | AFN         | 67.3   | 68.2 | 53.2    | 72.7    | 76.8    | 65.0    | 71.3    | 72.3    | 65.0    | 51.4    | 77.9    | 72.3    | 57.8    | 82.4    |
 | MDD         | 68.1   | 69.7 | 56.2    | 75.4    | 79.6    | 63.5    | 72.1    | 73.8    | 62.5    | 54.8    | 79.9    | 73.5    | 60.9    | 84.5    |
 | MCC         | /      | 72.4 | 58.4    | 79.6    | 83.0    | 67.5    | 77.0    | 78.5    | 66.6    | 54.8    | 81.8    | 74.4    | 61.4    | 85.6    |
+| FixMatch    | /      | 70.8 | 56.4    | 76.4    | 79.9    | 65.3    | 73.8    | 71.2    | 67.2    | 56.4    | 80.6    | 74.9    | 63.5    | 84.3    |
 
 ### Office-Home accuracy on vit_base_patch16_224 (batch size 24)
 
@@ -151,6 +154,7 @@ for three times and report their average accuracy.
 | AFN         | 76.1   | 75.0 | 95.6  | 56.2  | 81.3 | 69.8 | 93.0  | 81.0  | 93.4  | 74.1   | 91.7  | 55.0   | 90.6  | 18.1  | 74.4 |
 | MDD         | /      | 82.0 | 88.3  | 62.8  | 85.2 | 69.9 | 91.9  | 95.1  | 94.4  | 81.2   | 93.8  | 89.8   | 84.1  | 47.9  | 79.8 |
 | MCC         | 78.8   | 83.6 | 95.3  | 85.8  | 77.1 | 68.0 | 93.9  | 92.9  | 84.5  | 79.5   | 93.6  | 93.7   | 85.3  | 53.8  | 80.4 |
+| FixMatch    | /      | 77.5 | 94.3  | 75.1  | 72.4 | 87.2 | 95.6  | 88.5  | 92.2  | 37.5   | 97.3  | 84.6   | 88.0  | 17.0  | 77.1 |
 
 ### DomainNet accuracy on ResNet-101
 
@@ -293,4 +297,12 @@ If you use these methods in your research, please consider citing.
     year={2020},
     booktitle={ECCV},
 }
+
+@inproceedings{FixMatch,
+    title={Fixmatch: Simplifying semi-supervised learning with consistency and confidence},
+    author={Sohn, Kihyuk and Berthelot, David and Carlini, Nicholas and Zhang, Zizhao and Zhang, Han and Raffel, Colin A and Cubuk, Ekin Dogus and Kurakin, Alexey and Li, Chun-Liang},
+    booktitle={NIPS},
+    year={2020}
+}
+
 ```
