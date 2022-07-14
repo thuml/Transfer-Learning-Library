@@ -2,7 +2,7 @@
 @author: Jiaxin Li
 @contact: thulijx@gmail.com
 """
-import tqdm
+import time
 import sys
 
 from typing import Tuple, Optional, List, Dict
@@ -13,9 +13,10 @@ from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
 import wilds
+import resnet_ms as models
 
 sys.path.append('../../..')
-import resnet_ms as models
+from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 class Regressor(nn.Module):
@@ -196,10 +197,17 @@ def validate(val_dataset, model, epoch, writer, args):
     all_y_pred = []
     all_metadata = []
 
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time],
+        prefix='Test: ')
+
     # switch to evaluate mode
     model.eval()
+    end = time.time()
 
-    for input, target, metadata in tqdm.tqdm(val_loader):
+    for i, (input, target, metadata) in enumerate(val_loader):
         # compute output
         with torch.no_grad():
             output = model(input.cuda()).cpu()
@@ -207,6 +215,13 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_true.append(target)
         all_y_pred.append(output)
         all_metadata.append(metadata)
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if args.local_rank == 0 and i % args.print_freq == 0:
+            progress.display(i)
 
     if args.local_rank == 0:
 

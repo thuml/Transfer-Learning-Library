@@ -2,10 +2,10 @@
 @author: Junguang Jiang
 @contact: JiangJunguang1123@outlook.com
 """
+import time
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import tqdm
 import sys
 
 import torch
@@ -25,6 +25,7 @@ import timm
 sys.path.append('../../..')
 
 from tllib.vision.transforms import Denormalize
+from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 def get_model_names():
@@ -201,10 +202,17 @@ def validate(val_dataset, model, epoch, writer, args):
     sampled_targets = []
     sampled_metadata = []
 
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time],
+        prefix='Test: ')
+
     # switch to evaluate mode
     model.eval()
+    end = time.time()
 
-    for input, target, metadata in tqdm.tqdm(val_loader):
+    for i, (input, target, metadata) in enumerate(val_loader):
         # compute output
         with torch.no_grad():
             output = model(input.cuda()).cpu()
@@ -217,6 +225,13 @@ def validate(val_dataset, model, epoch, writer, args):
         sampled_targets.append(target[0:1])
         sampled_outputs.append(output[0:1])
         sampled_metadata.append(metadata[0:1])
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if args.local_rank == 0 and i % args.print_freq == 0:
+            progress.display(i)
 
     if args.local_rank == 0:
         writer.add_figure(

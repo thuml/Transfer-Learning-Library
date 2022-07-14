@@ -2,7 +2,7 @@
 @author: Jiaxin Li
 @contact: thulijx@gmail.com
 """
-import tqdm
+import time
 import sys
 
 import torch
@@ -12,7 +12,9 @@ from transformers import DistilBertTokenizerFast
 from transformers import DistilBertForSequenceClassification
 
 import wilds
+
 sys.path.append('../../..')
+from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 class DistilBertClassifier(DistilBertForSequenceClassification):
@@ -147,10 +149,17 @@ def validate(val_dataset, model, epoch, writer, args):
     all_y_pred = []
     all_metadata = []
 
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time],
+        prefix='Test: ')
+
     # switch to evaluate mode
     model.eval()
+    end = time.time()
 
-    for input, target, metadata in tqdm.tqdm(val_loader):
+    for i, (input, target, metadata) in enumerate(val_loader):
         # compute output
         with torch.no_grad():
             output = model(input.cuda()).cpu()
@@ -158,6 +167,13 @@ def validate(val_dataset, model, epoch, writer, args):
         all_y_true.append(target)
         all_y_pred.append(output.argmax(1))
         all_metadata.append(metadata)
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if args.local_rank == 0 and i % args.print_freq == 0:
+            progress.display(i)
 
     # evaluate
     results = val_dataset.eval(
