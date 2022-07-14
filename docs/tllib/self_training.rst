@@ -113,3 +113,11 @@ FlexMatch
 .. autoclass:: tllib.self_training.flexmatch.DynamicThresholdingModule
     :members:
 
+.. _DST:
+
+Debiased Self-Training
+-----------------------------
+
+.. autoclass:: tllib.self_training.dst.ImageClassifier
+
+.. autoclass:: tllib.self_training.dst.WorstCaseEstimationLoss
