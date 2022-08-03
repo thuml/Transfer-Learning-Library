@@ -19,15 +19,15 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from dalib.adaptation.advent import Discriminator, DomainAdversarialEntropyLoss
-import common.vision.models.segmentation as models
-import common.vision.datasets.segmentation as datasets
-import common.vision.transforms.segmentation as T
-from common.vision.transforms import DeNormalizeAndTranspose
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter, Meter
-from common.utils.logger import CompleteLogger
+from tllib.alignment.advent import Discriminator, DomainAdversarialEntropyLoss
+import tllib.vision.models.segmentation as models
+import tllib.vision.datasets.segmentation as datasets
+import tllib.vision.transforms.segmentation as T
+from tllib.vision.transforms import DeNormalizeAndTranspose
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter, Meter
+from tllib.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -17,12 +17,12 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 sys.path.append('../../..')
-from talib.finetune.stochnorm import convert_model
-from common.modules.classifier import Classifier
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.data import ForeverDataIterator
-from common.utils.logger import CompleteLogger
+from tllib.normalization.stochnorm import convert_model
+from tllib.modules.classifier import Classifier
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.logger import CompleteLogger
 
 sys.path.append('.')
 import utils

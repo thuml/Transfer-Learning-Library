@@ -10,29 +10,62 @@ import argparse
 from PIL import Image
 import numpy as np
 import os
+import math
 import shutil
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
 sys.path.append('../../..')
-from dalib.translation.fourier_transform import FourierTransform
-from dalib.adaptation.fda import robust_entropy
-import common.vision.models.segmentation as models
-import common.vision.datasets.segmentation as datasets
-import common.vision.transforms.segmentation as T
-from common.vision.transforms import DeNormalizeAndTranspose
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter, Meter
-from common.utils.logger import CompleteLogger
+from tllib.translation.fourier_transform import FourierTransform
+import tllib.vision.models.segmentation as models
+import tllib.vision.datasets.segmentation as datasets
+import tllib.vision.transforms.segmentation as T
+from tllib.vision.transforms import DeNormalizeAndTranspose
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter, Meter
+from tllib.utils.logger import CompleteLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def robust_entropy(y, ita=1.5, num_classes=19, reduction='mean'):
+    """ Robust entropy proposed in `FDA: Fourier Domain Adaptation for Semantic Segmentation (CVPR 2020) <https://arxiv.org/abs/2004.05498>`_
+
+    Args:
+        y (tensor): logits output of segmentation model in shape of :math:`(N, C, H, W)`
+        ita (float, optional): parameters for robust entropy. Default: 1.5
+        num_classes (int, optional): number of classes. Default: 19
+        reduction (string, optional): Specifies the reduction to apply to the output:
+          ``'none'`` | ``'mean'``. ``'none'``: no reduction will be applied,
+          ``'mean'``: the sum of the output will be divided by the number of
+          elements in the output. Default: ``'mean'``
+
+    Returns:
+        Scalar by default. If :attr:`reduction` is ``'none'``, then :math:`(N, )`.
+
+    """
+    P = F.softmax(y, dim=1)
+    logP = F.log_softmax(y, dim=1)
+    PlogP = P * logP
+    ent = -1.0 * PlogP.sum(dim=1)
+    ent = ent / math.log(num_classes)
+
+    # compute robust entropy
+    ent = ent ** 2.0 + 1e-8
+    ent = ent ** ita
+
+    if reduction == 'mean':
+        return ent.mean()
+    else:
+        return ent
 
 
 def main(args: argparse.Namespace):

@@ -17,18 +17,16 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from dalib.adaptation.afn import AdaptiveFeatureNorm, ImageClassifier
-from dalib.modules.entropy import entropy
-import common.vision.models as models
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.normalization.afn import AdaptiveFeatureNorm, ImageClassifier
+from tllib.modules.entropy import entropy
+import tllib.vision.models as models
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -214,7 +212,7 @@ if __name__ == '__main__':
                              ' (default: Office31)')
     parser.add_argument('-s', '--source', help='source domain')
     parser.add_argument('-t', '--target', help='target domain')
-    parser.add_argument('--train-resizing', type=str, default='ran.crop')
+    parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',

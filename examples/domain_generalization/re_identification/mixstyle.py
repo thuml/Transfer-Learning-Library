@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -17,23 +16,20 @@ import torch.backends.cudnn as cudnn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-sys.path.append('../../..')
-from dglib.generalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
-import dglib.generalization.mixstyle.models as models
-from common.vision.models.reid.identifier import ReIdentifier
-from common.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
-import common.vision.datasets.reid as datasets
-from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-from common.vision.models.reid.resnet import ReidResNet
-from common.utils.scheduler import WarmupMultiStepLR
-from common.utils.metric.reid import validate, visualize_ranked_results
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-
-sys.path.append('.')
 import utils
+from tllib.normalization.mixstyle.sampler import RandomDomainMultiInstanceSampler
+import tllib.normalization.mixstyle.resnet as models
+from tllib.vision.models.reid.identifier import ReIdentifier
+from tllib.vision.models.reid.loss import CrossEntropyLossWithLabelSmooth, SoftTripletLoss
+import tllib.vision.datasets.reid as datasets
+from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
+from tllib.vision.models.reid.resnet import ReidResNet
+from tllib.utils.scheduler import WarmupMultiStepLR
+from tllib.utils.metric.reid import validate, visualize_ranked_results
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

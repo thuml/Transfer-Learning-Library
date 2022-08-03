@@ -19,12 +19,12 @@ import torch.nn.functional as F
 from torch.utils.data import Subset
 
 sys.path.append('../../..')
-from talib.finetune.co_tuning import CoTuningLoss, Relationship, Classifier
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.data import ForeverDataIterator
-import common.vision.datasets as datasets
+from tllib.regularization.co_tuning import CoTuningLoss, Relationship, Classifier
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.data import ForeverDataIterator
+import tllib.vision.datasets as datasets
 
 sys.path.append('.')
 import utils

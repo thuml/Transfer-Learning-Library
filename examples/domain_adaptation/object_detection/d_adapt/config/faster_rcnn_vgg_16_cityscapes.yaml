@@ -1,0 +1,49 @@
+MODEL:
+  META_ARCHITECTURE: "DecoupledGeneralizedRCNN"
+  WEIGHTS: 'https://open-mmlab.oss-cn-beijing.aliyuncs.com/pretrain/vgg16_caffe-292e1171.pth'
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MASK_ON: False
+  BACKBONE:
+    NAME: "build_vgg_fpn_backbone"
+  ROI_HEADS:
+    IN_FEATURES: ["p3", "p4", "p5", "p6"]
+    NAME: "DecoupledStandardROIHeads"
+    NUM_CLASSES: 8
+  ROI_BOX_HEAD:
+    NAME: "FastRCNNConvFCHead"
+    NUM_FC: 2
+    POOLER_RESOLUTION: 7
+  ANCHOR_GENERATOR:
+    SIZES: [ [ 32 ], [ 64 ], [ 128 ], [ 256 ], [ 512 ] ]  # One size for each in feature map
+    ASPECT_RATIOS: [ [ 0.5, 1.0, 2.0 ] ]  # Three aspect
+  RPN:
+    IN_FEATURES: ["p3", "p4", "p5", "p6", "p7"]
+    PRE_NMS_TOPK_TRAIN: 2000  # Per FPN level
+    PRE_NMS_TOPK_TEST: 1000  # Per FPN level
+    POST_NMS_TOPK_TRAIN: 1000
+    POST_NMS_TOPK_TEST: 1000
+  PROPOSAL_GENERATOR:
+    NAME: "TLRPN"
+INPUT:
+  FORMAT: "RGB"
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+  MIN_SIZE_TEST: 800
+  MAX_SIZE_TEST: 1280
+  MAX_SIZE_TRAIN: 1280
+DATASETS:
+  TRAIN: ("cityscapes_trainval",)
+  TEST: ("cityscapes_test",)
+SOLVER:
+  STEPS: (3999, )
+  MAX_ITER: 4000  # 4 epochs
+  WARMUP_ITERS: 100
+  CHECKPOINT_PERIOD: 1000
+  IMS_PER_BATCH: 8
+  BASE_LR: 0.01
+  LR_SCHEDULER_NAME: "ExponentialLR"
+  GAMMA: 0.1
+TEST:
+  EVAL_PERIOD: 500
+VIS_PERIOD: 20
+VERSION: 2

@@ -6,6 +6,6 @@ CUDA_VISIBLE_DEVICES=0 python regda.py data/FreiHand data/RHD \
 
 # Body Dataset
 CUDA_VISIBLE_DEVICES=0 python regda.py data/surreal_processed data/Human36M \
-    -s SURREAL -t Human36M --finetune --seed 0 --debug --rotation 30 --epochs 10 --log logs/regda/surreal2human36m
+    -s SURREAL -t Human36M --seed 0 --debug --rotation 30 --epochs 10 --log logs/regda/surreal2human36m
 CUDA_VISIBLE_DEVICES=0 python regda.py data/surreal_processed data/lsp \
-    -s SURREAL -t LSP --finetune --seed 0 --debug --rotation 30 --log logs/regda/surreal2lsp
+    -s SURREAL -t LSP --seed 0 --debug --rotation 30 --log logs/regda/surreal2lsp

@@ -18,16 +18,13 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from dalib.adaptation.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.alignment.osbp import ImageClassifier as Classifier, UnknownClassBinaryCrossEntropy
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy, ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -77,7 +74,12 @@ def main(args: argparse.Namespace):
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    # resume from the best checkpoint
+    if args.phase != 'train':
+        checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
+        classifier.load_state_dict(checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
@@ -125,7 +127,8 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator,model: Classifier, unknown_bce: UnknownClassBinaryCrossEntropy, optimizer: SGD,
+def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: Classifier,
+          unknown_bce: UnknownClassBinaryCrossEntropy, optimizer: SGD,
           lr_scheduler: LambdaLR, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
@@ -224,7 +227,7 @@ def validate(val_loader: DataLoader, model: Classifier, args: argparse.Namespace
         if args.per_class_eval:
             print(confmat.format(classes))
         print(' * All {all:.3f} Known {known:.3f} Unknown {unknown:.3f} H-score {h_score:.3f}'
-                .format(all=all_acc, known=known, unknown=unknown, h_score=h_score))
+              .format(all=all_acc, known=known, unknown=unknown, h_score=h_score))
 
     return h_score
 
@@ -282,4 +285,3 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

@@ -5,12 +5,12 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the version string
-with open(path.join(here, 'dalib', '__init__.py')) as f:
+with open(path.join(here, 'tllib', '__init__.py')) as f:
     version = re.search(r'__version__ = \'(.*?)\'', f.read()).group(1)
 
 if __name__ == '__main__':
     setup(
-        name="dalib", # Replace with your own username
+        name="tllib", # Replace with your own username
         version=version,
         author="THUML",
         author_email="JiangJunguang1123@outlook.com",

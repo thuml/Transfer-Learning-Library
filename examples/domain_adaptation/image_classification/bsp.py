@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -18,18 +17,15 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from dalib.adaptation.dann import DomainAdversarialLoss
-from dalib.adaptation.bsp import BatchSpectralPenalizationLoss, ImageClassifier
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.alignment.dann import DomainAdversarialLoss
+from tllib.alignment.bsp import BatchSpectralPenalizationLoss, ImageClassifier
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -51,7 +47,8 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+    train_transform = utils.get_train_transform(args.train_resizing, scale=args.scale, ratio=args.ratio,
+                                                random_horizontal_flip=not args.no_hflip,
                                                 random_color_jitter=False, resize_size=args.resize_size,
                                                 norm_mean=args.norm_mean, norm_std=args.norm_std)
     val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
@@ -128,8 +125,9 @@ def main(args: argparse.Namespace):
         for epoch in range(args.pretrain_epochs):
             print("lr:", pretrain_lr_scheduler.get_lr())
             # pretrain for one epoch
-            utils.pretrain(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
-                           device)
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer,
+                                              pretrain_lr_scheduler, epoch, args,
+                                              device)
             # validate to show pretrain process
             utils.validate(val_loader, pretrain_model, args, device)
 
@@ -185,8 +183,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
     end = time.time()
     for i in range(args.iters_per_epoch):
-        x_s, labels_s = next(train_source_iter)
-        x_t, _ = next(train_target_iter)
+        x_s, labels_s = next(train_source_iter)[:2]
+        x_t, = next(train_target_iter)[:1]
 
         x_s = x_s.to(device)
         x_t = x_t.to(device)
@@ -228,7 +226,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DANN for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='BSP for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -239,6 +237,10 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--scale', type=float, nargs='+', default=[0.08, 1.0], metavar='PCT',
+                        help='Random resize scale (default: 0.08 1.0)')
+    parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
+                        help='Random resize aspect ratio (default: 0.75 1.33)')
     parser.add_argument('--resize-size', type=int, default=224,
                         help='the image size after resizing')
     parser.add_argument('--no-hflip', action='store_true',
@@ -283,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
-                        help='number of total epochs(pretrain) to run')
+                        help='number of total epochs(pretrain) to run (default: 3)')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,

@@ -6,3 +6,5 @@ tqdm
 scikit-learn
 webcolors
 matplotlib
+opencv-python
+numba

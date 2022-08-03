@@ -17,25 +17,26 @@ CUDA_VISIBLE_DEVICES=0 python delta.py data/aircraft -d Aircraft -sr 50 --seed 0
 CUDA_VISIBLE_DEVICES=0 python delta.py data/aircraft -d Aircraft -sr 30 --seed 0 --finetune --log logs/delta/aircraft_30
 CUDA_VISIBLE_DEVICES=0 python delta.py data/aircraft -d Aircraft -sr 15 --seed 0 --finetune --log logs/delta/aircraft_15
 
-# Resisc45
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/resisc45 -d Resisc45 -sc 10 --finetune --seed 0 \
-  --log logs/delta/resisc45_10
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/resisc45 -d Resisc45 -sc 20 --finetune --seed 0 \
-  --log logs/delta/resisc45_20
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/resisc45 -d Resisc45 -sc 40 --finetune --seed 0 \
-  --log logs/delta/resisc45_40
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/resisc45 -d Resisc45 -sc 80 --finetune --seed 0 \
-  --log logs/delta/resisc45_80
-
-# Patch Camelyon
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/patch_camelyon -d PatchCamelyon -sc 40 --finetune \
-  --seed 0 --log logs/delta/patch_camelyon_40
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/patch_camelyon -d PatchCamelyon -sc 80 --finetune \
-  --seed 0 --log logs/delta/patch_camelyon_80
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/patch_camelyon -d PatchCamelyon -sc 160 --finetune \
-  --seed 0 --log logs/delta/patch_camelyon_160
-CUDA_VISIBLE_DEVICES=0 python delta.py data/vtab/patch_camelyon -d PatchCamelyon -sc 320 --finetune \
-  --seed 0 --log logs/delta/patch_camelyon_320
+# CIFAR10
+CUDA_VISIBLE_DEVICES=0 python delta.py data/cifar10 -d CIFAR10 --seed 0 --finetune --log logs/delta/cifar10/1e-2 --lr 1e-2
+# CIFAR100
+CUDA_VISIBLE_DEVICES=0 python delta.py data/cifar100 -d CIFAR100 --seed 0 --finetune --log logs/delta/cifar100/1e-2 --lr 1e-2
+# Flowers
+CUDA_VISIBLE_DEVICES=0 python delta.py data/oxford_flowers102 -d OxfordFlowers102 --seed 0 --finetune --log logs/delta/oxford_flowers102/1e-2 --lr 1e-2
+# Pets
+CUDA_VISIBLE_DEVICES=0 python delta.py data/oxford_pet -d OxfordIIITPets --seed 0 --finetune --log logs/delta/oxford_pet/1e-2 --lr 1e-2
+# DTD
+CUDA_VISIBLE_DEVICES=0 python delta.py data/dtd -d DTD --seed 0 --finetune --log logs/delta/dtd/1e-2 --lr 1e-2
+# caltech101
+CUDA_VISIBLE_DEVICES=0 python delta.py data/caltech101 -d Caltech101 --seed 0 --finetune --log logs/delta/caltech101/lr_1e-3 --lr 1e-3
+# SUN397
+CUDA_VISIBLE_DEVICES=0 python delta.py data/sun397 -d SUN397 --seed 0 --finetune --log logs/delta/sun397/lr_1e-2 --lr 1e-2
+# Food 101
+CUDA_VISIBLE_DEVICES=0 python delta.py data/food-101 -d Food101 --seed 0 --finetune --log logs/delta/food-101/lr_1e-2 --lr 1e-2
+# Standford Cars
+CUDA_VISIBLE_DEVICES=0 python delta.py data/stanford_cars -d StanfordCars --seed 0 --finetune --log logs/delta/stanford_cars/lr_1e-2 --lr 1e-2
+# Standford Cars
+CUDA_VISIBLE_DEVICES=0 python delta.py data/aircraft -d Aircraft --seed 0 --finetune --log logs/delta/aircraft/lr_1e-2 --lr 1e-2
 
 # MoCo (Unsupervised Pretraining)
 #CUB-200-2011
