@@ -14,6 +14,7 @@ Transfer Learning
     tllib/reweight
     tllib/normalization
     tllib/regularization
+    tllib/ranking
 
 
 .. toctree::
