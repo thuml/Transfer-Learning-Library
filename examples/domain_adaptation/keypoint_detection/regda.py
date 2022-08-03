@@ -17,18 +17,18 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToPILImage
 
 sys.path.append('../../..')
-from dalib.adaptation.regda import PoseResNet2d as RegDAPoseResNet, \
+from tllib.alignment.regda import PoseResNet2d as RegDAPoseResNet, \
     PseudoLabelGenerator2d, RegressionDisparity
-import common.vision.models as models
-from common.vision.models.keypoint_detection.pose_resnet import Upsampling, PoseResNet
-from common.vision.models.keypoint_detection.loss import JointsKLLoss
-import common.vision.datasets.keypoint_detection as datasets
-import common.vision.transforms.keypoint_detection as T
-from common.vision.transforms import Denormalize
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter, AverageMeterDict
-from common.utils.metric.keypoint_detection import accuracy
-from common.utils.logger import CompleteLogger
+import tllib.vision.models as models
+from tllib.vision.models.keypoint_detection.pose_resnet import Upsampling, PoseResNet
+from tllib.vision.models.keypoint_detection.loss import JointsKLLoss
+import tllib.vision.datasets.keypoint_detection as datasets
+import tllib.vision.transforms.keypoint_detection as T
+from tllib.vision.transforms import Denormalize
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter, AverageMeterDict
+from tllib.utils.metric.keypoint_detection import accuracy
+from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

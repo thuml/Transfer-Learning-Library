@@ -20,15 +20,15 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 
 sys.path.append('../../..')
-import dalib.translation.cyclegan as cyclegan
-import dalib.translation.spgan as spgan
-from dalib.translation.cyclegan.util import ImagePool, set_requires_grad
-import common.vision.datasets.reid as datasets
-from common.vision.datasets.reid.convert import convert_to_pytorch_dataset
-from common.vision.transforms import Denormalize
-from common.utils.data import ForeverDataIterator
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
+import tllib.translation.cyclegan as cyclegan
+import tllib.translation.spgan as spgan
+from tllib.translation.cyclegan.util import ImagePool, set_requires_grad
+import tllib.vision.datasets.reid as datasets
+from tllib.vision.datasets.reid.convert import convert_to_pytorch_dataset
+from tllib.vision.transforms import Denormalize
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

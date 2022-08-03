@@ -18,18 +18,15 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from common.modules.classifier import Classifier
-from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy, ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.modules.classifier import Classifier
+from tllib.alignment.dann import DomainAdversarialLoss, ImageClassifier
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy, ConfusionMatrix
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -73,16 +70,22 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(device)
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(
+        device)
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(),
                     args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
+
+    # resume from the best checkpoint
+    if args.phase != 'train':
+        checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
+        classifier.load_state_dict(checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
@@ -277,7 +280,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay',default=1e-3, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
@@ -299,4 +302,3 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

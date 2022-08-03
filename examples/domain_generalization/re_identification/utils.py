@@ -9,23 +9,27 @@ import torch.nn as nn
 import torchvision.transforms as T
 
 sys.path.append('../../..')
-from common.utils.metric.reid import extract_reid_feature
-from common.utils.analysis import tsne
-import common.vision.models.reid as models
+from tllib.utils.metric.reid import extract_reid_feature
+from tllib.utils.analysis import tsne
+import tllib.vision.models.reid as models
+import tllib.normalization.ibn as ibn_models
 
 
 def get_model_names():
-    return sorted(
-        name for name in models.__dict__
-        if name.islower() and not name.startswith("__")
-        and callable(models.__dict__[name])
-    ) + timm.list_models()
+    return sorted(name for name in models.__dict__ if
+                  name.islower() and not name.startswith("__") and callable(models.__dict__[name])) + \
+           sorted(name for name in ibn_models.__dict__ if
+                  name.islower() and not name.startswith("__") and callable(ibn_models.__dict__[name])) + \
+           timm.list_models()
 
 
 def get_model(model_name):
     if model_name in models.__dict__:
-        # load models from common.vision.models
+        # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
+    elif model_name in ibn_models.__dict__:
+        # load models (with ibn) from tllib.normalization.ibn
+        backbone = ibn_models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
         backbone = timm.create_model(model_name, pretrained=True)

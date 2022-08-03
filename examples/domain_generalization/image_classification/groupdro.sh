@@ -18,13 +18,3 @@ CUDA_VISIBLE_DEVICES=0 python groupdro.py data/domainnet -d DomainNet -s c i q r
 CUDA_VISIBLE_DEVICES=0 python groupdro.py data/domainnet -d DomainNet -s c i p r s -t q -a resnet50 -i 4000 --lr 0.005 --seed 0 --log logs/groupdro/DomainNet_q
 CUDA_VISIBLE_DEVICES=0 python groupdro.py data/domainnet -d DomainNet -s c i p q s -t r -a resnet50 -i 4000 --lr 0.005 --seed 0 --log logs/groupdro/DomainNet_r
 CUDA_VISIBLE_DEVICES=0 python groupdro.py data/domainnet -d DomainNet -s c i p q r -t s -a resnet50 -i 4000 --lr 0.005 --seed 0 --log logs/groupdro/DomainNet_s
-
-# ResNet50, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python groupdro.py data/wilds -d iwildcam --train-resizing 'res2x' --val-resizing 'res2x' \
-  -a resnet50 -b 16 --n-domains-per-batch 2 --epochs 60 -i 1000 --lr 0.001 --finetune --seed 0 --log logs/groupdro/iwildcam
-CUDA_VISIBLE_DEVICES=0 python groupdro.py data/wilds -d camelyon17 -a resnet50 -b 36 --n-domains-per-batch 3 \
-  --epochs 20 -i 1000 --lr 0.01 --seed 0 --log logs/groupdro/camelyon17
-
-# DenseNet121, Wilds Dataset
-CUDA_VISIBLE_DEVICES=0 python groupdro.py data/wilds -d fmow --train-resizing 'cen.crop' -a densenet121 \
-  -b 36 --n-domains-per-batch 4 --epochs 60 -i 1000 --lr 0.003 --seed 0 --log logs/groupdro/fmow

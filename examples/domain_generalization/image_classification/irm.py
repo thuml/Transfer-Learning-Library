@@ -1,11 +1,11 @@
 """
+Adapted from https://github.com/facebookresearch/DomainBed
 @author: Baixu Chen
 @contact: cbx_99_hasta@outlook.com
 """
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -17,21 +17,45 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import torch.autograd as autograd
 
-sys.path.append('../../..')
-from dglib.generalization.irm import InvariancePenaltyLoss
-from dglib.modules.sampler import RandomDomainSampler
-from dglib.modules.classifier import ImageClassifier as Classifier
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import tsne, a_distance
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class InvariancePenaltyLoss(nn.Module):
+    r"""Invariance Penalty Loss from `Invariant Risk Minimization <https://arxiv.org/pdf/1907.02893.pdf>`_.
+    We adopt implementation from `DomainBed <https://github.com/facebookresearch/DomainBed>`_. Given classifier
+    output :math:`y` and ground truth :math:`labels`, we split :math:`y` into two parts :math:`y_1, y_2`, corresponding
+    labels are :math:`labels_1, labels_2`. Next we calculate cross entropy loss with respect to a dummy classifier
+    :math:`w`, resulting in :math:`grad_1, grad_2` . Invariance penalty is then :math:`grad_1*grad_2`.
+
+    Inputs:
+        - y: predictions from model
+        - labels: ground truth
+
+    Shape:
+        - y: :math:`(N, C)` where C means the number of classes.
+        - labels: :math:`(N, )` where N mean mini-batch size
+    """
+
+    def __init__(self):
+        super(InvariancePenaltyLoss, self).__init__()
+        self.scale = torch.tensor(1.).requires_grad_()
+
+    def forward(self, y: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        loss_1 = F.cross_entropy(y[::2] * self.scale, labels[::2])
+        loss_2 = F.cross_entropy(y[1::2] * self.scale, labels[1::2])
+        grad_1 = autograd.grad(loss_1, [self.scale], create_graph=True)[0]
+        grad_2 = autograd.grad(loss_2, [self.scale], create_graph=True)[0]
+        penalty = torch.sum(grad_1 * grad_2)
+        return penalty
 
 
 def main(args: argparse.Namespace):
@@ -60,7 +84,7 @@ def main(args: argparse.Namespace):
     train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
                                                    split='train', download=True, transform=train_transform,
                                                    seed=args.seed)
-    sampler = RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=args.n_domains_per_batch)
+    sampler = utils.RandomDomainSampler(train_dataset, args.batch_size, n_domains_per_batch=args.n_domains_per_batch)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
                               sampler=sampler, drop_last=True)
     val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split='val',
@@ -78,8 +102,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
-                            finetune=args.finetune, pool_layer=pool_layer).to(device)
+    classifier = utils.ImageClassifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
+                                       finetune=args.finetune, pool_layer=pool_layer).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
@@ -155,7 +179,7 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, optimizer, lr_scheduler: CosineAnnealingLR,
+def train(train_iter: ForeverDataIterator, model, optimizer, lr_scheduler: CosineAnnealingLR,
           invariance_penalty_loss: InvariancePenaltyLoss, n_domains_per_batch: int, epoch: int,
           args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')

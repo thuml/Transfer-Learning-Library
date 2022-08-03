@@ -1,14 +1,18 @@
 # Domain Generalization for Person Re-Identification
 
 ## Installation
-Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models).
-You also need to install timm to use PyTorch-Image-Models.
+
+It’s suggested to use **pytorch==1.7.1** and torchvision==0.8.2 in order to reproduce the benchmark results.
+
+Example scripts support all models in [PyTorch-Image-Models](https://github.com/rwightman/pytorch-image-models). You
+also need to install timm to use PyTorch-Image-Models.
 
 ```
 pip install timm
 ```
 
-## Dataset 
+## Dataset
+
 Following datasets can be downloaded automatically:
 
 - [Market1501](http://zheng-lab.cecs.anu.edu.au/Project/project_reid.html)
@@ -22,10 +26,10 @@ Supported methods include:
 - [Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net (IBN-Net, 2018 ECCV)](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - [Domain Generalization with MixStyle (MixStyle, 2021 ICLR)](https://arxiv.org/abs/2104.02008)
 
-## Experiment and Results
+## Usage
 
-The shell files give the script to reproduce the [benchmarks](/docs/dglib/benchmarks/re_identification.rst) with specified hyper-parameters.
-For example, if you want to reproduce MixStyle on Market1501 -> DukeMTMC task, use the following script
+The shell files give the script to reproduce the benchmark with specified hyper-parameters. For example, if you want to
+train MixStyle on Market1501 -> DukeMTMC task, use the following script
 
 ```shell script
 # Train MixStyle on Market1501 -> DukeMTMC task using ResNet 50.
@@ -35,9 +39,25 @@ CUDA_VISIBLE_DEVICES=0 python mixstyle.py data -s Market1501 -t DukeMTMC -a resn
 --mix-layers layer1 layer2 --finetune --seed 0 --log logs/mixstyle/Market2Duke
 ```
 
-For more information please refer to [Get Started](/docs/get_started/quickstart.rst) for help.
+### Experiment and Results
+
+In our experiments, we adopt modified resnet architecture from [MMT](https://arxiv.org/pdf/2001.01526.pdf>). For a fair
+comparison, we use standard cross entropy loss and triplet loss in all methods.
+
+**Notations**
+
+- ``Avg`` means the mAP (mean average precision) reported by `TLlib`.
+
+### Cross dataset mAP on ResNet-50
+
+| Methods  | Avg  | Market2Duke | Duke2Market | Market2MSMT | MSMT2Market | Duke2MSMT | MSMT2Duke |
+|----------|------|-------------|-------------|-------------|-------------|-----------|-----------|
+| Baseline | 23.5 | 25.6        | 29.6        | 6.3         | 31.7        | 10.1      | 37.8      |
+| IBN      | 27.0 | 31.5        | 33.3        | 10.4        | 33.6        | 13.7      | 40.0      |
+| MixStyle | 25.5 | 27.2        | 31.6        | 8.2         | 33.9        | 12.4      | 39.9      |
 
 ## Citation
+
 If you use these methods in your research, please consider citing.
 
 ```

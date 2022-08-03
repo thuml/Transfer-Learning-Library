@@ -18,19 +18,17 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
-from dalib.modules.domain_discriminator import DomainDiscriminator
-from common.modules.classifier import Classifier
-from dalib.adaptation.dann import DomainAdversarialLoss, ImageClassifier
-from dalib.adaptation.pada import AutomaticUpdateClassWeightModule
-from common.utils.data import ForeverDataIterator
-from common.utils.metric import accuracy
-from common.utils.meter import AverageMeter, ProgressMeter
-from common.utils.logger import CompleteLogger
-from common.utils.analysis import collect_feature, tsne, a_distance
-
-sys.path.append('.')
 import utils
+from tllib.modules.domain_discriminator import DomainDiscriminator
+from tllib.modules.classifier import Classifier
+from tllib.alignment.dann import DomainAdversarialLoss, ImageClassifier
+from tllib.reweight.pada import AutomaticUpdateClassWeightModule
+from tllib.utils.data import ForeverDataIterator
+from tllib.utils.metric import accuracy
+from tllib.utils.meter import AverageMeter, ProgressMeter
+from tllib.utils.logger import CompleteLogger
+from tllib.utils.analysis import collect_feature, tsne, a_distance
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

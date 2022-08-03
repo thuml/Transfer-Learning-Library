@@ -1,18 +1,13 @@
 import sys
-import time
 import timm
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.transforms as T
 
 sys.path.append('../../..')
-import common.vision.datasets.openset as datasets
-from common.vision.datasets.openset import default_open_set as open_set
-import common.vision.models as models
-from common.vision.transforms import ResizeImage
-from common.utils.metric import accuracy, ConfusionMatrix
-from common.utils.meter import AverageMeter, ProgressMeter
+import tllib.vision.datasets.openset as datasets
+from tllib.vision.datasets.openset import default_open_set as open_set
+import tllib.vision.models as models
+from tllib.vision.transforms import ResizeImage
 
 
 def get_model_names():
@@ -25,7 +20,7 @@ def get_model_names():
 
 def get_model(model_name):
     if model_name in models.__dict__:
-        # load models from common.vision.models
+        # load models from tllib.vision.models
         backbone = models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
@@ -51,7 +46,7 @@ def get_dataset_names():
 def get_dataset(dataset_name, root, source, target, train_source_transform, val_transform, train_target_transform=None):
     if train_target_transform is None:
         train_target_transform = train_source_transform
-    # load datasets from common.vision.datasets
+    # load datasets from tllib.vision.datasets
     dataset = datasets.__dict__[dataset_name]
     source_dataset = open_set(dataset, source=True)
     target_dataset = open_set(dataset, source=False)
