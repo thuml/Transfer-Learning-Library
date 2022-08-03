@@ -37,9 +37,9 @@ class Aircraft(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/3d852099cc0842d58e1a/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/96b464254a33491cab75/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/f5242785a40e4e189b5d/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/04356d49d0054092b07e/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/9fed22eba03046d69012/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/8d5e4c1b031a4a608c68/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",
