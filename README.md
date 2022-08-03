@@ -3,7 +3,7 @@
 ## Updates 
 
 ### 2022.8
-We release `v0.4` of *TLlib*. The previous version is moved to the `v0.3` branch. In `v0.4`, we add implementations of 
+We release `v0.4` of *TLlib*. Previous versions of *TLlib* can be found at [here](https://github.com/thuml/Transfer-Learning-Library/releases). In `v0.4`, we add implementations of 
 the following methods:
 - Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection) [[API]](/tllib/alignment/d_adapt)
 - Pre-trained Model Selection [[Code]](/examples/model_selection) [[API]](/tllib/ranking)
