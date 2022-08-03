@@ -1,6 +1,10 @@
 <img src="/TransLearn.png"/>
 
 ## Updates 
+
+### 2022.8
+We release `v0.4` of *TLlib*. The previous version is moved to the `v0.3` branch.
+
 ### 2022.2
 We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
 
