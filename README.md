@@ -3,7 +3,11 @@
 ## Updates 
 
 ### 2022.8
-We release `v0.4` of *TLlib*. The previous version is moved to the `v0.3` branch.
+We release `v0.4` of *TLlib*. The previous version is moved to the `v0.3` branch. In `v0.4`, we add implementations of 
+the following methods:
+- Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection) [[API]](/tllib/alignment/d_adapt)
+- Pre-trained Model Selection [[Code]](/examples/model_selection) [[API]](/tllib/ranking)
+- Semi-supervised Learning for Classification [[Code]](/examples/semi_supervised_learning/image_classification/) [[API]](/tllib/self_training)
 
 ### 2022.2
 We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
