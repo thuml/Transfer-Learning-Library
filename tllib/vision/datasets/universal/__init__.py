@@ -11,12 +11,11 @@ from ..domainnet import DomainNet
 from typing import Optional, ClassVar, Sequence
 from copy import deepcopy
 
-
-__all__ = ['Office31', 'OfficeHome', 'VisDA2017', 'DomainNet']
+__all__ = ['Office31', 'OfficeHome', 'VisDA2017', 'DomainNet', 'default_universal']
 
 
 def universal(dataset_class: ClassVar, public_classes: Sequence[str],
-            private_classes: Optional[Sequence[str]] = ()) -> ClassVar:
+              private_classes: Optional[Sequence[str]] = ()) -> ClassVar:
     """
     Convert a dataset into its universal version.
 
