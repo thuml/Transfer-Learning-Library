@@ -23,7 +23,7 @@ import torchvision.transforms as T
 import utils
 import tllib.vision.datasets.universal as datasets
 from tllib.vision.datasets.universal import default_universal as universal
-from tllib.alignment.cmu import ImageClassifier, Ensemble, norm, cal_f1, get_marginal_confidence, get_entropy
+from tllib.alignment.cmu import ImageClassifier, Ensemble, get_marginal_confidence, get_entropy, norm, calc_f1
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.utils.data import ForeverDataIterator
@@ -155,12 +155,15 @@ def main(args: argparse.Namespace):
             pretrain(train_source_iter, ens_iters, classifier, ens_classifier, optimizer_pretrain, args, epoch,
                      lr_scheduler_pretrain)
 
-            f1 = cal_f1(val_loader, classifier, ens_classifier, source_classes, device)
+            # TODO leakage here
+            f1 = calc_f1(val_loader, classifier, ens_classifier, source_classes, device)
 
             if best_f1 < f1:
-                state = {'classifier': classifier.state_dict(), 'ens_classifier': ens_classifier.state_dict()}
-                torch.save(state, pretrain_model_path)
                 best_f1 = f1
+                torch.save({
+                    'classifier': classifier.state_dict(),
+                    'ens_classifier': ens_classifier.state_dict()
+                }, pretrain_model_path)
 
         print("Best F1 {:.4f}".format(best_f1))
         exit(0)
@@ -267,28 +270,29 @@ def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model, ens_class
 
     model.train()
     ens_classifier.train()
+    batch_size = args.batch_size
 
     for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
-        y_s, f_s = model(x_s)
+        y_s, _ = model(x_s)
         cls_loss = F.cross_entropy(y_s, labels_s)
 
-        ens_losses = []
-        for j, ens_iter in enumerate(ens_iters):
-            x_se, labels_se = next(ens_iter)
-            x_se = x_se.to(device)
-            labels_se = labels_se.to(device)
-            y_se, f_se = model(x_se)
-            y_se = ens_classifier(f_se, index=j)
-            ens_losses.append(F.cross_entropy(y_se, labels_se))
+        ens_loss = 0
+        cls_acc = 0
+        for classifier_idx, ens_iter in enumerate(ens_iters):
+            x_s, labels_s = next(ens_iter)
+            x_s = x_s.to(device)
+            labels_s = labels_s.to(device)
+            _, f_s = model(x_s)
+            y_s = ens_classifier(f_s, index=classifier_idx)
+            ens_loss += F.cross_entropy(y_s, labels_s)
+            cls_acc += accuracy(y_s, labels_s)[0] / 5
 
-        cls_acc = accuracy(y_se, labels_se)[0]
-        cls_accs.update(cls_acc.item(), args.batch_size)
-
-        loss = sum(ens_losses) + cls_loss
-        losses.update(loss.item(), args.batch_size)
+        loss = ens_loss + cls_loss
+        losses.update(loss.item(), batch_size)
+        cls_accs.update(cls_acc.item(), batch_size)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()

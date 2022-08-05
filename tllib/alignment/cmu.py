@@ -98,7 +98,8 @@ def get_entropy(y_1, y_2, y_3, y_4, y_5):
     entropy3 = torch.sum(- y_3 * torch.log(y_3 + 1e-10), dim=1)
     entropy4 = torch.sum(- y_4 * torch.log(y_4 + 1e-10), dim=1)
     entropy5 = torch.sum(- y_5 * torch.log(y_5 + 1e-10), dim=1)
-    entropy_norm = np.log(y_1.size(1))
+    num_classes = y_1.size(1)
+    entropy_norm = np.log(num_classes)
 
     entropy = (entropy1 + entropy2 + entropy3 + entropy4 + entropy5) / (5 * entropy_norm)
     return entropy
@@ -111,35 +112,14 @@ def norm(x):
     return x
 
 
-def cal_pr(scores, labels, thresholds):
-    new_scores = zip(scores.numpy(), labels)
-    new_scores = np.array(sorted(new_scores, key=lambda x: x[0], reverse=True))
-
-    points = []
-    for threshold in thresholds:
-        tp, fp, fn = 0, 0, 0
-        for score, label in new_scores:
-            if score >= threshold:
-                if label:
-                    tp += 1
-                else:
-                    fp += 1
-            else:
-                if label:
-                    fn += 1
-        points.append([tp / (tp + fn + 1e-7), tp / (tp + fp + 1e-7)])
-
-    print_points = [[0., 1.]] + sorted(points, key=lambda x: x[0]) + [[1., 0.]]
-    return list(zip(*print_points)), points
-
-
-def cal_f1(val_loader, model, ens_classifier, source_classes, device):
+def calc_f1(val_loader, model, ens_classifier, source_classes, device):
     model.eval()
     ens_classifier.eval()
 
-    all_marginal_confidence = list()
-    all_entropy = list()
-    all_labels = list()
+    # criterion
+    all_marginal_confidence = []
+    all_entropy = []
+    all_labels = []
 
     with torch.no_grad():
         for i, (images, labels) in enumerate(val_loader):
@@ -150,25 +130,35 @@ def cal_f1(val_loader, model, ens_classifier, source_classes, device):
             marginal_confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
-            # all_confidence.extend(confidence)
-            all_marginal_confidence.extend(marginal_confidence)
-            all_entropy.extend(entropy)
-            all_labels.extend([label.item() for label in labels])
+            all_marginal_confidence.append(marginal_confidence)
+            all_entropy.append(entropy)
+            all_labels.append(labels)
 
-    all_marginal_confidence = norm(torch.tensor(all_marginal_confidence))
-    all_entropy = norm(torch.tensor(all_entropy))
+    all_marginal_confidence = torch.cat(all_marginal_confidence, dim=0)
+    all_entropy = torch.cat(all_entropy, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+
+    all_marginal_confidence = norm(all_marginal_confidence)
+    all_entropy = norm(all_entropy)
     all_scores = (all_marginal_confidence + 1 - all_entropy) / 2
 
-    common_labels = [(1 if label in source_classes else 0) for label in all_labels]
-    common_labels = np.array(common_labels)
+    thresholds = [x * 0.05 for x in range(20)]
+    highest_f1 = 0
 
-    step = 0.05
-    thresholds = [thresh * step for thresh in range(int(1 / step) - 1, -1, -1)]
+    for threshold in thresholds:
+        tp, fp, fn = 0, 0, 0
+        for score, label in zip(all_scores, all_labels):
+            if score >= threshold:
+                if label.item() in source_classes:
+                    tp += 1
+                else:
+                    fp += 1
+            else:
+                if label.item() in source_classes:
+                    fn += 1
+        precision = tp / (tp + fp + 1e-7)
+        recall = tp / (tp + fn + 1e-7)
+        f1 = 2 * precision * recall / (precision + recall + 1e-7)
+        highest_f1 = max(highest_f1, f1)
 
-    f1s = []
-    _, points = cal_pr(all_scores, common_labels, thresholds)
-    for j, point in enumerate(points):
-        recall, precision = point
-        f1s.append((2 * recall * precision) / (recall + precision + 1e-7))
-
-    return max(f1s)
+    return highest_f1
