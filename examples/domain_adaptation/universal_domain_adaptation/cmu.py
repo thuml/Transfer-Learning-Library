@@ -23,7 +23,7 @@ import torchvision.transforms as T
 import utils
 import tllib.vision.datasets.universal as datasets
 from tllib.vision.datasets.universal import default_universal as universal
-from tllib.alignment.cmu import ImageClassifier, Ensemble, get_marginal_confidence, get_entropy, norm, calc_f1
+from tllib.alignment.cmu import ImageClassifier, Ensemble, get_marginal_confidence, get_entropy, norm
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.utils.data import ForeverDataIterator
@@ -150,23 +150,39 @@ def main(args: argparse.Namespace):
         lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
         lr_scheduler_pretrain = LambdaLR(optimizer_pretrain, lr_lambda)
 
-        best_f1 = 0
         for epoch in range(args.epochs):
             pretrain(train_source_iter, ens_iters, classifier, ens_classifier, optimizer_pretrain, args, epoch,
                      lr_scheduler_pretrain)
 
-            # TODO leakage here
-            f1 = calc_f1(val_loader, classifier, ens_classifier, source_classes, device)
+        torch.save({
+            'classifier': classifier.state_dict(),
+            'ens_classifier': ens_classifier.state_dict()
+        }, pretrain_model_path)
 
-            if best_f1 < f1:
-                best_f1 = f1
-                torch.save({
-                    'classifier': classifier.state_dict(),
-                    'ens_classifier': ens_classifier.state_dict()
-                }, pretrain_model_path)
-
-        print("Best F1 {:.4f}".format(best_f1))
         exit(0)
+
+    if args.phase != 'train':
+        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
+        ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
+
+    # analysis the model
+    if args.phase == 'analysis':
+        # extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        # plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        # calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == 'test':
+        acc1, h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
+        return
 
     # domain discriminator
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
@@ -196,30 +212,7 @@ def main(args: argparse.Namespace):
     source_class_weight = torch.zeros_like(source_class_weight)
     source_class_weight[mask] = 1
     print('Weight of each source class')
-    print(source_class_weight)
-
-    if args.phase != 'train':
-        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
-        ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
-
-    # analysis the model
-    if args.phase == 'analysis':
-        # extract features from both domains
-        feature_extractor = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device)
-        source_feature = collect_feature(train_source_loader, feature_extractor, device)
-        target_feature = collect_feature(train_target_loader, feature_extractor, device)
-        # plot t-SNE
-        tSNE_filename = osp.join(logger.visualize_directory, 'TSNE.png')
-        tsne.visualize(source_feature, target_feature, tSNE_filename)
-        print("Saving t-SNE to", tSNE_filename)
-        # calculate A-distance, which is a measure for distribution discrepancy
-        A_distance = a_distance.calculate(source_feature, target_feature, device)
-        print("A-distance =", A_distance)
-        return
-
-    if args.phase == 'test':
-        acc1, h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
-        return
+    print(source_class_weight.cpu())
 
     # start training
     best_acc = 0.
