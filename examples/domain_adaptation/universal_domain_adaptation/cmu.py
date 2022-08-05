@@ -127,6 +127,9 @@ def main(args: argparse.Namespace):
 
     train_source_iter = ForeverDataIterator(train_source_loader)
     train_target_iter = ForeverDataIterator(train_target_loader)
+    ens_iters = [ForeverDataIterator(
+        DataLoader(ens_datasets[i], batch_size=args.batch_size, shuffle=True, num_workers=args.workers, drop_last=True))
+        for i in range(5)]
 
     # create model
     print("=> using pre-trained model '{}'".format(args.arch))
@@ -134,35 +137,19 @@ def main(args: argparse.Namespace):
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(
         device)
-    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
     ens_classifier = Ensemble(classifier.features_dim, train_source_dataset.num_classes).to(device)
-
-    # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
-                    weight_decay=args.weight_decay, nesterov=True)
-    lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
-    lr_scheduler = LambdaLR(optimizer, lr_lambda)
-
-    ens_optimizer = SGD(ens_classifier.get_parameters(), args.lr, momentum=args.momentum,
-                        weight_decay=args.weight_decay, nesterov=True)
-    ens_lr_scheduler = [LambdaLR(ens_optimizer, lr_lambda)] * 5
-
-    optimizer_pretrain = SGD(ens_classifier.get_parameters() + classifier.get_parameters(), args.lr,
-                             momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler_pretrain = LambdaLR(optimizer_pretrain, lr_lambda)
-
-    ens_iters = [ForeverDataIterator(
-        DataLoader(ens_datasets[i], batch_size=args.batch_size, shuffle=True, num_workers=args.workers, drop_last=True))
-        for i in range(5)]
-
-    # define loss function
-    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     if not os.path.exists("{}/stage1_models".format(args.log)):
         os.mkdir("{}/stage1_models".format(args.log))
 
     pretrain_model_path = "{}/stage1_models/pretrain.pth".format(args.log, args.source)
     if not os.path.exists(pretrain_model_path):
+        # pretrain the classifier and ens_classifier
+        optimizer_pretrain = SGD(classifier.get_parameters() + ens_classifier.get_parameters(), args.lr,
+                                 momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+        lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
+        lr_scheduler_pretrain = LambdaLR(optimizer_pretrain, lr_lambda)
+
         best_f1 = 0
         for epoch in range(args.epochs):
             pretrain(train_source_iter, ens_iters, classifier, ens_classifier, optimizer_pretrain, args, epoch,
@@ -177,20 +164,40 @@ def main(args: argparse.Namespace):
 
         print("Best F1 {:.4f}".format(best_f1))
         exit(0)
-    else:
-        checkpoint = torch.load(pretrain_model_path)
-        classifier.load_state_dict(checkpoint['classifier'])
-        ens_classifier.load_state_dict(checkpoint['ens_classifier'])
-        source_class_weight = evaluate_source_common(val_loader, classifier, ens_classifier, source_classes, args)
+
+    # domain discriminator
+    domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
+    # define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
+                    weight_decay=args.weight_decay, nesterov=True)
+    lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
+
+    ens_optimizer = SGD(ens_classifier.get_parameters(), args.lr, momentum=args.momentum,
+                        weight_decay=args.weight_decay, nesterov=True)
+    ens_lr_scheduler = [LambdaLR(ens_optimizer, lr_lambda)] * 5
+
+    # define loss function
+    domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
     target_score_upper = torch.zeros(1).to(device)
     target_score_lower = torch.zeros(1).to(device)
+
+    # calculate source weight
+    checkpoint = torch.load(pretrain_model_path)
+    classifier.load_state_dict(checkpoint['classifier'])
+    ens_classifier.load_state_dict(checkpoint['ens_classifier'])
+    source_class_weight = evaluate_source_common(val_loader, classifier, ens_classifier, source_classes, args)
 
     mask = torch.where(source_class_weight > args.cut)
     source_class_weight = torch.zeros_like(source_class_weight)
     source_class_weight[mask] = 1
     print('Weight of each source class')
     print(source_class_weight)
+
+    if args.phase != 'train':
+        classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
+        ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
 
     # analysis the model
     if args.phase == 'analysis':
@@ -227,19 +234,23 @@ def main(args: argparse.Namespace):
 
         # evaluate on validation set
         acc, h_score = validate(val_loader, classifier, ens_classifier, source_classes, args)
-        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest'))
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest_classifier'))
+        torch.save(ens_classifier.state_dict(), logger.get_checkpoint_path('latest_ens_classifier'))
 
         best_acc = max(acc, best_acc)
         if h_score > best_h_score:
             best_h_score = h_score
             # remember best h_score and save checkpoint
-            shutil.copy(logger.get_checkpoint_path('latest'), logger.get_checkpoint_path('best'))
+            shutil.copy(logger.get_checkpoint_path('latest_classifier'), logger.get_checkpoint_path('best_classifier'))
+            shutil.copy(logger.get_checkpoint_path('latest_ens_classifier'),
+                        logger.get_checkpoint_path('best_ens_classifier'))
 
-    print('* Val Mean Acc@1 {:.3f}'.format(best_acc))
+    print('* Val Best Mean Acc@1 {:.3f}'.format(best_acc))
     print('* Val Best H-score {:.3f}'.format(best_h_score))
 
     # evaluate on test set
-    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best')))
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
+    ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
     test_acc, test_h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
     print('* Test Mean Acc@1 {:.3f} H-score {:.3f}'.format(test_acc, test_h_score))
     logger.close()
