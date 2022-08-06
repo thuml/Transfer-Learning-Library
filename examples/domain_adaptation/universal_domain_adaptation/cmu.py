@@ -7,7 +7,6 @@ import time
 import warnings
 import argparse
 import shutil
-import os
 import os.path as osp
 
 import numpy as np
@@ -139,28 +138,6 @@ def main(args: argparse.Namespace):
         device)
     ens_classifier = Ensemble(classifier.features_dim, train_source_dataset.num_classes).to(device)
 
-    if not os.path.exists("{}/stage1_models".format(args.log)):
-        os.mkdir("{}/stage1_models".format(args.log))
-
-    pretrain_model_path = "{}/stage1_models/pretrain.pth".format(args.log, args.source)
-    if not os.path.exists(pretrain_model_path):
-        # pretrain the classifier and ens_classifier
-        optimizer_pretrain = SGD(classifier.get_parameters() + ens_classifier.get_parameters(), args.lr,
-                                 momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-        lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
-        lr_scheduler_pretrain = LambdaLR(optimizer_pretrain, lr_lambda)
-
-        for epoch in range(args.epochs):
-            pretrain(train_source_iter, ens_iters, classifier, ens_classifier, optimizer_pretrain, args, epoch,
-                     lr_scheduler_pretrain)
-
-        torch.save({
-            'classifier': classifier.state_dict(),
-            'ens_classifier': ens_classifier.state_dict()
-        }, pretrain_model_path)
-
-        exit(0)
-
     if args.phase != 'train':
         classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
         ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
@@ -184,12 +161,24 @@ def main(args: argparse.Namespace):
         acc1, h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
         return
 
+    # ==================================================================================================================
+    # stage 1 pretrain the classifier and ens_classifier
+    # ==================================================================================================================
+    print('Stage 1: Pretraining')
+    optimizer_pretrain = SGD(classifier.get_parameters() + ens_classifier.get_parameters(), args.lr,
+                             momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
+    lr_scheduler_pretrain = LambdaLR(optimizer_pretrain, lr_lambda)
+
+    for epoch in range(args.epochs_pretrain):
+        pretrain(train_source_iter, ens_iters, classifier, ens_classifier, optimizer_pretrain, lr_scheduler_pretrain,
+                 epoch, args)
+
     # domain discriminator
     domain_discri = DomainDiscriminator(in_feature=classifier.features_dim, hidden_size=1024).to(device)
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
                     weight_decay=args.weight_decay, nesterov=True)
-    lr_lambda = lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay)
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
     ens_optimizer = SGD(ens_classifier.get_parameters(), args.lr, momentum=args.momentum,
@@ -199,22 +188,22 @@ def main(args: argparse.Namespace):
     # define loss function
     domain_adv = DomainAdversarialLoss(domain_discri).to(device)
 
+    # ==================================================================================================================
+    # stage 2 adversarial training
+    # ==================================================================================================================
+
     target_score_upper = torch.zeros(1).to(device)
     target_score_lower = torch.zeros(1).to(device)
 
     # calculate source weight
-    checkpoint = torch.load(pretrain_model_path)
-    classifier.load_state_dict(checkpoint['classifier'])
-    ens_classifier.load_state_dict(checkpoint['ens_classifier'])
-    source_class_weight = evaluate_source_common(val_loader, classifier, ens_classifier, source_classes, args)
+    source_class_weight = calc_source_class_weight(val_loader, classifier, ens_classifier, args)
+    source_class_weight = (source_class_weight > args.cut).float()
 
-    mask = torch.where(source_class_weight > args.cut)
-    source_class_weight = torch.zeros_like(source_class_weight)
-    source_class_weight[mask] = 1
-    print('Weight of each source class')
+    print('weight of source classes')
     print(source_class_weight.cpu())
 
     # start training
+    print('Stage 2: Adversarial Training')
     best_acc = 0.
     best_h_score = 0.
     for epoch in range(args.epochs):
@@ -252,8 +241,8 @@ def main(args: argparse.Namespace):
     logger.close()
 
 
-def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model, ens_classifier, optimizer, args, epoch,
-             lr_scheduler):
+def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model: ImageClassifier, ens_classifier: Ensemble,
+             optimizer_pretrain: SGD, lr_scheduler_pretrain: LambdaLR, epoch: int, args: argparse.Namespace):
     losses = AverageMeter('Loss', ':6.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     progress = ProgressMeter(
@@ -269,8 +258,14 @@ def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model, ens_class
         x_s, labels_s = next(train_source_iter)
         x_s = x_s.to(device)
         labels_s = labels_s.to(device)
+
+        # clear grad
+        optimizer_pretrain.zero_grad()
+
+        # compute output
         y_s, _ = model(x_s)
         cls_loss = F.cross_entropy(y_s, labels_s)
+        cls_loss.backward()
 
         ens_loss = 0
         cls_acc = 0
@@ -280,7 +275,11 @@ def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model, ens_class
             labels_s = labels_s.to(device)
             _, f_s = model(x_s)
             y_s = ens_classifier(f_s, index=classifier_idx)
-            ens_loss += F.cross_entropy(y_s, labels_s)
+            # cls loss of each classifier
+            cls_loss = F.cross_entropy(y_s, labels_s)
+            cls_loss.backward()
+
+            ens_loss += cls_loss
             cls_acc += accuracy(y_s, labels_s)[0] / 5
 
         loss = ens_loss + cls_loss
@@ -288,10 +287,8 @@ def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model, ens_class
         cls_accs.update(cls_acc.item(), batch_size)
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
+        optimizer_pretrain.step()
+        lr_scheduler_pretrain.step()
 
         if i % args.print_freq == 0:
             progress.display(i)
@@ -334,53 +331,38 @@ def train_ens_classifier(train_source_iter, model, ens_classifier, optimizer, lr
             progress.display(i)
 
 
-def evaluate_source_common(val_loader, model, ens_classifier, source_classes, args):
-    temperature = 1
+def calc_source_class_weight(val_loader: DataLoader, model: ImageClassifier, ens_classifier: Ensemble, args):
     # switch to evaluate mode
     model.eval()
     ens_classifier.eval()
 
-    common = []
-    target_private = []
-    all_confidence = []
+    all_marginal_confidence = []
     all_entropy = []
-    all_labels = []
     all_output = []
 
-    source_weight = torch.zeros(len(source_classes)).to(device)
-    cnt = 0
     with torch.no_grad():
         for i, (images, labels) in enumerate(val_loader):
             images = images.to(device)
             output, f = model(images)
-            output = F.softmax(output, -1) / temperature
+            output = F.softmax(output, -1)
 
             yt_1, yt_2, yt_3, yt_4, yt_5 = ens_classifier(f, -1)
-            confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
+            marginal_confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
-            all_confidence.extend(confidence)
-            all_entropy.extend(entropy)
-            all_labels.extend(labels)
-            all_output.extend(output)
+            all_marginal_confidence.append(marginal_confidence)
+            all_entropy.append(entropy)
+            all_output.append(output)
 
-    all_confidence = norm(torch.tensor(all_confidence))
-    all_entropy = norm(torch.tensor(all_entropy))
-    all_score = (all_confidence + 1 - all_entropy) / 2
+    all_marginal_confidence = norm(torch.cat(all_marginal_confidence, dim=0))
+    all_entropy = norm(torch.cat(all_entropy, dim=0))
+    all_score = (all_marginal_confidence + 1 - all_entropy) / 2
 
-    print('source threshold {:.3f}'.format(args.src_threshold))
+    all_output = torch.cat(all_output, dim=0)
+    source_class_weight = all_output[all_score >= args.src_threshold].mean(dim=0)
+    source_class_weight = norm(source_class_weight)
 
-    for i in range(len(all_score)):
-        if all_score[i] >= args.src_threshold:
-            source_weight += all_output[i]
-            cnt += 1
-        if all_labels[i].item() in source_classes:
-            common.append(all_score[i])
-        else:
-            target_private.append(all_score[i])
-
-    source_weight = norm(source_weight / cnt)
-    return source_weight
+    return source_class_weight
 
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
@@ -527,6 +509,7 @@ if __name__ == '__main__':
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
+    # training parameters
     parser.add_argument('--threshold', default=0.8, type=float,
                         help='When class confidence is less than the given threshold, '
                              'model will output "unknown" (default: 0.5)')
@@ -536,7 +519,6 @@ if __name__ == '__main__':
                         help='cut threshold for common classes identifying')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
-    # training parameters
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         metavar='N',
                         help='mini-batch size (default: 32)')
@@ -552,11 +534,13 @@ if __name__ == '__main__':
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=30, type=int, metavar='N',
-                        help='number of total epochs to run')
-    parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
-                        help='Number of iterations per epoch')
-    parser.add_argument('-p', '--print-freq', default=100, type=int,
-                        metavar='N', help='print frequency (default: 100)')
+                        help='number of total epochs to run (default: 30)')
+    parser.add_argument('--epochs-pretrain', default=5, type=int,
+                        help='number of total epochs to run in the pretraining stage (default: 5)')
+    parser.add_argument('-i', '--iters-per-epoch', default=200, type=int,
+                        help='Number of iterations per epoch (default: 200)')
+    parser.add_argument('-p', '--print-freq', default=50, type=int,
+                        metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
