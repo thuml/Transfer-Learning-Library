@@ -208,14 +208,12 @@ def main(args: argparse.Namespace):
     best_h_score = 0.
     for epoch in range(args.epochs):
         # train for one epoch
-        target_score_upper, target_score_lower = train(train_source_iter, train_target_iter, classifier, domain_adv,
-                                                       ens_classifier, optimizer, lr_scheduler, epoch,
-                                                       source_class_weight, target_score_upper, target_score_lower,
-                                                       args)
+        train(train_source_iter, train_target_iter, classifier, domain_adv, ens_classifier, optimizer, lr_scheduler,
+              source_class_weight, target_score_upper, target_score_lower, epoch, args)
 
         for i in range(5):
-            train_ens_classifier(ens_iters[i], classifier, ens_classifier, ens_optimizer, ens_lr_scheduler[i], epoch,
-                                 args, i)
+            train_ens_classifier(ens_iters[i], classifier, ens_classifier, ens_optimizer, ens_lr_scheduler[i], i, epoch,
+                                 args)
 
         # evaluate on validation set
         acc, h_score = validate(val_loader, classifier, ens_classifier, source_classes, args)
@@ -243,7 +241,7 @@ def main(args: argparse.Namespace):
 
 def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model: ImageClassifier, ens_classifier: Ensemble,
              optimizer_pretrain: SGD, lr_scheduler_pretrain: LambdaLR, epoch: int, args: argparse.Namespace):
-    losses = AverageMeter('Loss', ':6.2f')
+    losses = AverageMeter('Loss', ':3.2f')
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
     progress = ProgressMeter(
         args.iters_per_epoch,
@@ -294,43 +292,6 @@ def pretrain(train_source_iter: ForeverDataIterator, ens_iters, model: ImageClas
             progress.display(i)
 
 
-def train_ens_classifier(train_source_iter, model, ens_classifier, optimizer, lr_scheduler, epoch, args,
-                         classifier_index):
-    losses = AverageMeter('Loss', ':4.2f')
-    cls_accs = AverageMeter('Cls Acc', ':5.1f')
-    progress = ProgressMeter(
-        args.iters_per_epoch // 2,
-        [losses, cls_accs],
-        prefix="Train ensemble classifier {}:, Epoch: [{}]".format(classifier_index + 1, epoch))
-
-    model.eval()
-    ens_classifier.train()
-
-    for i in range(args.iters_per_epoch // 2):
-        x_s, labels_s = next(train_source_iter)
-        x_s = x_s.to(device)
-        labels_s = labels_s.to(device)
-
-        # compute output
-        with torch.no_grad():
-            y_s, f_s = model(x_s)
-        y_s = ens_classifier(f_s, classifier_index)
-        loss = F.cross_entropy(y_s, labels_s)
-        cls_acc = accuracy(y_s, labels_s)[0]
-
-        losses.update(loss.item(), x_s.size(0))
-        cls_accs.update(cls_acc.item(), x_s.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-
-        if i % args.print_freq == 0:
-            progress.display(i)
-
-
 def calc_source_class_weight(val_loader: DataLoader, model: ImageClassifier, ens_classifier: Ensemble, args):
     # switch to evaluate mode
     model.eval()
@@ -341,7 +302,7 @@ def calc_source_class_weight(val_loader: DataLoader, model: ImageClassifier, ens
     all_output = []
 
     with torch.no_grad():
-        for i, (images, labels) in enumerate(val_loader):
+        for images, labels in val_loader:
             images = images.to(device)
             output, f = model(images)
             output = F.softmax(output, -1)
@@ -367,16 +328,18 @@ def calc_source_class_weight(val_loader: DataLoader, model: ImageClassifier, ens
 
 def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverDataIterator, model: ImageClassifier,
           domain_adv: DomainAdversarialLoss, ens_classifier: Ensemble, optimizer: SGD, lr_scheduler: LambdaLR,
-          epoch: int, source_class_weight, target_score_upper, target_score_lower, args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':4.2f')
-    losses = AverageMeter('Loss', ':4.2f')
-    cls_accs = AverageMeter('Cls Acc', ':4.1f')
-    domain_accs = AverageMeter('Domain Acc', ':4.1f')
-    score_upper = AverageMeter('Score Upper', ':4.2f')
-    score_lower = AverageMeter('Score Lower', ':4.2f')
+          source_class_weight, target_score_upper, target_score_lower, epoch: int, args: argparse.Namespace):
+    batch_time = AverageMeter('Time', ':3.2f')
+    cls_losses = AverageMeter('Cls Loss', ':3.2f')
+    transfer_losses = AverageMeter('Transfer Loss', ':3.2f')
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    domain_accs = AverageMeter('Domain Acc', ':3.1f')
+    score_upper = AverageMeter('Score Upper', ':3.2f')
+    score_lower = AverageMeter('Score Lower', ':3.2f')
     progress = ProgressMeter(
         args.iters_per_epoch,
-        [batch_time, losses, cls_accs, domain_accs, score_upper, score_lower],
+        [batch_time, cls_losses, transfer_losses, losses, cls_accs, domain_accs, score_upper, score_lower],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -384,6 +347,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     domain_adv.train()
     ens_classifier.eval()
 
+    batch_size = args.batch_size
     end = time.time()
     for i in range(args.iters_per_epoch):
         x_s, labels_s = next(train_source_iter)
@@ -399,26 +363,32 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
         with torch.no_grad():
             yt_1, yt_2, yt_3, yt_4, yt_5 = ens_classifier(f_t, -1)
-            confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
+            marginal_confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
-            w_t = (confidence + 1 - entropy) / 2
+
+            # target weights
+            w_t = (marginal_confidence + 1 - entropy) / 2
             target_score_upper = target_score_upper * 0.01 + w_t.max() * 0.99
             target_score_lower = target_score_lower * 0.01 + w_t.min() * 0.99
             w_t = (w_t - target_score_lower) / (target_score_upper - target_score_lower)
-            w_s = torch.tensor([source_class_weight[i] for i in labels_s]).to(device)
 
-        loss = F.cross_entropy(y_s, labels_s)
-        transfer_loss = domain_adv(f_s, f_t, w_s.detach(), w_t.detach())
-        domain_acc = domain_adv.domain_discriminator_accuracy
-        loss += transfer_loss * args.trade_off
+            # source weights
+            w_s = source_class_weight[labels_s]
+
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        transfer_loss = args.trade_off * domain_adv(f_s, f_t, w_s.detach(), w_t.detach())
+        loss = cls_loss + transfer_loss
+
+        cls_losses.update(cls_loss.item(), batch_size)
+        transfer_losses.update(transfer_loss.item(), batch_size)
+        losses.update(loss.item(), batch_size)
 
         cls_acc = accuracy(y_s, labels_s)[0]
-
-        losses.update(loss.item(), args.batch_size)
-        cls_accs.update(cls_acc.item(), args.batch_size)
-        domain_accs.update(domain_acc.item(), args.batch_size)
-        score_upper.update(target_score_upper.item(), 1)
-        score_lower.update(target_score_lower.item(), 1)
+        cls_accs.update(cls_acc.item(), batch_size)
+        domain_acc = domain_adv.domain_discriminator_accuracy
+        domain_accs.update(domain_acc.item(), batch_size)
+        score_upper.update(target_score_upper.item(), batch_size)
+        score_lower.update(target_score_lower.item(), batch_size)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -433,7 +403,44 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
         if i % args.print_freq == 0:
             progress.display(i)
 
-    return target_score_upper, target_score_lower
+
+def train_ens_classifier(train_source_iter: ForeverDataIterator, model: ImageClassifier, ens_classifier: Ensemble,
+                         optimizer: SGD, lr_scheduler: LambdaLR, classifier_index: int, epoch: int,
+                         args: argparse.Namespace):
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Cls Acc', ':3.1f')
+    progress = ProgressMeter(
+        args.iters_per_epoch // 2,
+        [losses, cls_accs],
+        prefix="Train ensemble classifier {}:, Epoch: [{}]".format(classifier_index + 1, epoch))
+
+    model.eval()
+    ens_classifier.train()
+
+    batch_size = args.batch_size
+    for i in range(args.iters_per_epoch // 2):
+        x_s, labels_s = next(train_source_iter)
+        x_s = x_s.to(device)
+        labels_s = labels_s.to(device)
+
+        # compute output
+        with torch.no_grad():
+            _, f_s = model(x_s)
+        y_s = ens_classifier(f_s, classifier_index)
+
+        loss = F.cross_entropy(y_s, labels_s)
+        losses.update(loss.item(), batch_size)
+        cls_acc = accuracy(y_s, labels_s)[0]
+        cls_accs.update(cls_acc.item(), batch_size)
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        if i % args.print_freq == 0:
+            progress.display(i)
 
 
 def validate(val_loader, model, ens_classifier, source_classes, args):
@@ -441,39 +448,42 @@ def validate(val_loader, model, ens_classifier, source_classes, args):
     model.eval()
     ens_classifier.eval()
 
-    all_confidence = []
+    all_marginal_confidence = []
     all_entropy = []
     all_predictions = []
     all_labels = []
 
     with torch.no_grad():
-        for i, (images, labels) in enumerate(val_loader):
+        for images, label in val_loader:
             images = images.to(device)
-            labels = labels.to(device)
+            label = label.to(device)
 
             output, f = model(images)
-            _, predictions = torch.max(F.softmax(output, -1), 1)
+            _, prediction = torch.max(F.softmax(output, -1), 1)
 
             yt_1, yt_2, yt_3, yt_4, yt_5 = ens_classifier(f, -1)
-            confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
+            marginal_confidence = get_marginal_confidence(yt_1, yt_2, yt_3, yt_4, yt_5)
             entropy = get_entropy(yt_1, yt_2, yt_3, yt_4, yt_5)
 
-            all_confidence.extend(confidence)
-            all_entropy.extend(entropy)
-            all_predictions.extend(predictions)
-            all_labels.extend(labels)
+            all_marginal_confidence.append(marginal_confidence)
+            all_entropy.append(entropy)
+            all_predictions.append(prediction)
+            all_labels.append(label)
 
-    all_confidence = norm(torch.tensor(all_confidence))
-    all_entropy = norm(torch.tensor(all_entropy))
-    all_score = (all_confidence + 1 - all_entropy) / 2
+    all_marginal_confidence = norm(torch.cat(all_marginal_confidence, dim=0))
+    all_entropy = norm(torch.cat(all_entropy, dim=0))
+    all_score = (all_marginal_confidence + 1 - all_entropy) / 2
+
+    all_predictions = torch.cat(all_predictions, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
 
     counters = utils.AccuracyCounter(len(source_classes) + 1)
-    for (predictions, labels, score) in zip(all_predictions, all_labels, all_score):
-        labels = labels.item()
-        if labels in source_classes:
-            counters.add_total(labels)
-            if score >= args.threshold and predictions == labels:
-                counters.add_correct(labels)
+    for (prediction, label, score) in zip(all_predictions, all_labels, all_score):
+        label = label.item()
+        if label in source_classes:
+            counters.add_total(label)
+            if score >= args.threshold and prediction == label:
+                counters.add_correct(label)
         else:
             counters.add_total(-1)
             if score < args.threshold:
