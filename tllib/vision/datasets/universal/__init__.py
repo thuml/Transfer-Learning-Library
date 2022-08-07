@@ -8,14 +8,14 @@ from ..officehome import OfficeHome
 from ..visda2017 import VisDA2017
 from ..domainnet import DomainNet
 
-from typing import Optional, ClassVar, Sequence
+from typing import Optional, ClassVar, Sequence, List
 from copy import deepcopy
 
 __all__ = ['Office31', 'OfficeHome', 'VisDA2017', 'DomainNet', 'default_universal']
 
 
 def universal(dataset_class: ClassVar, public_classes: Sequence[str],
-              private_classes: Optional[Sequence[str]] = ()) -> ClassVar:
+              private_classes: Optional[Sequence[str]] = (), class_mapping: Optional[List] = None) -> ClassVar:
     """
     Convert a dataset into its universal version.
 
@@ -28,6 +28,7 @@ def universal(dataset_class: ClassVar, public_classes: Sequence[str],
         private_classes (sequence[str], optional): A sequence of which categories that are privately kept \
             in the universal dataset. Each element of `private_classes` must belong to the `classes` list of \
             `dataset_class`. Default: ().
+        class_mapping: (list, optional): a class mapping
     """
     if not (issubclass(dataset_class, ImageList)):
         raise Exception("Only subclass of ImageList can be a universal dataset")
@@ -40,6 +41,8 @@ def universal(dataset_class: ClassVar, public_classes: Sequence[str],
             for (path, label) in self.samples:
                 class_name = self.classes[label]
                 if class_name in all_classes:
+                    if class_mapping:
+                        label = class_mapping[label]
                     samples.append((path, label))
             self.samples = samples
             self.targets = [s[1] for s in self.samples]
@@ -59,6 +62,7 @@ def default_universal(dataset_class: ClassVar, source: bool) -> ClassVar:
             :class:`~tllib.vision.datasets.visda2017.VisDA2017`, :class:`~tllib.vision.datasets.domainnet.DomainNet`,
         source (bool): Whether the dataset is used for source domain or not.
     """
+    class_mapping = None
     if dataset_class == Office31:
         public_classes = Office31.CLASSES[:10]
         if source:
@@ -66,12 +70,17 @@ def default_universal(dataset_class: ClassVar, source: bool) -> ClassVar:
         else:
             private_classes = Office31.CLASSES[20:]
     elif dataset_class == OfficeHome:
-        public_classes = sorted(OfficeHome.CLASSES)[:10]
+        sorted_classes = sorted(OfficeHome.CLASSES)
+        class_mapping = [sorted_classes.index(c) for c in OfficeHome.CLASSES]
+        public_classes = sorted_classes[:10]
         if source:
-            private_classes = sorted(OfficeHome.CLASSES)[10:15]
+            private_classes = sorted_classes[10:15]
         else:
-            private_classes = sorted(OfficeHome.CLASSES)[15:]
+            private_classes = sorted_classes[15:]
     elif dataset_class == VisDA2017:
+        ordered_classes = ['aeroplane', 'bus', 'horse', 'knife', 'person', 'skateboard', 'truck', 'bicycle', 'car',
+                           'motorcycle', 'plant', 'train']
+        class_mapping = [ordered_classes.index(c) for c in VisDA2017.CLASSES]
         public_classes = ('aeroplane', 'bus', 'horse', 'knife', 'person', 'skateboard')
         if source:
             private_classes = ('truck', 'bicycle', 'car')
@@ -85,4 +94,4 @@ def default_universal(dataset_class: ClassVar, source: bool) -> ClassVar:
             private_classes = DomainNet.CLASSES[200:]
     else:
         raise NotImplementedError("Unknown universal domain adaptation dataset: {}".format(dataset_class.__name__))
-    return universal(dataset_class, public_classes, private_classes)
+    return universal(dataset_class, public_classes, private_classes, class_mapping)
