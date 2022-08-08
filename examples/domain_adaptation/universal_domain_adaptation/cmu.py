@@ -26,7 +26,7 @@ from tllib.alignment.cmu import ImageClassifier, Ensemble, get_marginal_confiden
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.utils.data import ForeverDataIterator
-from tllib.utils.metric import accuracy
+from tllib.utils.metric import accuracy, ConfusionMatrix
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
@@ -114,8 +114,8 @@ def main(args: argparse.Namespace):
                                       transform=val_transform)
     else:
         test_dataset = val_dataset
-    source_classes = np.unique(train_source_dataset.targets)
-    num_classes = len(source_classes)
+    num_classes = train_source_dataset.num_classes
+    num_common_classes = train_source_dataset.num_common_classes
 
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size, shuffle=True,
                                      num_workers=args.workers, drop_last=True)
@@ -158,7 +158,7 @@ def main(args: argparse.Namespace):
         return
 
     if args.phase == 'test':
-        acc1, h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
+        acc1, h_score = validate(test_loader, classifier, ens_classifier, num_classes, num_common_classes, args)
         return
 
     # ==================================================================================================================
@@ -216,7 +216,7 @@ def main(args: argparse.Namespace):
                                  args)
 
         # evaluate on validation set
-        acc, h_score = validate(val_loader, classifier, ens_classifier, source_classes, args)
+        acc, h_score = validate(val_loader, classifier, ens_classifier, num_classes, num_common_classes, args)
         torch.save(classifier.state_dict(), logger.get_checkpoint_path('latest_classifier'))
         torch.save(ens_classifier.state_dict(), logger.get_checkpoint_path('latest_ens_classifier'))
 
@@ -234,7 +234,7 @@ def main(args: argparse.Namespace):
     # evaluate on test set
     classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_classifier')))
     ens_classifier.load_state_dict(torch.load(logger.get_checkpoint_path('best_ens_classifier')))
-    test_acc, test_h_score = validate(test_loader, classifier, ens_classifier, source_classes, args)
+    test_acc, test_h_score = validate(test_loader, classifier, ens_classifier, num_classes, num_common_classes, args)
     print('* Test Mean Acc@1 {:.3f} H-score {:.3f}'.format(test_acc, test_h_score))
     logger.close()
 
@@ -443,7 +443,7 @@ def train_ens_classifier(train_source_iter: ForeverDataIterator, model: ImageCla
             progress.display(i)
 
 
-def validate(val_loader, model, ens_classifier, source_classes, args):
+def validate(val_loader, model, ens_classifier, num_classes, num_common_classes, args):
     # switch to evaluate mode
     model.eval()
     ens_classifier.eval()
@@ -477,24 +477,25 @@ def validate(val_loader, model, ens_classifier, source_classes, args):
     all_predictions = torch.cat(all_predictions, dim=0)
     all_labels = torch.cat(all_labels, dim=0)
 
-    counters = utils.AccuracyCounter(len(source_classes) + 1)
-    for (prediction, label, score) in zip(all_predictions, all_labels, all_score):
-        label = label.item()
-        if label in source_classes:
-            counters.add_total(label)
-            if score >= args.threshold and prediction == label:
-                counters.add_correct(label)
-        else:
-            counters.add_total(-1)
-            if score < args.threshold:
-                counters.add_correct(-1)
+    unknown_class = num_classes
+    confmat = ConfusionMatrix(num_classes=num_classes + 1)
 
-    print('* Acc@1 of each class')
-    print(counters.per_class_accuracy())
-    print('* Mean Acc@1 {:.3f}'.format(counters.mean_accuracy()))
-    print('* H-score {:.3f}'.format(counters.h_score()))
+    all_predictions[all_score < args.threshold] = unknown_class
+    all_labels[all_labels >= unknown_class] = unknown_class
+    confmat.update(all_labels, all_predictions)
 
-    return counters.mean_accuracy(), counters.h_score()
+    _, accs, _ = confmat.compute()
+    mean_acc = accs[accs != 0].mean().item() * 100
+    known = accs[:num_common_classes].mean().item() * 100
+    unknown = accs[-1].item() * 100
+    h_score = 2 * known * unknown / (known + unknown)
+
+    print('* Mean Acc@1 {:.3f}'.format(mean_acc))
+    print('* Known Acc@1 {:.3f}'.format(known))
+    print('* Unknown Acc@1 {:.3f}'.format(unknown))
+    print('* H-score {:.3f}'.format(h_score))
+
+    return mean_acc, h_score
 
 
 if __name__ == '__main__':
@@ -520,13 +521,13 @@ if __name__ == '__main__':
     parser.add_argument('--bottleneck-dim', default=256, type=int,
                         help='Dimension of bottleneck')
     # training parameters
-    parser.add_argument('--threshold', default=0.8, type=float,
+    parser.add_argument('--threshold', default=0.7, type=float,
                         help='When class confidence is less than the given threshold, '
-                             'model will output "unknown" (default: 0.5)')
-    parser.add_argument('--src-threshold', default=0.8, type=float,
-                        help='threshold for source common class item counting')
-    parser.add_argument('--cut', default=0.2, type=float,
-                        help='cut threshold for common classes identifying')
+                             'model will output "unknown" (default: 0.7)')
+    parser.add_argument('--src-threshold', default=0.4, type=float,
+                        help='threshold for source common class item counting (default: 0.4)')
+    parser.add_argument('--cut', default=0.1, type=float,
+                        help='cut threshold for common classes identifying (default: 0.1)')
     parser.add_argument('--trade-off', default=1., type=float,
                         help='the trade-off hyper-parameter for transfer loss')
     parser.add_argument('-b', '--batch-size', default=32, type=int,

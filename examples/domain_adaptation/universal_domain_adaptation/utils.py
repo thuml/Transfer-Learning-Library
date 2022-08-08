@@ -4,7 +4,6 @@
 """
 import sys
 import timm
-import numpy as np
 import torch.nn as nn
 import torchvision.transforms as T
 
@@ -135,36 +134,3 @@ def get_val_transform(resizing='default'):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-
-
-class AccuracyCounter:
-
-    def __init__(self, num_classes):
-        self.n_correct = np.zeros(num_classes)
-        self.n_total = np.zeros(num_classes)
-        self.num_classes = num_classes
-
-    def add_correct(self, index, amount=1):
-        self.n_correct[index] += amount
-
-    def add_total(self, index, amount=1):
-        self.n_total[index] += amount
-
-    def clear_zero(self):
-        i = np.where(self.n_total == 0)
-        self.n_correct = np.delete(self.n_correct, i)
-        self.n_total = np.delete(self.n_total, i)
-
-    def per_class_accuracy(self):
-        self.clear_zero()
-        return self.n_correct / self.n_total
-
-    def mean_accuracy(self):
-        self.clear_zero()
-        return np.mean(self.n_correct / self.n_total)
-
-    def h_score(self):
-        self.clear_zero()
-        common_acc = np.mean(self.n_correct[0:-1] / self.n_total[0:-1])
-        open_acc = self.n_correct[-1] / self.n_total[-1]
-        return 2 * common_acc * open_acc / (common_acc + open_acc)
