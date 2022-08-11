@@ -14,26 +14,28 @@ Besides, we maintain a collection of **_awesome papers in Transfer Learning_** i
 ### 2022.2
 We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
 
-_API_ is divided by methods. Specifically, 
-- dalib.adaptation => tllib.aligment  (domain alignment methods)
-- dalib.translation => tllib.translation (domain translation methods)
-- dalib.modules, common.modules => tllib.modules
-- talib => tllib.regularization (regularization methods)
-- common.vision => tllib.vision
-- common.utils => tllib.utils
-
-We also add some new method division,
-- tllib.normalization (normalization-based methods)
-- tllib.self_training (self-training methods)
-- tllib.ranking (model ranking/selection methods)
-- tllib.reweight (data reweighting/resampling methods)
-
-_examples_ is still divided by learning setup.
-
 ## Introduction
 <img src="/Tllib.png">
 
 *TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
+
+Our _API_ is divided by methods, which include: 
+- domain alignment methods (tllib.aligment)
+- domain translation methods (tllib.translation)
+- self-training methods (tllib.self_training)
+- regularization methods (tllib.regularization)
+- data reweighting/resampling methods (tllib.reweight)
+- model ranking/selection methods (tllib.ranking)
+- normalization-based methods (tllib.normalization)
+
+We provide many example codes in the directory _examples_, which is divided by learning setups. Currently, the supported learning setups include:
+- DA (domain adaptation)
+- TA (task adaptation, also known as finetune)
+- OOD (out-of-distribution generalization, also known as DG / domain generalization)
+- SSL (semi-supervised learning)
+- Model Selection 
+
+Our supported tasks include: classification, regression, object detection, segmentation, keypoint detection, and so on.
 
 The currently supported algorithms include:
 
