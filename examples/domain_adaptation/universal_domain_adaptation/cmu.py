@@ -134,8 +134,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer).to(
-        device)
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim, pool_layer=pool_layer,
+                                 finetune=True).to(device)
     ens_classifier = Ensemble(classifier.features_dim, train_source_dataset.num_classes).to(device)
 
     if args.phase != 'train':
@@ -485,7 +485,7 @@ def validate(val_loader, model, ens_classifier, num_classes, num_common_classes,
     confmat.update(all_labels, all_predictions)
 
     _, accs, _ = confmat.compute()
-    mean_acc = accs[accs != 0].mean().item() * 100
+    mean_acc = ((accs[:num_common_classes].sum() + accs[-1]) / (num_common_classes + 1)).item() * 100
     known = accs[:num_common_classes].mean().item() * 100
     unknown = accs[-1].item() * 100
     h_score = 2 * known * unknown / (known + unknown)
@@ -543,7 +543,7 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=30, type=int, metavar='N',
                         help='number of total epochs to run (default: 30)')
     parser.add_argument('--epochs-pretrain', default=5, type=int,
@@ -554,8 +554,6 @@ if __name__ == '__main__':
                         metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
-    parser.add_argument('--per-class-eval', action='store_true',
-                        help='whether output per-class accuracy during evaluation')
     parser.add_argument("--log", type=str, default='cmu',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],

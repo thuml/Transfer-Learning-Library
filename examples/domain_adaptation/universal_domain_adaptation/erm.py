@@ -214,7 +214,7 @@ def validate(val_loader, model, num_classes, num_common_classes, args):
                 progress.display(i)
 
     _, accs, _ = confmat.compute()
-    mean_acc = accs[accs != 0].mean().item() * 100
+    mean_acc = ((accs[:num_common_classes].sum() + accs[-1]) / (num_common_classes + 1)).item() * 100
     known = accs[:num_common_classes].mean().item() * 100
     unknown = accs[-1].item() * 100
     h_score = 2 * known * unknown / (known + unknown)

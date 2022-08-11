@@ -8,18 +8,18 @@ CUDA_VISIBLE_DEVICES=0 python cmu.py data/office31 -d Office31 -s D -t A -a resn
 CUDA_VISIBLE_DEVICES=0 python cmu.py data/office31 -d Office31 -s W -t A -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/Office31_W2A
 
 # ResNet50, Office-Home, Single Source
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Cl
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Pr
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Rw
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Ar
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Pr
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Rw
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Ar
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Cl
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Rw
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Ar
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Cl
-CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --lr 0.003 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Pr
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Cl -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Cl
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Pr -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Pr
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Ar -t Rw -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Ar2Rw
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Ar -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Ar
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Pr -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Pr
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Cl -t Rw -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Cl2Rw
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Ar -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Ar
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Cl -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Cl
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Pr -t Rw -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Pr2Rw
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Ar -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Ar
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Cl -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Cl
+CUDA_VISIBLE_DEVICES=0 python cmu.py data/office-home -d OfficeHome -s Rw -t Pr -a resnet50 --lr 0.001 --threshold 0.7 --src-threshold 0.4 --cut 0.1 --seed 0 --log logs/cmu/OfficeHome_Rw2Pr
 
 # VisDA-2017
 CUDA_VISIBLE_DEVICES=0 python cmu.py data/visda-2017 -d VisDA2017 -s Synthetic -t Real -a resnet50 --train-resizing cen.crop \
