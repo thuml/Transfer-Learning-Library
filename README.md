@@ -31,9 +31,8 @@ We also add some new method division,
 _examples_ is still divided by learning setup.
 
 ## Introduction
-*TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
-
 <img src="/Tllib.png">
+*TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
 The currently supported algorithms include:
 
