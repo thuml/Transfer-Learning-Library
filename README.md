@@ -190,9 +190,6 @@ If you use this toolbox or benchmark in your research, please cite this project.
 }
 ```
 
-## TODO
-- add image for each learning setup
-
 ## Acknowledgment
 
 We would like to thank School of Software, Tsinghua University and The National Engineering Laboratory for Big Data Software for providing such an excellent ML research platform.
