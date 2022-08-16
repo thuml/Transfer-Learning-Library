@@ -1,20 +1,15 @@
-<img src="/TransLearn.png"/>
+# <img src="/logo.png" width=200/> Transfer Learning Library
 
-## Updates 
-
-### 2022.8
-We release `v0.4` of *TLlib*. Previous versions of *TLlib* can be found [here](https://github.com/thuml/Transfer-Learning-Library/releases). In `v0.4`, we add implementations of 
-the following methods:
-- Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection) [[API]](/tllib/alignment/d_adapt)
-- Pre-trained Model Selection [[Code]](/examples/model_selection) [[API]](/tllib/ranking)
-- Semi-supervised Learning for Classification [[Code]](/examples/semi_supervised_learning/image_classification/) [[API]](/tllib/self_training)
-
-Besides, we maintain a collection of **_awesome papers in Transfer Learning_** in another repo [_A Roadmap for Transfer Learning_](https://github.com/thuml/A-Roadmap-for-Transfer-Learning).
-
-### 2022.2
-We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
+- [Introduction](#introduction)
+- [Updates](#updates)
+- [Supported Methods](#supported-methods)
+- [Installation](#installation)
+- [Documentation](#documentation)
+- [Contact](#contact)
+- [Citation](#citation)
 
 ## Introduction
+
 <img src="/Tllib.png">
 
 *TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
@@ -37,6 +32,22 @@ We provide many example codes in the directory _examples_, which is divided by l
 
 Our supported tasks include: classification, regression, object detection, segmentation, keypoint detection, and so on.
 
+
+## Updates 
+
+### 2022.8
+We release `v0.4` of *TLlib*. Previous versions of *TLlib* can be found [here](https://github.com/thuml/Transfer-Learning-Library/releases). In `v0.4`, we add implementations of 
+the following methods:
+- Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection) [[API]](/tllib/alignment/d_adapt)
+- Pre-trained Model Selection [[Code]](/examples/model_selection) [[API]](/tllib/ranking)
+- Semi-supervised Learning for Classification [[Code]](/examples/semi_supervised_learning/image_classification/) [[API]](/tllib/self_training)
+
+Besides, we maintain a collection of **_awesome papers in Transfer Learning_** in another repo [_A Roadmap for Transfer Learning_](https://github.com/thuml/A-Roadmap-for-Transfer-Learning).
+
+### 2022.2
+We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
+
+## Supported Methods
 The currently supported algorithms include:
 
 ##### Domain Adaptation for Classification [[Code]](/examples/domain_adaptation/image_classification)
