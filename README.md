@@ -1,4 +1,4 @@
-# <img src="/logo.png" width=200/> Transfer Learning Library
+# <img src="/logo.png" width=150/> Transfer Learning Library
 
 - [Introduction](#introduction)
 - [Updates](#updates)
@@ -9,9 +9,6 @@
 - [Citation](#citation)
 
 ## Introduction
-
-<img src="/Tllib.png">
-
 *TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
 Our _API_ is divided by methods, which include: 
@@ -22,6 +19,8 @@ Our _API_ is divided by methods, which include:
 - data reweighting/resampling methods (tllib.reweight)
 - model ranking/selection methods (tllib.ranking)
 - normalization-based methods (tllib.normalization)
+
+<img src="/Tllib.png">
 
 We provide many example codes in the directory _examples_, which is divided by learning setups. Currently, the supported learning setups include:
 - DA (domain adaptation)
