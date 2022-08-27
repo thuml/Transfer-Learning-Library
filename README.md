@@ -1,4 +1,6 @@
-# <img src="/logo.png" width=150/> Transfer Learning Library
+<div align='center' margin-bottom:40px> <img src="/logo.png" width=250/> </div>
+
+# Transfer Learning Library
 
 - [Introduction](#introduction)
 - [Updates](#updates)
