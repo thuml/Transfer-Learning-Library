@@ -1,4 +1,4 @@
-<div align='center' margin-bottom:40px> <img src="/logo.png" width=250/> </div>
+<div align='center' margin-bottom:40px> <img src="/logo.png" width=200/> </div>
 
 # Transfer Learning Library
 
