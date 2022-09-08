@@ -33,8 +33,15 @@ We provide many example codes in the directory _examples_, which is divided by l
 
 Our supported tasks include: classification, regression, object detection, segmentation, keypoint detection, and so on.
 
-
 ## Updates 
+
+### 2022.9
+
+We support installing *TLlib* via `pip`, which is experimental currently.
+
+```shell
+pip install -i https://test.pypi.org/simple/ tllib==0.4
+```
 
 ### 2022.8
 We release `v0.4` of *TLlib*. Previous versions of *TLlib* can be found [here](https://github.com/thuml/Transfer-Learning-Library/releases). In `v0.4`, we add implementations of 
@@ -131,19 +138,20 @@ Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.
 
 ## Installation
 
-- To use ``tllib`` in other places, you need to install TLlib,
+##### Install from Source Code
+
+- Please git clone the library first. Then, run the following commands to install `tllib` and all the dependency.
 ```shell
 python setup.py install
+pip install -r requirements.txt
 ```
-Note that we do not support *pip install* currently.
+##### Install via `pip`
 
-- For flexible use and modification of TLlib, please git clone the library and check that you have install all the dependency.
+- Installing via `pip` is currently experimental.
 
+```shell
+pip install -i https://test.pypi.org/simple/ tllib==0.4
 ```
-    pip install -r requirements.txt
-```
-
-It's recommended to use pytorch==1.7.1 and torchvision==0.8.2 in order to better reproduce the benchmark results.
 
 
 ## Documentation
