@@ -65,7 +65,12 @@ CUDA_VISIBLE_DEVICES=0 python erm.py data/wilds -d "fmow" --aa "v0" --arch "dens
 
 | Methods | Val Avg Acc | Test Avg Acc | Val F1 macro | Test F1 macro |
 |---------|-------------|--------------|--------------|---------------|
-| ERM     | 59.9        | 72.6         | 36.6         | 32.9          |
+| ERM     | 59.9        | 72.6         | 36.3         | 32.9          |
+| DANN    | 57.4        | 70.1         | 35.8         | 32.2          |
+| DAN     | 63.7        | 69.4         | 39.1         | 31.6          |
+| JAN     | 62.4        | 68.7         | 37.6         | 31.5          |
+| CDAN    | 57.6        | 71.2         | 37.0         | 30.6          |
+| MDD     | 58.3        | 73.5         | 35.0         | 30.0          |
 
 ### Visualization
 

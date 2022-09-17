@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 
@@ -16,16 +15,13 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
 from tllib.normalization.stochnorm import convert_model
 from tllib.modules.classifier import Classifier
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.logger import CompleteLogger
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -53,7 +49,8 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
+                                                                val_transform, args.sample_rate,
+                                                                args.num_samples_per_classes)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
@@ -68,7 +65,8 @@ def main(args: argparse.Namespace):
     classifier = convert_model(classifier, p=args.prob)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    optimizer = SGD(classifier.get_parameters(args.lr), lr=args.lr, momentum=args.momentum, weight_decay=args.wd,
+                    nesterov=True)
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
 
     # resume from the best checkpoint
@@ -160,10 +158,10 @@ if __name__ == '__main__':
                         help='sample rate of training dataset (default: 100)')
     parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
                         help='number of samples per classes.')
-    parser.add_argument('--train-resizing', type=str, default='default')
-    parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--train-resizing', type=str, default='default', help='resize mode during training')
+    parser.add_argument('--val-resizing', type=str, default='default', help='resize mode during validation')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
-    parser.add_argument('--color-jitter', action='store_true')
+    parser.add_argument('--color-jitter', action='store_true', help='apply jitter during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
@@ -171,7 +169,7 @@ if __name__ == '__main__':
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
     parser.add_argument('--no-pool', action='store_true',
-                        help='no pool layer after the feature extractor.')
+                        help='no pool layer after the feature extractor. Used in models such as ViT.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--prob', '--probability', default=0.5, type=float,
                         metavar='P', help='Probability for StochNorm layers')
@@ -185,13 +183,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12,), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
@@ -206,4 +204,3 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     main(args)
-

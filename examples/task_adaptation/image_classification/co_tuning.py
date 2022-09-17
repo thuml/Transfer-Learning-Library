@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os
@@ -18,7 +17,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.utils.data import Subset
 
-sys.path.append('../../..')
+import utils
 from tllib.regularization.co_tuning import CoTuningLoss, Relationship, Classifier
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
@@ -26,17 +25,16 @@ from tllib.utils.logger import CompleteLogger
 from tllib.utils.data import ForeverDataIterator
 import tllib.vision.datasets as datasets
 
-sys.path.append('.')
-import utils
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def get_dataset(dataset_name, root, train_transform, val_transform, sample_rate=100, num_samples_per_classes=None):
     dataset = datasets.__dict__[dataset_name]
     if sample_rate < 100:
-        train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=train_transform)
-        determin_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True, transform=val_transform)
+        train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True,
+                                transform=train_transform)
+        determin_train_dataset = dataset(root=root, split='train', sample_rate=sample_rate, download=True,
+                                         transform=val_transform)
         test_dataset = dataset(root=root, split='test', sample_rate=100, download=True, transform=val_transform)
         num_classes = train_dataset.num_classes
     else:
@@ -76,7 +74,8 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, determin_train_dataset, val_dataset, num_classes = get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
+                                                                                  val_transform, args.sample_rate,
+                                                                                  args.num_samples_per_classes)
     print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
@@ -90,7 +89,8 @@ def main(args: argparse.Namespace):
     print("=> using pre-trained model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch, args.pretrained)
     pool_layer = nn.Identity() if args.no_pool else None
-    classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head(), pool_layer=pool_layer, finetune=args.finetune).to(device)
+    classifier = Classifier(backbone, num_classes, head_source=backbone.copy_head(), pool_layer=pool_layer,
+                            finetune=args.finetune).to(device)
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
@@ -106,7 +106,8 @@ def main(args: argparse.Namespace):
 
     # build relationship between source classes and target classes
     source_classifier = nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.head_source)
-    relationship = Relationship(determin_train_loader, source_classifier, device, os.path.join(logger.root, args.relationship))
+    relationship = Relationship(determin_train_loader, source_classifier, device,
+                                os.path.join(logger.root, args.relationship))
     co_tuning_loss = CoTuningLoss()
 
     # start training
@@ -189,10 +190,10 @@ if __name__ == '__main__':
                         help='sample rate of training dataset (default: 100)')
     parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
                         help='number of samples per classes.')
-    parser.add_argument('--train-resizing', type=str, default='default')
-    parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--train-resizing', type=str, default='default', help='resize mode during training')
+    parser.add_argument('--val-resizing', type=str, default='default', help='resize mode during validation')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
-    parser.add_argument('--color-jitter', action='store_true')
+    parser.add_argument('--color-jitter', action='store_true', help='apply jitter during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
@@ -200,7 +201,7 @@ if __name__ == '__main__':
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
     parser.add_argument('--no-pool', action='store_true',
-                        help='no pool layer after the feature extractor.')
+                        help='no pool layer after the feature extractor. Used in models such as ViT.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--trade-off', default=2.3, type=float,
                         metavar='P', help='the trade-off hyper-parameter for co-tuning loss')
@@ -216,13 +217,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12,), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
@@ -237,4 +238,3 @@ if __name__ == '__main__':
                         help="When phase is 'test', only test the model.")
     args = parser.parse_args()
     main(args)
-
