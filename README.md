@@ -1,4 +1,4 @@
-<div align='center' margin-bottom:40px> <img src="/logo.png" width=200/> </div>
+<div align='center' margin-bottom:40px> <img src="logo.png" width=200/> </div>
 
 # Transfer Learning Library
 
@@ -22,7 +22,7 @@ Our _API_ is divided by methods, which include:
 - model ranking/selection methods (tllib.ranking)
 - normalization-based methods (tllib.normalization)
 
-<img src="/Tllib.png">
+<img src="Tllib.png">
 
 We provide many example codes in the directory _examples_, which is divided by learning setups. Currently, the supported learning setups include:
 - DA (domain adaptation)
