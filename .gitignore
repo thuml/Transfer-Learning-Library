@@ -131,3 +131,5 @@ exp/*
 trash/*
 examples/domain_adaptation/digits/logs/*
 examples/domain_adaptation/digits/data/*
++.DS_Store
+*/.DS_Store
