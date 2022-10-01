@@ -100,3 +100,8 @@ If you have any questions or want to use the code, please contact
 - Junguang Jiang (JiangJunguang1123@outlook.com)
 
 ## Acknowledgement
+
+We appreciate the following github repos for their valuable code base:
+- https://github.com/xternalz/WideResNet-pytorch
+- https://github.com/kekmodel/FixMatch-pytorch
+- https://github.com/TorchSSL/TorchSSL
