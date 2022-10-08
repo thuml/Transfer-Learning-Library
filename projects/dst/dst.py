@@ -203,13 +203,13 @@ def main(args):
         val_sampler = DistributedSampler(val_dataset, shuffle=False)
 
     labeled_train_loader = DataLoader(
-        labeled_train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True,
+        labeled_train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=False,
         sampler=labeled_train_sampler, drop_last=True)
     unlabeled_train_loader = DataLoader(
         unlabeled_train_dataset, batch_size=args.unlabeled_batch_size, shuffle=False, num_workers=args.workers,
         pin_memory=False, sampler=unlabeled_train_sampler, drop_last=True)
     val_loader = DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True,
+        val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=False,
         sampler=val_sampler)
 
     # create model
@@ -343,7 +343,6 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
 
         # update ema model
         ema_model.update()
-        utils.update_bn(model, ema_model)
 
         if global_step % args.print_freq == 0:
             # measure accuracy and track loss
@@ -415,6 +414,7 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
                     normalize=True)
 
         if global_step % args.eval_freq == 0:
+            utils.update_bn(model, ema_model)
             acc = utils.validate(val_loader, ema_model, args)
             if args.local_rank == 0:
                 writer.add_scalar('eval/acc', acc, global_step)
