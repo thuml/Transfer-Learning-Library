@@ -91,6 +91,18 @@ def sample_labeled_data(num_samples_per_class, num_classes, labels, seed):
     return np.array(labeled_idxes)
 
 
+def load_or_sample_labeled_data(dataset_name, num_samples_per_class, num_classes, labels, seed):
+    split_root = 'labeled_subset'
+    split_path = os.path.join(split_root, '{}_{}_labels.npy'.format(dataset_name, num_samples_per_class * num_classes))
+    if os.path.exists(split_path):
+        labeled_idxes = np.load(split_path)
+    else:
+        labeled_idxes = sample_labeled_data(num_samples_per_class, num_classes, labels, seed=seed)
+        os.makedirs(split_root, exist_ok=True)
+        np.save(split_path, labeled_idxes)
+    return labeled_idxes
+
+
 def get_dataset(dataset_name, root, num_samples_per_class, batch_size, labeled_train_transform, val_transform,
                 unlabeled_train_transform=None, seed=0):
     def duplicate_labeled_indexes(idxes):
@@ -119,7 +131,8 @@ def get_dataset(dataset_name, root, num_samples_per_class, batch_size, labeled_t
         num_classes = base_dataset.num_classes
 
         # randomly sample labeled data
-        labeled_idxes = sample_labeled_data(num_samples_per_class, num_classes, base_dataset.targets, seed=seed)
+        labeled_idxes = load_or_sample_labeled_data(dataset_name, num_samples_per_class, num_classes,
+                                                    base_dataset.targets, seed=seed)
         labeled_idxes = duplicate_labeled_indexes(labeled_idxes)
         # labeled subset
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
@@ -146,7 +159,8 @@ def get_dataset(dataset_name, root, num_samples_per_class, batch_size, labeled_t
         targets = np.concatenate([svhn_train_split.targets, svhn_extra_split.targets])
 
         # randomly sample labeled data
-        labeled_idxes = sample_labeled_data(num_samples_per_class, num_classes, targets, seed=seed)
+        labeled_idxes = load_or_sample_labeled_data(dataset_name, num_samples_per_class, num_classes, targets,
+                                                    seed=seed)
         labeled_idxes = duplicate_labeled_indexes(labeled_idxes)
         # labeled subset
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
@@ -169,8 +183,9 @@ def get_dataset(dataset_name, root, num_samples_per_class, batch_size, labeled_t
         num_classes = base_dataset.num_classes
 
         # randomly sample labeled data
-        labeled_idxes = sample_labeled_data(num_samples_per_class, base_dataset.num_classes,
-                                            base_dataset.targets, seed=seed)
+        labeled_idxes = load_or_sample_labeled_data(dataset_name,
+                                                    num_samples_per_class, base_dataset.num_classes,
+                                                    base_dataset.targets, seed=seed)
         labeled_idxes = duplicate_labeled_indexes(labeled_idxes)
         # labeled subset
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)

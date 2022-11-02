@@ -3,15 +3,11 @@
 Code release of paper [Debiased Self-Training for Semi-Supervised Learning](https://arxiv.org/abs/2202.07136)
 (NeurIPS 2022)
 
-![arch](fig/arch.png)
-
-**Note**
-
 Here we release code and benchmark results on standard SSL datasets, including `SVHN`, `CIFAR10`, `CIFAR100` and `STL10`
 . Following common practice, we adopt variants of `WideResNet` as backbone network and train from scratch.
 
 Code and evaluating results with supervised or unsupervised pre-trained models on `ImageNet` can be found
-[here](../../examples/semi_supervised_learning/image_classification). 
+[here](../../examples/semi_supervised_learning/image_classification).
 
 ## Get Started
 
@@ -63,7 +59,8 @@ CUDA_VISIBLE_DEVICES=0 python dst.py --root data/cifar10 --dataset CIFAR10 --num
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port 16666 dst.py \
   --root data/cifar100 --dataset CIFAR100 --num-samples-per-class 4 \
   --norm-mean 0.507 0.487 0.441 --norm-std 0.267 0.256 0.276 \
-  --arch WideResNet --depth 28 --widen-factor 8 --sync-bn --lr 0.03 -b 16 -ub 112 --threshold 0.95 --weight-decay 0.001 \
+  --arch WideResNet --depth 28 --widen-factor 8 --sync-bn --lr 0.03 -b 16 -ub 112 \
+  --threshold 0.9 --trade-off-worst 0.3 --eta-prime 2 --warmup-iterations 100000 --weight-decay 0.001 \
   --opt-level O0 --deterministic --log logs/dst_fixmatch/cifar100_400_labels
 ```
 
@@ -91,17 +88,3 @@ If you find this code useful, please cite our paper.
     year={2022}
 }
 ```
-
-## Contact
-
-If you have any questions or want to use the code, please contact
-
-- Baixu Chen (cbx_99_hasta@outlook.com)
-- Junguang Jiang (JiangJunguang1123@outlook.com)
-
-## Acknowledgement
-
-We appreciate the following github repos for their valuable code base:
-- https://github.com/xternalz/WideResNet-pytorch
-- https://github.com/kekmodel/FixMatch-pytorch
-- https://github.com/TorchSSL/TorchSSL

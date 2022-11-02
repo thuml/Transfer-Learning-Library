@@ -40,7 +40,7 @@ from tllib.utils.metric import accuracy
 
 class Classifier(ClassifierBase):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, grl_factor=0.1, warmup_iterations=300000, **kwargs):
         super(Classifier, self).__init__(*args, **kwargs)
 
         # pseudo head and worst-case estimation head
@@ -49,19 +49,17 @@ class Classifier(ClassifierBase):
             nn.Linear(self.features_dim, mlp_dim),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(mlp_dim, mlp_dim),
-            nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(mlp_dim, self.num_classes)
         )
-        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=0.1, max_iters=300000, auto_step=False)
+        self.grl_layer = WarmStartGradientReverseLayer(alpha=1.0, lo=0.0, hi=grl_factor, max_iters=warmup_iterations,
+                                                       auto_step=False)
         self.worst_head = nn.Sequential(
             nn.Linear(self.features_dim, mlp_dim),
+            nn.BatchNorm1d(mlp_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(mlp_dim, mlp_dim),
+            nn.BatchNorm1d(mlp_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(mlp_dim, self.num_classes)
         )
 
@@ -215,7 +213,8 @@ def main(args):
     # create model
     print('=> creating model {}'.format(args.arch))
     backbone = utils.get_model(args.arch, depth=args.depth, widen_factor=args.widen_factor)
-    model = Classifier(backbone, args.num_classes, finetune=False)
+    model = Classifier(backbone, args.num_classes, grl_factor=args.grl_factor, warmup_iterations=args.warmup_iterations,
+                       finetune=False)
     print(model)
 
     if args.sync_bn:
@@ -303,15 +302,15 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
     end = time.time()
     batch_size = (args.batch_size + args.unlabeled_batch_size) * args.world_size
 
-    for global_step, (x_l, labels_l), ((x_u_weak, x_u_strong), _) in \
+    for global_step, (x_l, labels_l), ((x_u, x_u_strong), _) in \
             zip(range(args.start_step, args.train_iterations), labeled_train_loader, unlabeled_train_loader):
         x_l = x_l.cuda()
-        x_u_weak = x_u_weak.cuda()
+        x_u = x_u.cuda()
         x_u_strong = x_u_strong.cuda()
         labels_l = labels_l.cuda()
 
         # compute output
-        x = torch.cat((x_l, x_u_weak, x_u_strong), dim=0)
+        x = torch.cat((x_l, x_u, x_u_strong), dim=0)
         y, y_adv, y_pseudo = model(x)
 
         # cls loss on labeled data
@@ -319,15 +318,15 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
         cls_loss = cls_criterion(y_l, labels_l)
 
         # self training loss on unlabeled data
-        y_u_weak, _ = y[args.batch_size:].chunk(2, dim=0)
+        y_u, _ = y[args.batch_size:].chunk(2, dim=0)
         _, y_u_strong = y_pseudo[args.batch_size:].chunk(2, dim=0)
-        self_training_loss, mask, _ = self_training_criterion(y_u_strong, y_u_weak)
+        self_training_loss, mask, _ = self_training_criterion(y_u_strong, y_u)
         self_training_loss = args.trade_off_self_training * self_training_loss
 
         # worst case estimation loss on unlabeled data
         y_l_adv = y_adv[:args.batch_size]
         y_u_adv, _ = y_adv[args.batch_size:].chunk(2, dim=0)
-        worst_case_loss = args.trade_off_worst * worst_case_criterion(y_l, y_l_adv, y_u_weak, y_u_adv)
+        worst_case_loss = args.trade_off_worst * worst_case_criterion(y_l, y_l_adv, y_u, y_u_adv)
 
         loss = cls_loss + self_training_loss + worst_case_loss
 
@@ -402,7 +401,7 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
                     normalize=True)
 
                 torchvision.utils.save_image(
-                    x_u_weak,
+                    x_u,
                     os.path.join(args.log, 'visualize', 'weak-aug-unlabeled-data.jpg'),
                     padding=0,
                     normalize=True)
@@ -484,10 +483,14 @@ if __name__ == '__main__':
                         help='weight of self-training loss on unlabeled data')
     parser.add_argument('--trade-off-worst', default=0.1, type=float,
                         help='weight of worst-case estimation loss on unlabeled data')
+    parser.add_argument('--grl-factor', default=0.1, type=float,
+                        help='gradient reverse factor')
     parser.add_argument('--eta-prime', default=1, type=float,
                         help='weight of adversarial loss on labeled data')
     parser.add_argument('--train-iterations', default=1000000, type=int, metavar='N',
                         help='number of total iterations to run')
+    parser.add_argument('--warmup-iterations', default=300000, type=int,
+                        help='number of warmup iterations')
     parser.add_argument('--eval-freq', default=5000, type=int,
                         help='test interval length')
     parser.add_argument('-b', '--batch-size', default=64, type=int, metavar='N',

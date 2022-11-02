@@ -225,24 +225,24 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
     end = time.time()
     batch_size = (args.batch_size + args.unlabeled_batch_size) * args.world_size
 
-    for global_step, (x_l, labels_l), ((x_u_weak, x_u_strong), _) in \
+    for global_step, (x_l, labels_l), ((x_u, x_u_strong), _) in \
             zip(range(args.start_step, args.train_iterations), labeled_train_loader, unlabeled_train_loader):
         x_l = x_l.cuda()
-        x_u_weak = x_u_weak.cuda()
+        x_u = x_u.cuda()
         x_u_strong = x_u_strong.cuda()
         labels_l = labels_l.cuda()
 
         # compute output
-        x = torch.cat((x_l, x_u_weak, x_u_strong), dim=0)
+        x = torch.cat((x_l, x_u, x_u_strong), dim=0)
         y = model(x)
         y_l = y[:args.batch_size]
-        y_u_weak, y_u_strong = y[args.batch_size:].chunk(2, dim=0)
+        y_u, y_u_strong = y[args.batch_size:].chunk(2, dim=0)
 
         # cls loss on labeled data
         cls_loss = cls_criterion(y_l, labels_l)
 
         # self training loss on unlabeled data
-        self_training_loss, mask, _ = self_training_criterion(y_u_strong, y_u_weak)
+        self_training_loss, mask, _ = self_training_criterion(y_u_strong, y_u)
         self_training_loss = args.trade_off_self_training * self_training_loss
 
         loss = cls_loss + self_training_loss
@@ -310,7 +310,7 @@ def train(labeled_train_loader: DataLoader, unlabeled_train_loader: DataLoader, 
                     normalize=True)
 
                 torchvision.utils.save_image(
-                    x_u_weak,
+                    x_u,
                     os.path.join(args.log, 'visualize', 'weak-aug-unlabeled-data.jpg'),
                     padding=0,
                     normalize=True)
