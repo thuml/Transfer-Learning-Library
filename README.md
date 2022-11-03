@@ -1,26 +1,61 @@
-<img src="/TransLearn.png"/>
+<div align='center' margin-bottom:40px> <img src="/logo.png" width=200/> </div>
 
-## Updates 
-### 2022.2
-We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
+# Transfer Learning Library
 
-_API_ is divided by methods. Specifically, 
-- dalib.adaptation => tllib.aligment  (domain alignment methods)
-- dalib.translation => tllib.translation (domain translation methods)
-- dalib.modules, common.modules => tllib.modules
-- talib => tllib.regularization (regularization methods)
-- common.vision => tllib.vision
-- common.utils => tllib.utils
-
-We also add some new method division,
-- tllib.normalization
-- tllib.self_training
-
-_examples_ is still divided by learning setup.
+- [Introduction](#introduction)
+- [Updates](#updates)
+- [Supported Methods](#supported-methods)
+- [Installation](#installation)
+- [Documentation](#documentation)
+- [Contact](#contact)
+- [Citation](#citation)
 
 ## Introduction
 *TLlib* is an open-source and well-documented library for Transfer Learning. It is based on pure PyTorch with high performance and friendly API. Our code is pythonic, and the design is consistent with torchvision. You can easily develop new algorithms, or readily apply existing algorithms.
 
+Our _API_ is divided by methods, which include: 
+- domain alignment methods (tllib.aligment)
+- domain translation methods (tllib.translation)
+- self-training methods (tllib.self_training)
+- regularization methods (tllib.regularization)
+- data reweighting/resampling methods (tllib.reweight)
+- model ranking/selection methods (tllib.ranking)
+- normalization-based methods (tllib.normalization)
+
+<img src="/Tllib.png">
+
+We provide many example codes in the directory _examples_, which is divided by learning setups. Currently, the supported learning setups include:
+- DA (domain adaptation)
+- TA (task adaptation, also known as finetune)
+- OOD (out-of-distribution generalization, also known as DG / domain generalization)
+- SSL (semi-supervised learning)
+- Model Selection 
+
+Our supported tasks include: classification, regression, object detection, segmentation, keypoint detection, and so on.
+
+## Updates 
+
+### 2022.9
+
+We support installing *TLlib* via `pip`, which is experimental currently.
+
+```shell
+pip install -i https://test.pypi.org/simple/ tllib==0.4
+```
+
+### 2022.8
+We release `v0.4` of *TLlib*. Previous versions of *TLlib* can be found [here](https://github.com/thuml/Transfer-Learning-Library/releases). In `v0.4`, we add implementations of 
+the following methods:
+- Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection) [[API]](/tllib/alignment/d_adapt)
+- Pre-trained Model Selection [[Code]](/examples/model_selection) [[API]](/tllib/ranking)
+- Semi-supervised Learning for Classification [[Code]](/examples/semi_supervised_learning/image_classification/) [[API]](/tllib/self_training)
+
+Besides, we maintain a collection of **_awesome papers in Transfer Learning_** in another repo [_A Roadmap for Transfer Learning_](https://github.com/thuml/A-Roadmap-for-Transfer-Learning).
+
+### 2022.2
+We adjusted our API following our survey [Transferablity in Deep Learning](https://arxiv.org/abs/2201.05867).
+
+## Supported Methods
 The currently supported algorithms include:
 
 ##### Domain Adaptation for Classification [[Code]](/examples/domain_adaptation/image_classification)
@@ -34,7 +69,7 @@ The currently supported algorithms include:
 - **BSP** - Transferability vs. Discriminability: Batch Spectral Penalization for Adversarial Domain Adaptation [[ICML 2019]](http://proceedings.mlr.press/v97/chen19i/chen19i.pdf) [[Code]](/examples/domain_adaptation/image_classification/bsp.py) 
 - **MCC** - Minimum Class Confusion for Versatile Domain Adaptation [[ECCV 2020]](http://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123660460.pdf) [[Code]](/examples/domain_adaptation/image_classification/mcc.py)
 
-##### Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/keypoint_detection)
+##### Domain Adaptation for Object Detection [[Code]](/examples/domain_adaptation/object_detection)
 - **CycleGAN** - Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks [[ICCV 2017]](https://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf) [[Code]](/examples/domain_adaptation/object_detection/cycle_gan.py)
 - **D-adapt** - Decoupled Adaptation for Cross-Domain Object Detection [[ICLR 2022]](https://openreview.net/pdf?id=VNqaB1g9393) [[Code]](/examples/domain_adaptation/object_detection/d_adapt)
 
@@ -60,15 +95,6 @@ Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.
 ##### Open-set Domain Adaptation [[Code]](/examples/domain_adaptation/openset_domain_adaptation)
 - **OSBP** - Open Set Domain Adaptation by Backpropagation [[ECCV 2018]](https://arxiv.org/abs/1804.10427) [[Code]](/examples/domain_adaptation/openset_domain_adaptation/osbp.py)
 
-##### Task Adaptation for Image Classification [[Code]](/examples/task_adaptation/image_classification/)
-- **L2-SP** - Explicit inductive bias for transfer learning with convolutional networks [[ICML 2018]]((https://arxiv.org/abs/1802.01483)) [[Code]](/examples/task_adaptation/image_classification/delta.py)
-- **BSS** - Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning [[NIPS 2019]](https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf) [[Code]](/examples/task_adaptation/image_classification/bss.py)
-- **DELTA** - DEep Learning Transfer using Fea- ture Map with Attention for convolutional networks [[ICLR 2019]](https://openreview.net/pdf?id=rkgbwsAcYm) [[Code]](/examples/task_adaptation/image_classification/delta.py)
-- **Co-Tuning** - Co-Tuning for Transfer Learning [[NIPS 2020]](http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf) [[Code]](/examples/task_adaptation/image_classification/co_tuning.py)
-- **StochNorm** - Stochastic Normalization [[NIPS 2020]](https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf) [[Code]](/examples/task_adaptation/image_classification/stochnorm.py)
-- **LWF** - Learning Without Forgetting [[ECCV 2016]](https://arxiv.org/abs/1606.09282) [[Code]](/examples/task_adaptation/image_classification/lwf.py)
-- **Bi-Tuning** - Bi-tuning of Pre-trained Representations [[ArXiv]](https://arxiv.org/abs/2011.06182?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+arxiv%2FQSXk+%28ExcitingAds%21+cs+updates+on+arXiv.org%29) [[Code]](/examples/task_adaptation/image_classification/bi_tuning.py)
-
 ##### Domain Generalization for Classification [[Code]](/examples/domain_generalization/image_classification/)
 - **IBN-Net** - Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net [[ECCV 2018]](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - **MixStyle** - Domain Generalization with MixStyle [[ICLR 2021]](https://arxiv.org/abs/2104.02008) [[Code]](/examples/domain_generalization/image_classification/mixstyle.py)
@@ -82,29 +108,50 @@ Unsupervised Domain Adaptation [[ICCV 2019]](https://arxiv.org/pdf/1811.07456v2.
 - **IBN-Net** - Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net [[ECCV 2018]](https://openaccess.thecvf.com/content_ECCV_2018/papers/Xingang_Pan_Two_at_Once_ECCV_2018_paper.pdf)
 - **MixStyle** - Domain Generalization with MixStyle [[ICLR 2021]](https://arxiv.org/abs/2104.02008) [[Code]](/examples/domain_generalization/re_identification/mixstyle.py)
 
+##### Task Adaptation (Fine-Tuning) for Image Classification [[Code]](/examples/task_adaptation/image_classification/)
+- **L2-SP** - Explicit inductive bias for transfer learning with convolutional networks [[ICML 2018]]((https://arxiv.org/abs/1802.01483)) [[Code]](/examples/task_adaptation/image_classification/delta.py)
+- **BSS** - Catastrophic Forgetting Meets Negative Transfer: Batch Spectral Shrinkage for Safe Transfer Learning [[NIPS 2019]](https://proceedings.neurips.cc/paper/2019/file/c6bff625bdb0393992c9d4db0c6bbe45-Paper.pdf) [[Code]](/examples/task_adaptation/image_classification/bss.py)
+- **DELTA** - DEep Learning Transfer using Fea- ture Map with Attention for convolutional networks [[ICLR 2019]](https://openreview.net/pdf?id=rkgbwsAcYm) [[Code]](/examples/task_adaptation/image_classification/delta.py)
+- **Co-Tuning** - Co-Tuning for Transfer Learning [[NIPS 2020]](http://ise.thss.tsinghua.edu.cn/~mlong/doc/co-tuning-for-transfer-learning-nips20.pdf) [[Code]](/examples/task_adaptation/image_classification/co_tuning.py)
+- **StochNorm** - Stochastic Normalization [[NIPS 2020]](https://papers.nips.cc/paper/2020/file/bc573864331a9e42e4511de6f678aa83-Paper.pdf) [[Code]](/examples/task_adaptation/image_classification/stochnorm.py)
+- **LWF** - Learning Without Forgetting [[ECCV 2016]](https://arxiv.org/abs/1606.09282) [[Code]](/examples/task_adaptation/image_classification/lwf.py)
+- **Bi-Tuning** - Bi-tuning of Pre-trained Representations [[ArXiv]](https://arxiv.org/abs/2011.06182?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+arxiv%2FQSXk+%28ExcitingAds%21+cs+updates+on+arXiv.org%29) [[Code]](/examples/task_adaptation/image_classification/bi_tuning.py)
+
+##### Pre-trained Model Selection [[Code]](/examples/model_selection)
+
+- **H-Score** - An Information-theoretic Approach to Transferability in Task Transfer Learning [[ICIP 2019]](http://yangli-feasibility.com/home/media/icip-19.pdf) [[Code]](/examples/model_selection/hscore.py)
+- **NCE** - Negative Conditional Entropy in `Transferability and Hardness of Supervised Classification Tasks [[ICCV 2019]](https://arxiv.org/pdf/1908.08142v1.pdf) [[Code]](/examples/model_selection/nce.py)
+- **LEEP** - LEEP: A New Measure to Evaluate Transferability of Learned Representations [[ICML 2020]](http://proceedings.mlr.press/v119/nguyen20b/nguyen20b.pdf) [[Code]](/examples/model_selection/leep.py)
+- **LogME** - Log Maximum Evidence in `LogME: Practical Assessment of Pre-trained Models for Transfer Learning [[ICML 2021]](https://arxiv.org/pdf/2102.11005.pdf) [[Code]](/examples/model_selection/logme.py)
+
 ##### Semi-Supervised Learning for Classification [[Code]](/examples/semi_supervised_learning/image_classification/)
 - **Pseudo Label** - Pseudo-Label : The Simple and Efficient Semi-Supervised Learning Method for Deep Neural Networks [[ICML 2013]](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.664.3543&rep=rep1&type=pdf) [[Code]](/examples/semi_supervised_learning/image_classification/pseudo_label.py)
 - **Pi Model** - Temporal Ensembling for Semi-Supervised Learning [[ICLR 2017]](https://arxiv.org/abs/1610.02242) [[Code]](/examples/semi_supervised_learning/image_classification/pi_model.py)
 - **Mean Teacher** - Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results [[NIPS 2017]](https://arxiv.org/abs/1703.01780) [[Code]](/examples/semi_supervised_learning/image_classification/mean_teacher.py)
+- **Noisy Student** - Self-Training With Noisy Student Improves ImageNet Classification [[CVPR 2020]](https://openaccess.thecvf.com/content_CVPR_2020/papers/Xie_Self-Training_With_Noisy_Student_Improves_ImageNet_Classification_CVPR_2020_paper.pdf) [[Code]](/examples/semi_supervised_learning/image_classification/noisy_student.py)
 - **UDA** - Unsupervised Data Augmentation for Consistency Training [[NIPS 2020]](https://arxiv.org/pdf/1904.12848v4.pdf) [[Code]](/examples/semi_supervised_learning/image_classification/uda.py)
 - **FixMatch** - Simplifying Semi-Supervised Learning with Consistency and Confidence [[NIPS 2020]](https://arxiv.org/abs/2001.07685) [[Code]](/examples/semi_supervised_learning/image_classification/fixmatch.py)
 - **Self-Tuning** - Self-Tuning for Data-Efficient Deep Learning [[ICML 2021]](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf) [[Code]](/examples/semi_supervised_learning/image_classification/self_tuning.py)
+- **FlexMatch** - FlexMatch: Boosting Semi-Supervised Learning with Curriculum Pseudo Labeling [[NIPS 2021]](https://arxiv.org/abs/2110.08263) [[Code]](/examples/semi_supervised_learning/image_classification/flexmatch.py)
+- **DebiasMatch** - Debiased Learning From Naturally Imbalanced Pseudo-Labels [[CVPR 2022]](https://openaccess.thecvf.com/content/CVPR2022/papers/Wang_Debiased_Learning_From_Naturally_Imbalanced_Pseudo-Labels_CVPR_2022_paper.pdf) [[Code]](/examples/semi_supervised_learning/image_classification/debiasmatch.py)
+- **DST** - Debiased Self-Training for Semi-Supervised Learning [[ArXiv]](https://arxiv.org/abs/2202.07136) [[Code]](/examples/semi_supervised_learning/image_classification/dst.py)
 
 ## Installation
 
-- To use ``tllib`` in other places, you need to install TLlib,
+##### Install from Source Code
+
+- Please git clone the library first. Then, run the following commands to install `tllib` and all the dependency.
 ```shell
 python setup.py install
+pip install -r requirements.txt
 ```
-Note that we do not support *pip install* currently.
+##### Install via `pip`
 
-- For flexible use and modification of TLlib, please git clone the library and check that you have install all the dependency.
+- Installing via `pip` is currently experimental.
 
+```shell
+pip install -i https://test.pypi.org/simple/ tllib==0.4
 ```
-    pip install -r requirements.txt
-```
-
-It's recommended to use pytorch==1.7.1 and torchvision==0.8.2 in order to better reproduce the benchmark results.
 
 
 ## Documentation
@@ -154,12 +201,12 @@ If you use this toolbox or benchmark in your research, please cite this project.
 }
 
 @misc{tllib,
-  author = {Junguang Jiang, Baixu Chen, Bo Fu, Mingsheng Long},
-  title = {Transfer-Learning-library},
-  year = {2020},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/thuml/Transfer-Learning-Library}},
+    author = {Junguang Jiang, Baixu Chen, Bo Fu, Mingsheng Long},
+    title = {Transfer-Learning-library},
+    year = {2020},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/thuml/Transfer-Learning-Library}},
 }
 ```
 

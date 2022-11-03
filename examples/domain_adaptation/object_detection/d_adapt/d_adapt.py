@@ -252,6 +252,11 @@ def main(args, args_cls, args_box):
     logger = logging.getLogger("detectron2")
     cfg = utils.setup(args)
 
+    # dataset
+    args.sources = utils.build_dataset(args.sources[::2], args.sources[1::2])
+    args.targets = utils.build_dataset(args.targets[::2], args.targets[1::2])
+    args.test = utils.build_dataset(args.test[::2], args.test[1::2])
+
     # create model
     model = models.__dict__[cfg.MODEL.META_ARCHITECTURE](cfg, finetune=args.finetune)
     model.to(torch.device(cfg.MODEL.DEVICE))
@@ -333,10 +338,6 @@ if __name__ == "__main__":
     args, argv = parser.parse_known_args(argv)
     print("Detection Args:")
     pprint.pprint(args)
-
-    args.sources = utils.build_dataset(args.sources[::2], args.sources[1::2])
-    args.targets = utils.build_dataset(args.targets[::2], args.targets[1::2])
-    args.test = utils.build_dataset(args.test[::2], args.test[1::2])
 
     launch(
         main,

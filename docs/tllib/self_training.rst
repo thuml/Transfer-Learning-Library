@@ -8,7 +8,7 @@ Self Training Methods
 Pseudo Label
 -----------------------------
 
-.. autoclass:: tllib.self_training.pseudo_label.ConfidenceRegularizedSelfTrainingLoss
+.. autoclass:: tllib.self_training.pseudo_label.ConfidenceBasedSelfTrainingLoss
 
 .. _PiModel:
 
@@ -103,3 +103,21 @@ Self Tuning
 .. autoclass:: tllib.self_training.self_tuning.Classifier
 
 .. autoclass:: tllib.self_training.self_tuning.SelfTuning
+
+
+.. _FlexMatch:
+
+FlexMatch
+-----------------------------
+
+.. autoclass:: tllib.self_training.flexmatch.DynamicThresholdingModule
+    :members:
+
+.. _DST:
+
+Debiased Self-Training
+-----------------------------
+
+.. autoclass:: tllib.self_training.dst.ImageClassifier
+
+.. autoclass:: tllib.self_training.dst.WorstCaseEstimationLoss

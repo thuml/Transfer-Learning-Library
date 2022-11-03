@@ -58,7 +58,8 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+    train_transform = utils.get_train_transform(args.train_resizing, scale=args.scale, ratio=args.ratio,
+                                                random_horizontal_flip=not args.no_hflip,
                                                 random_color_jitter=False, resize_size=args.resize_size,
                                                 norm_mean=args.norm_mean, norm_std=args.norm_std)
     val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
@@ -100,7 +101,8 @@ def main(args: argparse.Namespace):
         for epoch in range(args.pretrain_epochs):
             print("lr:", pretrain_lr_scheduler.get_lr())
             # pretrain for one epoch
-            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args,
+            utils.empirical_risk_minimization(train_source_iter, pretrain_model, pretrain_optimizer,
+                                              pretrain_lr_scheduler, epoch, args,
                                               device)
             # validate to show pretrain process
             utils.validate(val_loader, pretrain_model, args, device)
@@ -244,6 +246,10 @@ if __name__ == '__main__':
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--resize-size', type=int, default=224,
                         help='the image size after resizing')
+    parser.add_argument('--scale', type=float, nargs='+', default=[0.08, 1.0], metavar='PCT',
+                        help='Random resize scale (default: 0.08 1.0)')
+    parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
+                        help='Random resize aspect ratio (default: 0.75 1.33)')
     parser.add_argument('--no-hflip', action='store_true',
                         help='no random horizontal flipping during training')
     parser.add_argument('--norm-mean', type=float, nargs='+',
@@ -278,11 +284,11 @@ if __name__ == '__main__':
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--pretrain-epochs', default=3, type=int, metavar='N',
-                        help='number of total epochs(pretrain) to run')
+                        help='number of total epochs (pretrain) to run')
     parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
                         help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
@@ -291,7 +297,7 @@ if __name__ == '__main__':
                         help='seed for initializing training. ')
     parser.add_argument('--per-class-eval', action='store_true',
                         help='whether output per-class accuracy during evaluation')
-    parser.add_argument("--log", type=str, default='addagrl',
+    parser.add_argument("--log", type=str, default='adda',
                         help="Where to save logs, checkpoints and debugging images.")
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."

@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -25,7 +24,6 @@ from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,7 +45,8 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=not args.no_hflip,
+    train_transform = utils.get_train_transform(args.train_resizing, scale=args.scale, ratio=args.ratio,
+                                                random_horizontal_flip=not args.no_hflip,
                                                 random_color_jitter=False, resize_size=args.resize_size,
                                                 norm_mean=args.norm_mean, norm_std=args.norm_std)
     val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
@@ -75,8 +74,9 @@ def main(args: argparse.Namespace):
                                  pool_layer=pool_layer, finetune=not args.scratch).to(device)
 
     # define optimizer and lr scheduler
-    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay,
+                    nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
 
     # define loss function
     mcc_loss = MinimumClassConfusionLoss(temperature=args.temperature)
@@ -205,6 +205,10 @@ if __name__ == '__main__':
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--resize-size', type=int, default=224,
                         help='the image size after resizing')
+    parser.add_argument('--scale', type=float, nargs='+', default=[0.08, 1.0], metavar='PCT',
+                        help='Random resize scale (default: 0.08 1.0)')
+    parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
+                        help='Random resize aspect ratio (default: 0.75 1.33)')
     parser.add_argument('--no-hflip', action='store_true',
                         help='no random horizontal flipping during training')
     parser.add_argument('--norm-mean', type=float, nargs='+',

@@ -12,9 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataset import Subset, ConcatDataset
-import torchvision
 import torchvision.transforms as T
-from torchvision.datasets.folder import default_loader
 import timm
 from timm.data.auto_augment import auto_augment_transform, rand_augment_transform
 
@@ -77,12 +75,12 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
         labeled_train_dataset.num_classes = base_dataset.num_classes
         # unlabeled subset
-        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=True)
         unlabeled_train_dataset = ConcatDataset([
             Subset(base_dataset, unlabeled_idxes),
-            dataset(root=root, split='validation', download=False, transform=unlabeled_train_transform)
+            dataset(root=root, split='validation', download=True, transform=unlabeled_train_transform)
         ])
-        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
+        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
     else:
         dataset = datasets.__dict__[dataset_name]
         base_dataset = dataset(root=root, split='train', transform=labeled_train_transform, download=True)
@@ -93,9 +91,9 @@ def get_dataset(dataset_name, num_samples_per_class, root, labeled_train_transfo
         labeled_train_dataset = Subset(base_dataset, labeled_idxes)
         labeled_train_dataset.num_classes = base_dataset.num_classes
         # unlabeled subset
-        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=False)
+        base_dataset = dataset(root=root, split='train', transform=unlabeled_train_transform, download=True)
         unlabeled_train_dataset = Subset(base_dataset, unlabeled_idxes)
-        val_dataset = dataset(root=root, split='test', download=False, transform=val_transform)
+        val_dataset = dataset(root=root, split='test', download=True, transform=val_transform)
     return labeled_train_dataset, unlabeled_train_dataset, val_dataset
 
 
@@ -166,6 +164,25 @@ def get_val_transform(resizing='default', norm_mean=(0.485, 0.456, 0.406), norm_
         T.ToTensor(),
         T.Normalize(mean=norm_mean, std=norm_std)
     ])
+
+
+def convert_dataset(dataset):
+    """
+    Converts a dataset which returns (img, label) pairs into one that returns (index, img, label) triplets.
+    """
+
+    class DatasetWrapper:
+
+        def __init__(self):
+            self.dataset = dataset
+
+        def __getitem__(self, index):
+            return index, self.dataset[index]
+
+        def __len__(self):
+            return len(self.dataset)
+
+    return DatasetWrapper()
 
 
 class ImageClassifier(Classifier):
@@ -259,3 +276,53 @@ def validate(val_loader, model, args, device, num_classes):
         print(' * Mean Cls {:.3f}'.format(mean_cls_acc))
 
     return top1.avg, mean_cls_acc
+
+
+def empirical_risk_minimization(labeled_train_iter, model, optimizer, lr_scheduler, epoch, args, device):
+    batch_time = AverageMeter('Time', ':2.2f')
+    data_time = AverageMeter('Data', ':2.1f')
+    losses = AverageMeter('Loss', ':3.2f')
+    cls_accs = AverageMeter('Acc', ':3.1f')
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    batch_size = args.batch_size
+    for i in range(args.iters_per_epoch):
+        (x_l, x_l_strong), labels_l = next(labeled_train_iter)
+        x_l = x_l.to(device)
+        x_l_strong = x_l_strong.to(device)
+        labels_l = labels_l.to(device)
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # compute output
+        y_l = model(x_l)
+        y_l_strong = model(x_l_strong)
+        # cross entropy loss on both weak augmented and strong augmented samples
+        loss = F.cross_entropy(y_l, labels_l) + args.trade_off_cls_strong * F.cross_entropy(y_l_strong, labels_l)
+
+        # measure accuracy and record loss
+        losses.update(loss.item(), batch_size)
+        cls_acc = accuracy(y_l, labels_l)[0]
+        cls_accs.update(cls_acc.item(), batch_size)
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            progress.display(i)

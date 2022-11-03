@@ -5,7 +5,6 @@
 import random
 import time
 import warnings
-import sys
 import argparse
 import shutil
 import os.path as osp
@@ -199,7 +198,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DANN for Unsupervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='AFN for Unsupervised Domain Adaptation')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')

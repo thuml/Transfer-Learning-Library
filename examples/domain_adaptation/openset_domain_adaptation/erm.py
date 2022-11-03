@@ -26,7 +26,6 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
 from tllib.utils.analysis import collect_feature, tsne, a_distance
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -48,7 +47,8 @@ def main(args: argparse.Namespace):
 
     # Data loading code
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True, random_color_jitter=False)
+    train_transform = utils.get_train_transform(args.train_resizing, random_horizontal_flip=True,
+                                                random_color_jitter=False)
     val_transform = utils.get_val_transform(args.val_resizing)
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
@@ -70,7 +70,12 @@ def main(args: argparse.Namespace):
 
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
-    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    # resume from the best checkpoint
+    if args.phase != 'train':
+        checkpoint = torch.load(logger.get_checkpoint_path('best'), map_location='cpu')
+        classifier.load_state_dict(checkpoint)
 
     # analysis the model
     if args.phase == 'analysis':
@@ -269,4 +274,3 @@ if __name__ == '__main__':
                              "When phase is 'analysis', only analysis the model.")
     args = parser.parse_args()
     main(args)
-

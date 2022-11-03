@@ -181,7 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('--train-resizing', type=str, default='default', help='resize mode during training')
     parser.add_argument('--val-resizing', type=str, default='default', help='resize mode during validation')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
-    parser.add_argument('--color-jitter', action='store_true', help='no color jitter during training')
+    parser.add_argument('--color-jitter', action='store_true', help='apply jitter during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--wd', '--weight-decay', default=0.0005, type=float,
                         metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,

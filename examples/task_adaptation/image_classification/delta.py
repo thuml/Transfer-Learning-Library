@@ -18,16 +18,13 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-sys.path.append('../../..')
+import utils
 from tllib.regularization.delta import *
 from tllib.modules.classifier import Classifier
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.logger import CompleteLogger
-
-sys.path.append('.')
-import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -55,7 +52,8 @@ def main(args: argparse.Namespace):
     print("val_transform: ", val_transform)
 
     train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
-                                                                val_transform, args.sample_rate, args.num_samples_per_classes)
+                                                                val_transform, args.sample_rate,
+                                                                args.num_samples_per_classes)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, drop_last=True)
     train_iter = ForeverDataIterator(train_loader)
@@ -88,9 +86,11 @@ def main(args: argparse.Namespace):
 
     # create intermediate layer getter
     if args.arch == 'resnet50':
-        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
+        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3',
+                         'backbone.layer4.2.conv3']
     elif args.arch == 'resnet101':
-        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3', 'backbone.layer4.2.conv3']
+        return_layers = ['backbone.layer1.2.conv3', 'backbone.layer2.3.conv3', 'backbone.layer3.5.conv3',
+                         'backbone.layer4.2.conv3']
     else:
         raise NotImplementedError(args.arch)
     source_getter = IntermediateLayerGetter(source_classifier, return_layers=return_layers)
@@ -122,7 +122,8 @@ def main(args: argparse.Namespace):
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_iter, classifier, backbone_regularization, head_regularization, target_getter, source_getter, optimizer, epoch, args)
+        train(train_iter, classifier, backbone_regularization, head_regularization, target_getter, source_getter,
+              optimizer, epoch, args)
         lr_scheduler.step()
 
         # evaluate on validation set
@@ -143,8 +144,9 @@ def calculate_channel_attention(dataset, return_layers, num_classes, args):
     classifier = Classifier(backbone, num_classes).to(device)
     optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
     data_loader = DataLoader(dataset, batch_size=args.attention_batch_size, shuffle=True,
-                        num_workers=args.workers, drop_last=False)
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=math.exp(math.log(0.1) / args.attention_lr_decay_epochs))
+                             num_workers=args.workers, drop_last=False)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=math.exp(
+        math.log(0.1) / args.attention_lr_decay_epochs))
     criterion = nn.CrossEntropyLoss()
 
     channel_weights = []
@@ -217,7 +219,7 @@ def calculate_channel_attention(dataset, return_layers, num_classes, args):
                 difference = difference.detach().cpu().numpy().item()
                 history_value = channel_weights[layer_id][j]
                 channel_weights[layer_id][j] = 1.0 * (i * history_value + difference) / (i + 1)
-                classifier.state_dict()[name + '.weight'][j, ] = tmp
+                classifier.state_dict()[name + '.weight'][j,] = tmp
 
     channel_attention = []
     for weight in channel_weights:
@@ -228,10 +230,11 @@ def calculate_channel_attention(dataset, return_layers, num_classes, args):
     return channel_attention
 
 
-def train(train_iter: ForeverDataIterator, model: Classifier, backbone_regularization:nn.Module,  head_regularization:nn.Module,
+def train(train_iter: ForeverDataIterator, model: Classifier, backbone_regularization: nn.Module,
+          head_regularization: nn.Module,
           target_getter: IntermediateLayerGetter,
           source_getter: IntermediateLayerGetter,
-          optimizer: SGD, epoch: int,  args: argparse.Namespace):
+          optimizer: SGD, epoch: int, args: argparse.Namespace):
     batch_time = AverageMeter('Time', ':4.2f')
     data_time = AverageMeter('Data', ':3.1f')
     losses = AverageMeter('Loss', ':3.2f')
@@ -302,10 +305,10 @@ if __name__ == '__main__':
                         help='sample rate of training dataset (default: 100)')
     parser.add_argument('-sc', '--num-samples-per-classes', default=None, type=int,
                         help='number of samples per classes.')
-    parser.add_argument('--train-resizing', type=str, default='default')
-    parser.add_argument('--val-resizing', type=str, default='default')
+    parser.add_argument('--train-resizing', type=str, default='default', help='resize mode during training')
+    parser.add_argument('--val-resizing', type=str, default='default', help='resize mode during validation')
     parser.add_argument('--no-hflip', action='store_true', help='no random horizontal flipping during training')
-    parser.add_argument('--color-jitter', action='store_true')
+    parser.add_argument('--color-jitter', action='store_true', help='apply jitter during training')
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
@@ -313,7 +316,7 @@ if __name__ == '__main__':
                              ' | '.join(utils.get_model_names()) +
                              ' (default: resnet50)')
     parser.add_argument('--no-pool', action='store_true',
-                        help='no pool layer after the feature extractor.')
+                        help='no pool layer after the feature extractor. Used in models such as ViT.')
     parser.add_argument('--finetune', action='store_true', help='whether use 10x smaller lr for backbone')
     parser.add_argument('--pretrained', default=None,
                         help="pretrained checkpoint of the backbone. "
@@ -321,7 +324,7 @@ if __name__ == '__main__':
     parser.add_argument('--regularization-type', choices=['l2_sp', 'feature_map', 'attention_feature_map'],
                         default='attention_feature_map')
     parser.add_argument('--trade-off-backbone', default=0.01, type=float,
-                         help='trade-off for backbone regularization')
+                        help='trade-off for backbone regularization')
     parser.add_argument('--trade-off-head', default=0.01, type=float,
                         help='trade-off for head regularization')
     # training parameters
@@ -331,13 +334,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='parameter for lr scheduler')
-    parser.add_argument('--lr-decay-epochs', type=int, default=(12, ), nargs='+', help='epochs to decay lr')
+    parser.add_argument('--lr-decay-epochs', type=int, default=(12,), nargs='+', help='epochs to decay lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=0.0, type=float,
-                        metavar='W', help='weight decay (default: 0.0d)')
+    parser.add_argument('--wd', '--weight-decay', default=0., type=float,
+                        metavar='W', help='weight decay (default: 0.)')
     parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
+                        help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-i', '--iters-per-epoch', default=500, type=int,
@@ -367,4 +370,3 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
-

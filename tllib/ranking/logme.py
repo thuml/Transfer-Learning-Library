@@ -87,19 +87,19 @@ class PosteriorPredictiveAlignment(nn.Module):
 def log_maximum_evidence(features: np.ndarray, targets: np.ndarray, regression=False, return_distribution=False):
     """
     Log Maximum Evidence in `LogME: Practical Assessment of Pre-trained Models
-    for Transfer Learning (ICML 2021) <https://arxiv.org/pdf/2102.11005.pdf>`
+    for Transfer Learning (ICML 2021) <https://arxiv.org/pdf/2102.11005.pdf>`_.
     
     Args:
-        - features (np.ndarray): feature matrix from pre-trained model.
-        - targets (np.ndarray): targets labels/values.
-        - regression: whether to apply in regression setting.
-        - return_weights: whether to return bayesian weight.
+        features (np.ndarray): feature matrix from pre-trained model.
+        targets (np.ndarray): targets labels/values.
+        regression (bool, optional): whether to apply in regression setting. (Default: False)
+        return_weights (bool, optional): whether to return bayesian weight. (Default: False)
 
     Shape:
-        - features: [N, F] with element in [0, C_t)  and feature dimension F.
-        - targets: [N] or [N, C], with C regression-labels.
-        - weights: [F, C_t].
-        - score: scaler.
+        - features: (N, F) with element in [0, :math:`C_t`) and feature dimension F, where :math:`C_t` denotes the number of target class
+        - targets: (N, ) or (N, C), with C regression-labels.
+        - weights: (F, :math:`C_t`).
+        - score: scalar.
     """
     f = features.astype(np.float64)
     y = targets

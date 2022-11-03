@@ -23,6 +23,7 @@ class Logger(object):
         filename (str): the file to write stream output
         stream: the stream to read from. Default: sys.stdout
     """
+
     def __init__(self, data_name, model_name, metric_name, stream=sys.stdout):
         self.terminal = stream
         self.save_dir = os.path.join('./logs/' + data_name, model_name)                 # save intermediate features/outputs
@@ -37,7 +38,7 @@ class Logger(object):
 
     def get_save_dir(self):
         return self.save_dir
-    
+
     def get_result_dir(self):
         return self.result_dir
 
@@ -74,27 +75,27 @@ def forwarding_dataset(score_loader, model, layer, device):
     features = []
     outputs = []
     targets = []
-    
+
     def hook_fn_forward(module, input, output):
         features.append(input[0].detach().cpu())
         outputs.append(output.detach().cpu())
-    
+
     forward_hook = layer.register_forward_hook(hook_fn_forward)
-    
+
     model.eval()
     with torch.no_grad():
         for _, (data, target) in enumerate(score_loader):
             targets.append(target)
             data = data.to(device)
             _ = model(data)
-    
+
     forward_hook.remove()
 
     features = torch.cat([x for x in features]).numpy()
     outputs = torch.cat([x for x in outputs])
     predictions = F.softmax(outputs, dim=-1).numpy()
     targets = torch.cat([x for x in targets]).numpy()
-    
+
     return features, predictions, targets
 
 
@@ -130,7 +131,8 @@ def get_dataset(dataset_name, root, transform, sample_rate=100, num_samples_per_
             samples = list(range(len(score_dataset)))
             random.shuffle(samples)
             samples_len = min(num_samples_per_classes * num_classes, len(score_dataset))
-            print("Origin dataset:", len(score_dataset), "Sampled dataset:", samples_len, "Ratio:", float(samples_len) / len(score_dataset))
+            print("Origin dataset:", len(score_dataset), "Sampled dataset:", samples_len, "Ratio:",
+                  float(samples_len) / len(score_dataset))
             dataset = Subset(score_dataset, samples[:samples_len])
     return score_dataset, num_classes
 
@@ -164,4 +166,3 @@ def get_transform(resizing='res.'):
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-

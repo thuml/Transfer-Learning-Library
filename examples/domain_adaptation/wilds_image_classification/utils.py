@@ -2,10 +2,10 @@
 @author: Junguang Jiang
 @contact: JiangJunguang1123@outlook.com
 """
+import time
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import tqdm
 import sys
 
 import torch
@@ -25,6 +25,7 @@ import timm
 sys.path.append('../../..')
 
 from tllib.vision.transforms import Denormalize
+from tllib.utils.meter import AverageMeter, ProgressMeter
 
 
 def get_model_names():
@@ -44,14 +45,16 @@ def get_model(model_name, pretrain=True):
 
 
 def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_list=("test",),
-                transform_train=None, transform_test=None, verbose=True):
+                transform_train=None, transform_test=None, verbose=True, transform_train_target=None):
+    if transform_train_target is None:
+        transform_train_target = transform_train
     labeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
     unlabeled_dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True, unlabeled=True)
     num_classes = labeled_dataset.n_classes
     train_labeled_dataset = labeled_dataset.get_subset("train", transform=transform_train)
 
     train_unlabeled_datasets = [
-        unlabeled_dataset.get_subset(u, transform=transform_train)
+        unlabeled_dataset.get_subset(u, transform=transform_train_target)
         for u in unlabeled_list
     ]
     train_unlabeled_dataset = ConcatDataset(train_unlabeled_datasets)
@@ -69,7 +72,7 @@ def get_dataset(dataset_name, root, unlabeled_list=("test_unlabeled",), test_lis
     if verbose:
         print("Datasets")
         for n, d in zip(["train"] + unlabeled_list + test_list,
-                        [train_labeled_dataset,] + train_unlabeled_datasets + test_datasets):
+                        [train_labeled_dataset, ] + train_unlabeled_datasets + test_datasets):
             print("\t{}:{}".format(n, len(d)))
         print("\t#classes:", num_classes)
 
@@ -104,7 +107,8 @@ def get_train_transform(img_size, scale=None, ratio=None, hflip=0.5, vflip=0.,
                         color_jitter=0.4, auto_augment=None, interpolation='bilinear'):
     scale = tuple(scale or (0.08, 1.0))  # default imagenet scale range
     ratio = tuple(ratio or (3. / 4., 4. / 3.))  # default imagenet ratio range
-    transforms_list = [transforms.RandomResizedCrop(img_size, scale=scale, ratio=ratio, interpolation=_pil_interp(interpolation))]
+    transforms_list = [
+        transforms.RandomResizedCrop(img_size, scale=scale, ratio=ratio, interpolation=_pil_interp(interpolation))]
     if hflip > 0.:
         transforms_list += [transforms.RandomHorizontalFlip(p=hflip)]
     if vflip > 0.:
@@ -198,11 +202,17 @@ def validate(val_dataset, model, epoch, writer, args):
     sampled_targets = []
     sampled_metadata = []
 
+    batch_time = AverageMeter('Time', ':6.3f')
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time],
+        prefix='Test: ')
+
     # switch to evaluate mode
     model.eval()
+    end = time.time()
 
-    for input, target, metadata in tqdm.tqdm(val_loader):
-
+    for i, (input, target, metadata) in enumerate(val_loader):
         # compute output
         with torch.no_grad():
             output = model(input.cuda()).cpu()
@@ -215,6 +225,13 @@ def validate(val_dataset, model, epoch, writer, args):
         sampled_targets.append(target[0:1])
         sampled_outputs.append(output[0:1])
         sampled_metadata.append(metadata[0:1])
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if args.local_rank == 0 and i % args.print_freq == 0:
+            progress.display(i)
 
     if args.local_rank == 0:
         writer.add_figure(
@@ -278,7 +295,7 @@ def plot_classes_preds(images, labels, outputs, class_names, metadata, metadata_
     fig = plt.figure(figsize=(12, nrows * 4))
     domains = get_domain_names(metadata, metadata_map)
     for idx in np.arange(min(nrows * 4, len(images))):
-        ax = fig.add_subplot(nrows, 4, idx+1, xticks=[], yticks=[])
+        ax = fig.add_subplot(nrows, 4, idx + 1, xticks=[], yticks=[])
         matplotlib_imshow(images[idx])
         ax.set_title("{0}, {1:.1f}%\n(label: {2}\ndomain: {3})".format(
             class_names[preds[idx]],

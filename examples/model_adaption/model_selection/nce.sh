@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 # Ranking Pre-trained Model
 # ======================================================================================================================
 # CIFAR10
@@ -54,7 +53,6 @@ CUDA_VISIBLE_DEVICES=0 python nce.py ./data/caltech101 -d Caltech101 -a densenet
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/caltech101 -d Caltech101 -a mobilenet_v2 -l classifier[-1] --save_features
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/caltech101 -d Caltech101 -a mnasnet1_0 -l classifier[-1] --save_features
 
-
 # ======================================================================================================================
 # DTD
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/dtd -d DTD -a resnet50 -l fc --save_features
@@ -81,7 +79,6 @@ CUDA_VISIBLE_DEVICES=0 python nce.py ./data/Oxford-IIIT -d OxfordIIITPets -a den
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/Oxford-IIIT -d OxfordIIITPets -a mobilenet_v2 -l classifier[-1] --save_features
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/Oxford-IIIT -d OxfordIIITPets -a mnasnet1_0 -l classifier[-1] --save_features
 
-
 # ======================================================================================================================
 # StanfordCars
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/stanford_cars -d StanfordCars -a resnet50 -l fc --save_features
@@ -94,7 +91,6 @@ CUDA_VISIBLE_DEVICES=0 python nce.py ./data/stanford_cars -d StanfordCars -a den
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/stanford_cars -d StanfordCars -a densenet201 -l classifier --save_features
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/stanford_cars -d StanfordCars -a mobilenet_v2 -l classifier[-1] --save_features
 CUDA_VISIBLE_DEVICES=0 python nce.py ./data/stanford_cars -d StanfordCars -a mnasnet1_0 -l classifier[-1] --save_features
-
 
 # ======================================================================================================================
 # SUN397

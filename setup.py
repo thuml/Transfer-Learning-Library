@@ -8,6 +8,14 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'tllib', '__init__.py')) as f:
     version = re.search(r'__version__ = \'(.*?)\'', f.read()).group(1)
 
+# Get all runtime requirements
+REQUIRES = []
+with open('requirements.txt') as f:
+    for line in f:
+        line, _, _ = line.partition('#')
+        line = line.strip()
+        REQUIRES.append(line)
+
 if __name__ == '__main__':
     setup(
         name="tllib", # Replace with your own username
@@ -40,16 +48,7 @@ if __name__ == '__main__':
             'Programming Language :: Python :: 3.8',
         ],
         python_requires='>=3.6',
-        install_requires=[
-            'torch>=1.7.0',
-            'torchvision>=0.5.0',
-            'numpy',
-            'prettytable',
-            'tqdm',
-            'scikit-learn',
-            'webcolors',
-            'matplotlib'
-        ],
+        install_requires=REQUIRES,
         extras_require={
             'dev': [
                 'Sphinx',

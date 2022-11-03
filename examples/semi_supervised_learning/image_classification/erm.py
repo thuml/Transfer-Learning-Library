@@ -105,7 +105,7 @@ def main(args: argparse.Namespace):
         print(lr_scheduler.get_lr())
 
         # train for one epoch
-        train(labeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args)
+        utils.empirical_risk_minimization(labeled_train_iter, classifier, optimizer, lr_scheduler, epoch, args, device)
 
         # evaluate on validation set
         acc1, avg = utils.validate(val_loader, classifier, args, device, num_classes)
@@ -120,57 +120,6 @@ def main(args: argparse.Namespace):
     print("best_acc1 = {:3.1f}".format(best_acc1))
     print('best_avg = {:3.1f}'.format(best_avg))
     logger.close()
-
-
-def train(labeled_train_iter: ForeverDataIterator, model, optimizer: SGD, lr_scheduler: LambdaLR, epoch: int,
-          args: argparse.Namespace):
-    batch_time = AverageMeter('Time', ':2.2f')
-    data_time = AverageMeter('Data', ':2.1f')
-    losses = AverageMeter('Loss', ':3.2f')
-    cls_accs = AverageMeter('Acc', ':3.1f')
-
-    progress = ProgressMeter(
-        args.iters_per_epoch,
-        [batch_time, data_time, losses, cls_accs],
-        prefix="Epoch: [{}]".format(epoch))
-
-    # switch to train mode
-    model.train()
-
-    end = time.time()
-    batch_size = args.batch_size
-    for i in range(args.iters_per_epoch):
-        (x_l, x_l_strong), labels_l = next(labeled_train_iter)
-        x_l = x_l.to(device)
-        x_l_strong = x_l_strong.to(device)
-        labels_l = labels_l.to(device)
-
-        # measure data loading time
-        data_time.update(time.time() - end)
-
-        # compute output
-        y_l = model(x_l)
-        y_l_strong = model(x_l_strong)
-        # cross entropy loss on both weak augmented and strong augmented samples
-        loss = F.cross_entropy(y_l, labels_l) + args.trade_off_cls_strong * F.cross_entropy(y_l_strong, labels_l)
-
-        # measure accuracy and record loss
-        losses.update(loss.item(), batch_size)
-        cls_acc = accuracy(y_l, labels_l)[0]
-        cls_accs.update(cls_acc.item(), batch_size)
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % args.print_freq == 0:
-            progress.display(i)
 
 
 if __name__ == '__main__':

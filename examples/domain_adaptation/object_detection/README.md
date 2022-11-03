@@ -1,5 +1,8 @@
 # Unsupervised Domain Adaptation for Object Detection
 
+## Updates
+- *04/2022*: Provide CycleGAN translated datasets.
+
 
 ## Installation
 Our code is based on [Detectron latest(v0.6)](https://detectron2.readthedocs.io/en/latest/tutorials/install.html), please install it before usage.
@@ -100,6 +103,30 @@ object_detction/datasets/
 
 **Note**: The above is a tutorial for using standard datasets. To use your own datasets, 
 you need to convert them into corresponding format.
+
+#### CycleGAN translated dataset
+
+The following command use CycleGAN to translate VOC (with directory `datasets/VOC2007` and `datasets/VOC2012`) to Clipart (with directory `datasets/VOC2007_to_clipart` and `datasets/VOC2012_to_clipart`).
+```
+mkdir datasets/VOC2007_to_clipart
+cp -r datasets/VOC2007/* datasets/VOC2007_to_clipart
+mkdir datasets/VOC2012_to_clipart
+cp -r datasets/VOC2012/* datasets/VOC2012_to_clipart
+
+CUDA_VISIBLE_DEVICES=0 python cycle_gan.py \
+  -s VOC2007 datasets/VOC2007 VOC2012 datasets/VOC2012 -t Clipart datasets/clipart \
+  --translated-source datasets/VOC2007_to_clipart datasets/VOC2012_to_clipart \
+  --log logs/cyclegan_resnet9/translation/voc2clipart --netG resnet_9
+```
+
+You can also download and use datasets that are translated by us.
+
+- PASCAL_VOC to Clipart [[07]](https://cloud.tsinghua.edu.cn/f/1b6b060d202145aea416/?dl=1)+[[12]](https://cloud.tsinghua.edu.cn/f/818dbd8e41a043fab7c3/?dl=1) (with directory `datasets/VOC2007_to_clipart` and `datasets/VOC2012_to_clipart`)
+- PASCAL_VOC to Comic [[07]](https://cloud.tsinghua.edu.cn/f/89382bba64514210a9f8/?dl=1)+[[12]](https://cloud.tsinghua.edu.cn/f/f90289137fd5465f806d/?dl=1) (with directory `datasets/VOC2007_to_comic` and `datasets/VOC2012_to_comic`)
+- PASCAL_VOC to WaterColor [[07]](https://cloud.tsinghua.edu.cn/f/8e982e9f21294b38be8a/?dl=1)+[[12]](https://cloud.tsinghua.edu.cn/f/b8235034cb4247ce809f/?dl=1) (with directory `datasets/VOC2007_to_watercolor` and `datasets/VOC2012_to_watercolor`)
+- Cityscapes to Foggy Cityscapes [[Part1]](https://cloud.tsinghua.edu.cn/f/09ceeb25a476481bae29/?dl=1) [[Part2]](https://cloud.tsinghua.edu.cn/f/51fb05d3ee614e7d87a0/?dl=1) [[Part3]](https://cloud.tsinghua.edu.cn/f/646415daf6b344c3a9e3/?dl=1) [[Part4]](https://cloud.tsinghua.edu.cn/f/008d5d3c54344f83b101/?dl=1) (with directory `datasets/cityscapes_to_foggy_cityscapes`). Note that you need to use ``cat`` to merge the downloaded files.
+- Sim10k to Cityscapes (Car) [[Download]](https://cloud.tsinghua.edu.cn/f/33ac656fcde34f758dcd/?dl=1) (with directory `datasets/sim10k2cityscapes_car`).
+
 
 ## Supported Methods
 
