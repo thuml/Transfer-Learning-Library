@@ -2,7 +2,6 @@
 @author: Yong Liu
 @contact: liuyong1095556447@163.com
 """
-from email.mime import base
 import os
 import torch
 import numpy as np
