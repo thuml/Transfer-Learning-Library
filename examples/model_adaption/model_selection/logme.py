@@ -11,8 +11,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.append('../..')
-from tllib.ranking import h_score
+sys.path.append('../../..')
+from tllib.ranking import log_maximum_evidence as logme
 
 sys.path.append('.')
 import utils
@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'results_hscore')
+    logger = utils.Logger(args.data, args.arch, 'results_logme')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -48,16 +48,20 @@ def main(args):
             np.save(os.path.join(logger.get_save_dir(), 'targets.npy'), targets)
 
     print('Conducting transferability calculation')
-    result = h_score(features, targets)
-
-    logger.write(
-        f'# {result:.4f} # data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n')
-    print(f'Results saved in {logger.get_result_dir()}')
+    if args.save_distribution:
+        result, distribution = logme(features, targets, return_distribution=True)
+        np.savez(os.path.join(logger.get_save_dir(), 'distribution.npz'), 
+            distribution=distribution, logme=result)
+    else:
+        result = logme(features, targets)
+    
+    print(result)
+    logger.write(f'[Exp] data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n[LogME] {result:.4f}\n')
     logger.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Ranking pre-trained models with HScore')
+    parser = argparse.ArgumentParser(description='Ranking pre-trained models with LogME (Log Maximum Evidence)')
 
     # dataset
     parser.add_argument('root', metavar='DIR',
@@ -86,7 +90,8 @@ if __name__ == '__main__':
                         help="pretrained checkpoint of the backbone. "
                              "(default: None, use the ImageNet supervised pretrained backbone)")
     parser.add_argument("--save_features", action='store_true',
-                        help="whether to save extracted features")
-
+                    help="whether to save extracted features")
+    parser.add_argument("--save_distribution", action='store_true',
+                    help="whether to save posterior predictive distributions (for B-Tuning)")
     args = parser.parse_args()
     main(args)

@@ -11,8 +11,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.append('../..')
-from tllib.ranking import log_expected_empirical_prediction as leep
+sys.path.append('../../..')
+from tllib.ranking import h_score
 
 sys.path.append('.')
 import utils
@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'results_leep')
+    logger = utils.Logger(args.data, args.arch, 'results_hscore')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -48,16 +48,15 @@ def main(args):
             np.save(os.path.join(logger.get_save_dir(), 'targets.npy'), targets)
 
     print('Conducting transferability calculation')
-    result = leep(predictions, targets)
-
-    logger.write(
-        f'# {result:.4f} # data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n')
+    result = h_score(features, targets)
+    
+    logger.write(f'[Exp] data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n[H-Score] {result:.4f}\n')
+    print(f'Results saved in {logger.get_result_dir()}')
     logger.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Ranking pre-trained models with LEEP (Log Expected Empirical Prediction)')
+    parser = argparse.ArgumentParser(description='Ranking pre-trained models with HScore')
 
     # dataset
     parser.add_argument('root', metavar='DIR',

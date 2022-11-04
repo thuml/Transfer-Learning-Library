@@ -11,8 +11,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.append('../..')
-from tllib.ranking import negative_conditional_entropy as nce
+sys.path.append('../../..')
+from tllib.ranking import log_expected_empirical_prediction as leep
 
 sys.path.append('.')
 import utils
@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(args):
-    logger = utils.Logger(args.data, args.arch, 'results_nce')
+    logger = utils.Logger(args.data, args.arch, 'results_leep')
     print(args)
     print(f'Calc Transferabilities of {args.arch} on {args.data}')
 
@@ -48,15 +48,15 @@ def main(args):
             np.save(os.path.join(logger.get_save_dir(), 'targets.npy'), targets)
 
     print('Conducting transferability calculation')
-    result = nce(np.argmax(predictions, axis=1), targets)
-
-    logger.write(
-        f'# {result:.4f} # data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n')
+    result = leep(predictions, targets)
+    
+    logger.write(f'[Exp] data_{args.data}_sr{args.sample_rate}_sc{args.num_samples_per_classes}_model_{args.arch}_layer_{args.layer}\n[LEEP] {result:.4f}\n')
     logger.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Ranking pre-trained models with NCE (Negative Conditional Entropy)')
+    parser = argparse.ArgumentParser(
+        description='Ranking pre-trained models with LEEP (Log Expected Empirical Prediction)')
 
     # dataset
     parser.add_argument('root', metavar='DIR',

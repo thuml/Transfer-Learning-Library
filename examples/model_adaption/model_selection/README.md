@@ -11,6 +11,7 @@ pip install timm
 ## Dataset
 
 - [Aircraft](https://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/)
+- [Birdsnap](http://thomasberg.org/)
 - [Caltech101](http://www.vision.caltech.edu/Image_Datasets/Caltech101/)
 - [CIFAR10](http://www.cs.utoronto.ca/~kriz/cifar.html)
 - [CIFAR100](http://www.cs.utoronto.ca/~kriz/cifar.html)
@@ -63,6 +64,23 @@ are presented.
 | MNasNet      |          72.8 | 35.28  | -4.192 | 0.948 | -4.195 |
 | Pearson Corr |             - |  0.688 |  0.127 | 0.582 | 0.173 |
 | Weighted Tau |             - |  0.664 | -0.264 | 0.595 |  0.002 |
+
+#### Model Ranking Benchmark on Birdsnap
+
+| Model        | Finetuned Acc |  HScore  | LEEP   | LogME | NCE    |
+|--------------|---------------|----------|--------|-------|--------|
+| GoogleNet    |         73.0  |  26.769  | -3.110 | 0.806 | -2.739 |
+| Inception V3 |         77.2  |  40.538  | -2.967 | 0.848 | -2.746 |
+| ResNet50     |         74.7  |  40.182  | -2.830 | 0.829 | -2.742 |
+| ResNet101    |         73.8  |  40.769  | -2.785 | 0.836 | -2.722 |
+| ResNet152    |         74.3  |  41.116  | -2.804 | 0.839 | -2.740 |
+| DenseNet121  |         73.2  |  27.346  | -2.835 | 0.810 | -2.711 |
+| DenseNet169  |         71.4  |  34.582  | -2.807 | 0.815 | -2.710 |
+| Densenet201  |         72.6  |  38.021  | -2.837 | 0.822 | -2.730 |
+| MobileNet V2 |         69.3  |  30.363  | -2.838 | 0.808 | -2.723 |
+| MNasNet      |         68.3  |  31.516  | -2.791 | 0.824 | -2.715 |
+| Pearson Corr | -             |   0.567  | -0.320 | 0.627 | -0.685 |
+| Weighted Tau | -             |   0.494  | -0.133 | 0.672 | -0.636 |
 
 #### Model Ranking Benchmark on Caltech101
 

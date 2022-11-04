@@ -75,12 +75,12 @@ class Classifier(nn.Module):
         """The dimension of features before the final `head` layer"""
         return self._features_dim
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, return_feat=False) -> Tuple[torch.Tensor, torch.Tensor]:
         """"""
         f = self.pool_layer(self.backbone(x))
         f = self.bottleneck(f)
         predictions = self.head(f)
-        if self.training:
+        if self.training or return_feat:
             return predictions, f
         else:
             return predictions

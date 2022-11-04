@@ -12,7 +12,7 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 import torchvision.models as models
 
-sys.path.append('../../..')
+sys.path.append('../../../..')
 import tllib.vision.datasets as datasets
 
 
@@ -26,8 +26,8 @@ class Logger(object):
 
     def __init__(self, data_name, model_name, metric_name, stream=sys.stdout):
         self.terminal = stream
-        self.save_dir = os.path.join(data_name, model_name)  # save intermediate features/outputs
-        self.result_dir = os.path.join(data_name, f'{metric_name}.txt')  # save ranking results
+        self.save_dir = os.path.join('./logs/' + data_name, model_name)                 # save intermediate features/outputs
+        self.result_dir = os.path.join('./logs/' + data_name, f'{metric_name}.txt')     # save ranking results
         os.makedirs(self.save_dir, exist_ok=True)
         self.log = open(self.result_dir, 'a')
 
@@ -99,13 +99,13 @@ def forwarding_dataset(score_loader, model, layer, device):
     return features, predictions, targets
 
 
-def get_model(model_name, pretrained=True, pretrained_checkpoint=None):
+def get_model(model_name, pretrained_checkpoint=None):
     if model_name in get_model_names():
         # load models from common.vision.models
-        backbone = models.__dict__[model_name](pretrained=pretrained)
+        backbone = models.__dict__[model_name](pretrained=True)
     else:
         # load models from pytorch-image-models
-        backbone = timm.create_model(model_name, pretrained=pretrained)
+        backbone = timm.create_model(model_name, pretrained=True)
     if pretrained_checkpoint:
         print("=> loading pre-trained model from '{}'".format(pretrained_checkpoint))
         pretrained_dict = torch.load(pretrained_checkpoint)
