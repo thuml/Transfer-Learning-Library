@@ -88,8 +88,7 @@ For more features such as resuming from checkpoints, please refer to the [code](
 
 **Note**
 
-Overall, our implementation shows better performance. There are two main differences between the implementation and our
-paper.
+There are two main differences between the implementation and our paper.
 
 - For nonlinear worst head $h_{\text{worst}}$, we use a 3 layer MLP with BatchNorm layers and find it helps stabilize
   adversarial process.
