@@ -481,16 +481,16 @@ if __name__ == '__main__':
                         help='confidence threshold')
     parser.add_argument('--trade-off-self-training', default=1, type=float,
                         help='weight of self-training loss on unlabeled data')
-    parser.add_argument('--trade-off-worst', default=0.1, type=float,
-                        help='weight of worst-case estimation loss on unlabeled data')
+    parser.add_argument('--trade-off-worst', default=0.3, type=float,
+                        help='weight of worst-case estimation loss on unlabeled data (default: 0.3)')
     parser.add_argument('--grl-factor', default=0.1, type=float,
                         help='gradient reverse factor')
-    parser.add_argument('--eta-prime', default=1, type=float,
-                        help='weight of adversarial loss on labeled data')
+    parser.add_argument('--eta-prime', default=2, type=float,
+                        help='weight of adversarial loss on labeled data (default: 2)')
     parser.add_argument('--train-iterations', default=1000000, type=int, metavar='N',
                         help='number of total iterations to run')
-    parser.add_argument('--warmup-iterations', default=300000, type=int,
-                        help='number of warmup iterations')
+    parser.add_argument('--warmup-iterations', default=100000, type=int,
+                        help='number of warmup iterations (default: 100000)')
     parser.add_argument('--eval-freq', default=5000, type=int,
                         help='test interval length')
     parser.add_argument('-b', '--batch-size', default=64, type=int, metavar='N',
