@@ -1,13 +1,10 @@
 # DST: Debiased Self-Training
 
-Code release of paper [Debiased Self-Training for Semi-Supervised Learning](https://arxiv.org/abs/2202.07136)
+Code release of paper [Debiased Self-Training for Semi-Supervised Learning](https://arxiv.org/abs/2202.07136) 
 (NeurIPS 2022 Oral)
 
-Here we release code and benchmark results on standard SSL datasets, including `SVHN`, `CIFAR10`, `CIFAR100` and `STL10`
-. Following common practice, we adopt variants of `WideResNet` as backbone network and train from scratch.
-
-Code and evaluating results with supervised or unsupervised pre-trained models on `ImageNet` can be found
-[here](../../examples/semi_supervised_learning/image_classification).
+This repo provides training code on standard SSL benchmarks. 
+We maintain code with pre-trained models [here](../../examples/semi_supervised_learning/image_classification).
 
 ## Get Started
 
@@ -30,11 +27,11 @@ The following datasets can be downloaded automatically:
 - [CIFAR100](http://www.cs.utoronto.ca/~kriz/cifar.html)
 - [STL10](https://cs.stanford.edu/~acoates/stl10/)
 
-**Note**
+**Dataset Split**
 
-As the selection of labeled samples directly affects the final performance, we also provide the [splits](labeled_subset)
-in our experiments. To use different splits, please replace these files with corresponding ones. If the split files do
-not exist in `labeled_subset` folder, our code will generate them deterministically given the same random seed.
+As the selection of labeled samples directly affects the final performance, we also provide the [dataset splits](labeled_subset).
+To use different splits, please replace these files with corresponding ones.
+If the split files **do not exist** in `labeled_subset` folder, they will be generated **deterministically** given the same random seed.
 
 ### Usage
 
