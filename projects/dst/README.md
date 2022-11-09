@@ -97,8 +97,8 @@ paper.
   on `STL10`.
 
 Besides, due to the large computation cost of SSL experiments, we do not heavily tune the hyperparameters.
-Hence, the architecture of different heads ($h_{\text{pseudo}}$ and $h_{\text{worst}}$) and hyperparameters might not
-be optimal. If you find better combination, feel free to contact us!
+Hence, the architecture of different heads and hyperparameters might not be optimal.
+If you find better combination, feel free to contact us!
 
 ## Contact
 
