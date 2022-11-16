@@ -5,7 +5,7 @@
 import numpy as np
 from sklearn.covariance import LedoitWolf
 
-__all__ = ['h_score']
+__all__ = ['h_score', 'regularized_h_score']
 
 
 def h_score(features: np.ndarray, labels: np.ndarray):
@@ -53,7 +53,7 @@ def regularized_h_score(features: np.ndarray, labels: np.ndarray):
     The  regularized H-Score :math:`\mathcal{H}_{\alpha}` can be described as:
 
     .. math::
-        \mathcal{H}_{\alpha}=\operatorname{tr}\left(\operatorname{cov}_{\alpha}(f)^{-1} (1 - \alpha) \operatorname{cov}\left(\mathbb{E}[f \mid y]\right)\right)
+        \mathcal{H}_{\alpha}=\operatorname{tr}\left(\operatorname{cov}_{\alpha}(f)^{-1}\left(1-\alpha \right)\operatorname{cov}\left(\mathbb{E}[f \mid y]\right)\right)
     
     where :math:`f` is the features extracted by the model to be ranked, :math:`y` is the groud-truth label vector and :math:`\operatorname{cov}_{\alpha}` the  Ledoit-Wolf 
     covariance estimator with shrinkage parameter :math:`\alpha`
