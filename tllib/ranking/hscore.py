@@ -47,7 +47,7 @@ def h_score(features: np.ndarray, labels: np.ndarray):
 
 def regularized_h_score(features: np.ndarray, labels: np.ndarray):
         r"""
-    Newer is not always better: Rethinking transferability metrics, their peculiarities, stability and performance (NeurIPS 2021) 
+    Regularized H-score in `Newer is not always better: Rethinking transferability metrics, their peculiarities, stability and performance (NeurIPS 2021) 
     <https://openreview.net/pdf?id=iz_Wwmfquno>`_.
     
     The  regularized H-Score :math:`\mathcal{H}_{\alpha}` can be described as:
