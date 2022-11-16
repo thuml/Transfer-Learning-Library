@@ -31,12 +31,7 @@ def h_score(features: np.ndarray, labels: np.ndarray):
     f = features
     y = labels
 
-    def covariance(X):
-        X_mean = X - np.mean(X, axis=0, keepdims=True)
-        cov = np.divide(np.dot(X_mean.T, X_mean), len(X) - 1)
-        return cov
-
-    covf = covariance(f)
+    covf = np.cov(f, rowvar = False)
     C = int(y.max() + 1)
     g = np.zeros_like(f)
 
@@ -44,7 +39,9 @@ def h_score(features: np.ndarray, labels: np.ndarray):
         Ef_i = np.mean(f[y == i, :], axis=0)
         g[y == i] = Ef_i
 
-    covg = covariance(g)
+    covg = np.cov(g, rowvar = False)
     score = np.trace(np.dot(np.linalg.pinv(covf, rcond=1e-15), covg))
 
     return score
+
+
