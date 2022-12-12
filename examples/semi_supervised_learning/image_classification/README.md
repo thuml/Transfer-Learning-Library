@@ -40,7 +40,7 @@ Supported methods include:
 - [Self-Tuning for Data-Efficient Deep Learning (Self-Tuning, ICML 2021)](http://ise.thss.tsinghua.edu.cn/~mlong/doc/Self-Tuning-for-Data-Efficient-Deep-Learning-icml21.pdf)
 - [FlexMatch: Boosting Semi-Supervised Learning with Curriculum Pseudo Labeling (FlexMatch, NIPS 2021)](https://arxiv.org/abs/2110.08263)
 - [Debiased Learning From Naturally Imbalanced Pseudo-Labels (DebiasMatch, CVPR 2022)](https://openaccess.thecvf.com/content/CVPR2022/papers/Wang_Debiased_Learning_From_Naturally_Imbalanced_Pseudo-Labels_CVPR_2022_paper.pdf)
-- [Debiased Self-Training for Semi-Supervised Learning (DST)](https://arxiv.org/abs/2202.07136)
+- [Debiased Self-Training for Semi-Supervised Learning (DST, NeurIPS 2022)](https://arxiv.org/abs/2202.07136)
 
 ## Usage
 
@@ -199,10 +199,10 @@ If you use these methods in your research, please consider citing.
     year={2022}
 }
 
-@article{DST,
+@inproceedings{DST,
     title={Debiased Self-Training for Semi-Supervised Learning},
-    author={Chen, Baixu and Jiang, Junguang and Wang, Ximei and Wang, Jianmin and Long, Mingsheng},
-    journal={arXiv preprint arXiv:2202.07136},
+    author={Chen, Baixu and Jiang, Junguang and Wang, Ximei and Wan, Pengfei and Wang, Jianmin and Long, Mingsheng},
+    booktitle={Advances in Neural Information Processing Systems},
     year={2022}
 }
 ```
