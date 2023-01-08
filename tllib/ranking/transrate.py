@@ -4,17 +4,17 @@
 """
 import numpy as np
 
-
 __all__ = ['transrate']
 
-def coding_rate(features : np.ndarray, eps = 1e-4):
+
+def coding_rate(features: np.ndarray, eps=1e-4):
     f = features
     n, d = f.shape
     (_, rate) = np.linalg.slogdet((np.eye(d) + 1 / (n * eps) * f.transpose() @ f))
     return 0.5 * rate
 
 
-def transrate(features: np.ndarray, labels: np.ndarray, eps = 1e-4):
+def transrate(features: np.ndarray, labels: np.ndarray, eps=1e-4):
     r"""
     TransRate in `Frustratingly easy transferability estimation (ICML 2022) 
     <https://proceedings.mlr.press/v162/huang22d/huang22d.pdf>`_.
@@ -39,11 +39,10 @@ def transrate(features: np.ndarray, labels: np.ndarray, eps = 1e-4):
     """
     f = features
     y = labels
-    f = f - np.mean(f, axis = 0, keepdims = True)
+    f = f - np.mean(f, axis=0, keepdims=True)
     Rf = coding_rate(f, eps)
     Rfy = 0.0
     C = int(y.max() + 1)
     for i in range(C):
-        Rfy += coding_rate(f[(y==i).flatten()], eps)
+        Rfy += coding_rate(f[(y == i).flatten()], eps)
     return Rf - Rfy / C
-

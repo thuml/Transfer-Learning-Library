@@ -32,7 +32,7 @@ def h_score(features: np.ndarray, labels: np.ndarray):
     f = features
     y = labels
 
-    covf = np.cov(f, rowvar = False)
+    covf = np.cov(f, rowvar=False)
     C = int(y.max() + 1)
     g = np.zeros_like(f)
 
@@ -40,13 +40,14 @@ def h_score(features: np.ndarray, labels: np.ndarray):
         Ef_i = np.mean(f[y == i, :], axis=0)
         g[y == i] = Ef_i
 
-    covg = np.cov(g, rowvar = False)
+    covg = np.cov(g, rowvar=False)
     score = np.trace(np.dot(np.linalg.pinv(covf, rcond=1e-15), covg))
 
     return score
 
+
 def regularized_h_score(features: np.ndarray, labels: np.ndarray):
-        r"""
+    r"""
     Regularized H-score in `Newer is not always better: Rethinking transferability metrics, their peculiarities, stability and performance (NeurIPS 2021) 
     <https://openreview.net/pdf?id=iz_Wwmfquno>`_.
     
@@ -67,13 +68,13 @@ def regularized_h_score(features: np.ndarray, labels: np.ndarray):
         - score: scalar.
     """
     f = features.astype('float64')
-    f = f - np.mean(f, axis= 0, keepdims= True) #Center the features for correct Ledoit-Wolf Estimation
+    f = f - np.mean(f, axis=0, keepdims=True)  # Center the features for correct Ledoit-Wolf Estimation
     y = labels
 
     C = int(y.max() + 1)
     g = np.zeros_like(f)
 
-    cov = LedoitWolf(assume_centered= False).fit(f)
+    cov = LedoitWolf(assume_centered=False).fit(f)
     alpha = cov.shrinkage_
     covf_alpha = cov.covariance_
 
@@ -81,7 +82,7 @@ def regularized_h_score(features: np.ndarray, labels: np.ndarray):
         Ef_i = np.mean(f[y == i, :], axis=0)
         g[y == i] = Ef_i
 
-    covg = np.cov(g, rowvar = False)
-    score = np.trace(np.dot(np.linalg.pinv(covf_alpha, rcond=1e-15), (1-alpha) * covg))
+    covg = np.cov(g, rowvar=False)
+    score = np.trace(np.dot(np.linalg.pinv(covf_alpha, rcond=1e-15), (1 - alpha) * covg))
 
     return score
