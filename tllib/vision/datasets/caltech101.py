@@ -39,7 +39,7 @@ class Caltech101(ImageList):
                    'wheelchair', 'wild_cat', 'windsor_chair', 'wrench', 'yin_yang']
         if download:
             download_data(root, "caltech101", "caltech101.tar",
-                          "https://cloud.tsinghua.edu.cn/f/dbf5e3930c9942da91bf/?dl=1")
+                          "https://cloud.tsinghua.edu.cn/f/445aead4a3e5443e9a4c/?dl=1")
         else:
             check_exits(root, "caltech101")
 

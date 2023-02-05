@@ -25,7 +25,7 @@ class SUN397(ImageList):
     """
     dataset_url = ("SUN397", "SUN397.tar.gz", "http://vision.princeton.edu/projects/2010/SUN/SUN397.tar.gz")
     image_list_url = (
-        "SUN397/image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/80b2a412093f4ac5a624/?dl=1")
+        "SUN397/image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/17399c6e0455480aa174/?dl=1")
 
     def __init__(self, root, split='train', download=True, **kwargs):
         if download:

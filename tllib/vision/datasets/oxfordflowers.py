@@ -47,7 +47,7 @@ class OxfordFlowers102(ImageList):
                'mallow', 'mexican petunia', 'bromelia', 'blanket flower', 'trumpet creeper', 'blackberry lily']
     def __init__(self, root, split='train', download=False, **kwargs):
         if download:
-            download_data(root, "oxford_flowers102", "oxford_flowers102.tgz", "https://cloud.tsinghua.edu.cn/f/9910751054764d568281/?dl=1")
+            download_data(root, "oxford_flowers102", "oxford_flowers102.tgz", "https://cloud.tsinghua.edu.cn/f/61cb20241c1d43279d80/?dl=1")
         else:
             check_exits(root, "oxford_flowers102")
         root = os.path.join(root, "oxford_flowers102")

@@ -35,9 +35,9 @@ class OxfordIIITPets(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/8b7fb79279174bcc8558/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/e333a09b93a34a0ebef6/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/ce00352d79c34ea48bf4/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/40f340b49b53457db5eb/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/65cdf4a1a75543e8a27b/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/77506cab2e6048e88729/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",

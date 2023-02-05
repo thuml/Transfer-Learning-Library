@@ -36,9 +36,9 @@ class StanfordDogs(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/b7b3dd297ec54e038238/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/cd09d9ca88f044bfa5d3/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/64a67e97069948c7b2c9/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/648df023a6454535887f/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/9791d3d79013479fa189/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/b35375f7349e45db9d11/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",
