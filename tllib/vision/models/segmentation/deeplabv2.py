@@ -3,8 +3,7 @@
 @contact: JiangJunguang1123@outlook.com
 """
 import torch.nn as nn
-from torchvision.models.utils import load_state_dict_from_url
-
+from torch.hub import load_state_dict_from_url
 
 model_urls = {
     'deeplabv2_resnet101': 'https://cloud.tsinghua.edu.cn/f/2d9a7fc43ce34f76803a/?dl=1'
