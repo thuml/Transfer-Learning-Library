@@ -88,7 +88,7 @@ def main(args: argparse.Namespace):
         nn.ReLU()
     )
     regressor = Regressor(backbone=backbone, num_factors=num_factors, bottleneck=bottleneck,
-                          bottleneck_dim=backbone.out_features).to(device)
+                          bottleneck_dim=256).to(device)
     print(regressor)
 
     # define optimizer and lr scheduler

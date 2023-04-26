@@ -34,7 +34,7 @@ class DTD(ImageList):
 
     def __init__(self, root, split, download=False, **kwargs):
         if download:
-            download_data(root, "dtd", "dtd.tar", "https://cloud.tsinghua.edu.cn/f/499e9eb56b0947fa933a/?dl=1")
+            download_data(root, "dtd", "dtd.tar", "https://cloud.tsinghua.edu.cn/f/77ad660967b647568710/?dl=1")
         else:
             check_exits(root, "dtd")
 

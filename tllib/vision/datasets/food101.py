@@ -25,8 +25,8 @@ class Food101(ImageFolder):
             test/
     """
     download_list = [
-        ("train", "train.tar", "https://cloud.tsinghua.edu.cn/f/4b5749a2964445fc8d11/?dl=1"),
-        ("test", "test.tar", "https://cloud.tsinghua.edu.cn/f/932cd7058b574bc3bef9/?dl=1")
+        ("train", "train.tar", "https://cloud.tsinghua.edu.cn/f/cd4fb52ca47344e9bd11/?dl=1"),
+        ("test", "test.tar", "https://cloud.tsinghua.edu.cn/f/18d943ce94764ebab820/?dl=1")
     ]
 
     def __init__(self, root, split='train', transform=None, download=True):

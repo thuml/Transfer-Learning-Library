@@ -36,9 +36,9 @@ class COCO70(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/d2ffb62fe3d140f1a73c/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/e0dc4368342948c5bb2a/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/59393a55c818429fb8d1/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/b008c0d823ad488c8be1/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/75a895576d5e4e59a88d/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/ec6e45bc830d42f0924a/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",

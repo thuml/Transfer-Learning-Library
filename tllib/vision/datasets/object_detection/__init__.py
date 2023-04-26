@@ -44,7 +44,7 @@ class VOCBase:
 
 class VOC2007(VOCBase):
     archive_name = 'VOC2007.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/07c03846908e432e87e6/?dl=1'
 
     def __init__(self, root):
         super(VOC2007, self).__init__(root)
@@ -52,7 +52,7 @@ class VOC2007(VOCBase):
 
 class VOC2012(VOCBase):
     archive_name = 'VOC2012.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/29450c5e151843999872/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/d9c348407e4946068e89/?dl=1'
 
     def __init__(self, root):
         super(VOC2012, self).__init__(root, year=2012)
@@ -60,7 +60,7 @@ class VOC2012(VOCBase):
 
 class VOC2007Test(VOCBase):
     archive_name = 'VOC2007.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/07c03846908e432e87e6/?dl=1'
 
     def __init__(self, root):
         super(VOC2007Test, self).__init__(root, year=2007, split='test')
@@ -68,7 +68,7 @@ class VOC2007Test(VOCBase):
 
 class Clipart(VOCBase):
     archive_name = 'clipart.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/53ae84b87016418d931d/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/6b8c45c5b7f34272baee/?dl=1'
 
 
 class VOCPartialBase:
@@ -89,7 +89,7 @@ class VOCPartialBase:
 
 class VOC2007Partial(VOCPartialBase):
     archive_name = 'VOC2007.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/07c03846908e432e87e6/?dl=1'
 
     def __init__(self, root):
         super(VOC2007Partial, self).__init__(root)
@@ -97,7 +97,7 @@ class VOC2007Partial(VOCPartialBase):
 
 class VOC2012Partial(VOCPartialBase):
     archive_name = 'VOC2012.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/29450c5e151843999872/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/d9c348407e4946068e89/?dl=1'
 
     def __init__(self, root):
         super(VOC2012Partial, self).__init__(root, year=2012)
@@ -105,7 +105,7 @@ class VOC2012Partial(VOCPartialBase):
 
 class VOC2007PartialTest(VOCPartialBase):
     archive_name = 'VOC2007.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/cc2d40bc5f00445eb05e/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/07c03846908e432e87e6/?dl=1'
 
     def __init__(self, root):
         super(VOC2007PartialTest, self).__init__(root, year=2007, split='test')
@@ -113,7 +113,7 @@ class VOC2007PartialTest(VOCPartialBase):
 
 class WaterColor(VOCPartialBase):
     archive_name = 'watercolor.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/f6b648436ac2497bb232/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/d2d321affb5f466aae5b/?dl=1'
 
     def __init__(self, root):
         super(WaterColor, self).__init__(root, split='train')
@@ -121,7 +121,7 @@ class WaterColor(VOCPartialBase):
 
 class WaterColorTest(VOCPartialBase):
     archive_name = 'watercolor.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/f6b648436ac2497bb232/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/d2d321affb5f466aae5b/?dl=1'
 
     def __init__(self, root):
         super(WaterColorTest, self).__init__(root, split='test')
@@ -129,7 +129,7 @@ class WaterColorTest(VOCPartialBase):
 
 class Comic(VOCPartialBase):
     archive_name = 'comic.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/a7c38db53287449f9db2/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/030d7b4b649f46589b2d/?dl=1'
 
     def __init__(self, root):
         super(Comic, self).__init__(root, split='train')
@@ -137,7 +137,7 @@ class Comic(VOCPartialBase):
 
 class ComicTest(VOCPartialBase):
     archive_name = 'comic.tar'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/a7c38db53287449f9db2/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/030d7b4b649f46589b2d/?dl=1'
 
     def __init__(self, root):
         super(ComicTest, self).__init__(root, split='test')
