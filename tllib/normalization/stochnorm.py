@@ -63,17 +63,20 @@ class _StochNorm(nn.Module):
             if input.dim() == 2:
                 s = torch.from_numpy(
                     np.random.binomial(n=1, p=self.p, size=self.num_features).reshape(1,
-                                                                                      self.num_features)).float().cuda()
+                                                                                      self.num_features)).float()
             elif input.dim() == 3:
                 s = torch.from_numpy(
                     np.random.binomial(n=1, p=self.p, size=self.num_features).reshape(1, self.num_features,
-                                                                                      1)).float().cuda()
+                                                                                      1)).float()
             elif input.dim() == 4:
                 s = torch.from_numpy(
                     np.random.binomial(n=1, p=self.p, size=self.num_features).reshape(1, self.num_features, 1,
-                                                                                      1)).float().cuda()
+                                                                                      1)).float()
             else:
                 raise BaseException()
+            
+            if torch.cuda.is_available():
+                s = s.cuda()
 
             z = (1 - s) * z_0 + s * z_1
         else:
