@@ -41,8 +41,9 @@ def get_model(model_name, pretrained_checkpoint=None):
         backbone = timm.create_model(model_name, pretrained=True)
         try:
             backbone.out_features = backbone.get_classifier().in_features
+            backbone.fc_imagenet = backbone.fc
             backbone.reset_classifier(0, '')
-            backbone.copy_head = backbone.get_classifier
+            backbone.copy_head = lambda: copy.deepcopy(backbone.fc_imagenet)
         except:
             backbone.out_features = backbone.head.in_features
             backbone.head = nn.Identity()
