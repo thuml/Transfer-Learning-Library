@@ -22,7 +22,7 @@ import utils
 from tllib.modules.classifier import Classifier
 from tllib.modules.entropy import entropy
 from tllib.modules.domain_discriminator import DomainDiscriminator
-from tllib.reweight.iwan import ImportanceWeightModule, ImageClassifier
+from tllib.weighting.iwan import ImportanceWeightModule, ImageClassifier
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy

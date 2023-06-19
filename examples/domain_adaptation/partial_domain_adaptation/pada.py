@@ -22,7 +22,7 @@ import utils
 from tllib.modules.domain_discriminator import DomainDiscriminator
 from tllib.modules.classifier import Classifier
 from tllib.alignment.dann import DomainAdversarialLoss, ImageClassifier
-from tllib.reweight.pada import AutomaticUpdateClassWeightModule
+from tllib.weighting.pada import AutomaticUpdateClassWeightModule
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter

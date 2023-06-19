@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 import utils
-from tllib.reweight.groupdro import AutomaticUpdateDomainWeightModule
+from tllib.weighting.groupdro import AutomaticUpdateDomainWeightModule
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
 from tllib.utils.meter import AverageMeter, ProgressMeter
