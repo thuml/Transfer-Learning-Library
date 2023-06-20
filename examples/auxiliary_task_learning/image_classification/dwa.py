@@ -22,7 +22,7 @@ from tllib.utils.meter import AverageMeter, ProgressMeter
 from tllib.utils.metric import accuracy
 
 from tllib.modules.multi_output_module import MultiOutputImageClassifier
-from tllib.weighting.pcgrad import PCGradGradientWeightedCombiner
+from tllib.weighting.dwa import DynamicWeightAverageLossCombiner
 import utils
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -70,7 +70,7 @@ def main(args):
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     heads = nn.ModuleDict({
-        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.source
+        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.train_tasks
     })
     classifier = MultiOutputImageClassifier(backbone, heads, pool_layer=pool_layer, finetune=not args.scratch).to(device)
 
@@ -90,13 +90,13 @@ def main(args):
         print(acc1)
         return
 
-    pcgrad_combiner = PCGradGradientWeightedCombiner(task_names, device)
+    weight_combiner = DynamicWeightAverageLossCombiner(task_names, args.epochs, args.temperature, device)
     # start training
     best_acc1 = {}
     for epoch in range(args.epochs):
         print(lr_scheduler.get_lr())
         # train for one epoch
-        train(train_loaders, task_names, classifier, optimizer, pcgrad_combiner, epoch, args.iters_per_epoch, args, device)
+        train(train_loaders, task_names, classifier, optimizer, weight_combiner, epoch, args.iters_per_epoch, args, device)
         lr_scheduler.step()
 
         # evaluate on validation set
@@ -118,10 +118,11 @@ def main(args):
     logger.close()
 
 
-def train(train_loaders, task_names, model, optimizer, pcgrad_combiner, epoch, iters_per_epoch, args, device):
+def train(train_loaders, task_names, model, optimizer, weight_combiner, epoch, iters_per_epoch, args, device):
     batch_time = AverageMeter('Time', ':5.2f')
     losses = AverageMeter('Loss', ':6.2f')
     accs = AverageMeter('Acc', ':3.1f')
+    per_task_losses = [AverageMeter("Loss ()".format(task_name)) for task_name in task_names]
     progress = ProgressMeter(
         iters_per_epoch,
         [batch_time, losses, accs],
@@ -135,8 +136,7 @@ def train(train_loaders, task_names, model, optimizer, pcgrad_combiner, epoch, i
         # clear grad
         optimizer.zero_grad()
 
-        # gradient of each task
-        per_task_grad = []
+        per_task_loss = []
 
         for task_idx, task_name in enumerate(task_names):
             x, labels = next(train_loaders[task_idx])[:2]
@@ -145,20 +145,17 @@ def train(train_loaders, task_names, model, optimizer, pcgrad_combiner, epoch, i
 
             # compute output
             y = model(x, task_name)
-            loss = F.cross_entropy(y, labels) / len(task_names)
+            loss = F.cross_entropy(y, labels)
             acc = accuracy(y, labels)[0]
 
             losses.update(loss.item(), x.size(0))
             accs.update(acc.item(), x.size(0))
 
-            # backward
-            loss.backward()
+            per_task_losses[task_idx].update(loss.item(), x.size(0))
+            per_task_loss.append(loss)
 
-            # collect grad
-            per_task_grad.append(model.get_grad())
-            model.zero_grad_shared_parameters()
-
-        model.update_grad(pcgrad_combiner.combine(per_task_grad))
+        total_loss = weight_combiner.combine(per_task_loss, epoch)
+        total_loss.backward()
 
         # do SGD step
         optimizer.step()
@@ -170,9 +167,11 @@ def train(train_loaders, task_names, model, optimizer, pcgrad_combiner, epoch, i
         if i % args.print_freq == 0:
             progress.display(i)
 
+    weight_combiner.update([m.avg for m in per_task_losses], epoch)
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='PCGrad for MultiTask Learning')
+    parser = argparse.ArgumentParser(description='Dynamic Average Weighting for MultiTask Learning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
@@ -191,9 +190,6 @@ if __name__ == '__main__':
                         default=(0.485, 0.456, 0.406), help='normalization mean')
     parser.add_argument('--norm-std', type=float, nargs='+',
                         default=(0.229, 0.224, 0.225), help='normalization std')
-    parser.add_argument('--sampler', default="ProportionalMultiTaskSampler")
-    parser.add_argument('--temperature', type=float, default=1)
-    parser.add_argument('--examples_cap', type=int, default=None)
     # model parameters
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         choices=utils.get_model_names(),
@@ -203,6 +199,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
+    parser.add_argument('--temperature', type=float, default=2., help='temperature for DWA (default: 2)')
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',

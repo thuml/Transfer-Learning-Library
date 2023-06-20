@@ -53,32 +53,30 @@ def get_dataset_names():
     )
 
 
-def get_dataset(dataset_name, root, source, target, train_source_transform, val_transform, train_target_transform=None):
-    if train_target_transform is None:
-        train_target_transform = train_source_transform
+def get_dataset(dataset_name, root, train_tasks, test_tasks, train_transform, val_transform):
     if dataset_name in datasets.__dict__:
         # load datasets from tllib.vision.datasets
         dataset = datasets.__dict__[dataset_name]
 
-        train_source_datasets = {domain_name: dataset(root=root, task=domain_name, split='train', download=True,
-                                                      transform=train_source_transform) for domain_name in source}
+        train_all_datasets = {domain_name: dataset(root=root, task=domain_name, split='train', download=True,
+                                                      transform=train_transform) for domain_name in train_tasks}
         train_target_datasets = {domain_name: dataset(root=root, task=domain_name, split='train', download=True,
-                                                      transform=train_target_transform) for domain_name in target}
+                                                      transform=train_transform) for domain_name in test_tasks}
         val_datasets = {
             domain_name: dataset(root=root, task=domain_name, split='val', download=True, transform=val_transform) for
-            domain_name in target}
+            domain_name in test_tasks}
         test_datasets = {
             domain_name: dataset(root=root, task=domain_name, split='test', download=True, transform=val_transform) for
-            domain_name in target}
+            domain_name in test_tasks}
         class_names = list(val_datasets.values())[0].classes
         num_classes = len(class_names)
     else:
         raise NotImplementedError(dataset_name)
-    print("source train:", {domain_name: len(dataset) for domain_name, dataset in train_source_datasets.items()})
+    print("all train:", {domain_name: len(dataset) for domain_name, dataset in train_all_datasets.items()})
     print("target train:", {domain_name: len(dataset) for domain_name, dataset in train_target_datasets.items()})
     print("target val:", {domain_name: len(dataset) for domain_name, dataset in val_datasets.items()})
     print("target test:", {domain_name: len(dataset) for domain_name, dataset in test_datasets.items()})
-    return train_source_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, class_names
+    return train_all_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, class_names
 
 
 def validate(task_name, val_loader, model, args, device, verbose=True) -> float:

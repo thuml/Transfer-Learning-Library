@@ -6,7 +6,6 @@ import random
 import warnings
 import argparse
 import shutil
-import sys
 
 import torch
 import torch.nn as nn
@@ -15,7 +14,6 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-sys.path.append('../..')
 from tllib.utils.logger import CompleteLogger
 from tllib.modules.multi_output_module import MultiOutputImageClassifier
 import utils
@@ -47,21 +45,21 @@ def main(args):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_source_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, args.class_names = \
-        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_all_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.root, args.train_tasks, args.test_tasks, train_transform, val_transform)
     val_loaders = {name: DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers) for
                    name, dataset in val_datasets.items()}
     test_loaders = {name: DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers) for
                     name, dataset in test_datasets.items()}
 
-    task_sampler = utils.get_task_sampler(train_source_datasets, args)
+    task_sampler = utils.get_task_sampler(train_all_datasets, args)
 
     # create model
     print("=> using model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     heads = nn.ModuleDict({
-        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.source
+        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.train_tasks
     })
     classifier = MultiOutputImageClassifier(backbone, heads, pool_layer=pool_layer, finetune=not args.scratch).to(device)
     if args.pretrained is not None:
@@ -113,15 +111,15 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Source Only for Supervised Domain Adaptation')
+    parser = argparse.ArgumentParser(description='Empirical Risk Minimization')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='DomainNetv2', choices=utils.get_dataset_names(),
                         help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
-    parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
+    parser.add_argument('-tr', '--train_tasks', help='training task(s)', nargs='+')
+    parser.add_argument('-ts', '--test_tasks', help='test tasks(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--resize-size', type=int, default=224,
@@ -144,6 +142,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-pool', action='store_true',
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
+    parser.add_argument('--pretrained', default=None)
     # training parameters
     parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
@@ -171,6 +170,5 @@ if __name__ == '__main__':
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
-    parser.add_argument('--pretrained', default=None)
     args = parser.parse_args()
     main(args)

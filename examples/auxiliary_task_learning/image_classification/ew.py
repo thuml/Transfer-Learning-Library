@@ -53,30 +53,26 @@ def main(args):
     print("train_transform: ", train_transform)
     print("val_transform: ", val_transform)
 
-    train_source_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, args.class_names = \
-        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
-    val_loaders = {name: DataLoader(dataset, batch_size=args.test_batch_size, shuffle=False, num_workers=args.workers)
+    train_all_datasets, train_target_datasets, val_datasets, test_datasets, num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.root, args.train_tasks, args.test_tasks, train_transform, val_transform)
+    val_loaders = {name: DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
                    for name, dataset in val_datasets.items()}
-    test_loaders = {name: DataLoader(dataset, batch_size=args.test_batch_size, shuffle=False, num_workers=args.workers)
+    test_loaders = {name: DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
                     for name, dataset in test_datasets.items()}
 
-    train_loaders = [ForeverDataIterator(DataLoader(dataset, batch_size=args.batch_size,
-                                                    shuffle=True, num_workers=args.workers, drop_last=True)) for
-                     task_name, dataset in train_source_datasets.items()]
-    task_names = train_source_datasets.keys()
+    train_loaders = [ForeverDataIterator(DataLoader(dataset, batch_size=int(args.batch_size / len(train_all_datasets)),
+                                                    shuffle=True, num_workers=args.workers, drop_last=True))
+                     for task_name, dataset in train_all_datasets.items()]
+    task_names = train_all_datasets.keys()
 
     # create model
     print("=> using model '{}'".format(args.arch))
     backbone = utils.get_model(args.arch, pretrain=not args.scratch)
     pool_layer = nn.Identity() if args.no_pool else None
     heads = nn.ModuleDict({
-        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.source
+        task_name: nn.Linear(backbone.out_features, num_classes) for task_name in args.train_tasks
     })
     classifier = MultiOutputImageClassifier(backbone, heads, pool_layer=pool_layer, finetune=not args.scratch).to(device)
-    if args.pretrained is not None:
-        print("Loading from ", args.pretrained)
-        checkpoint = torch.load(args.pretrained, map_location='cpu')
-        classifier.load_state_dict(checkpoint, strict=False)
 
     print(heads)
     # define optimizer and lr scheduler
@@ -176,15 +172,15 @@ def train(train_loaders, task_names, model, optimizer, weight_combiner, epoch, i
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='PCGrad for MultiTask Learning')
+    parser = argparse.ArgumentParser(description='Equal Weight for MultiTask Learning')
     # dataset parameters
     parser.add_argument('root', metavar='DIR',
                         help='root path of dataset')
     parser.add_argument('-d', '--data', metavar='DATA', default='DomainNetv2', choices=utils.get_dataset_names(),
                         help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
                              ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
-    parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
+    parser.add_argument('-tr', '--train_tasks', help='training task(s)', nargs='+')
+    parser.add_argument('-ts', '--test_tasks', help='test tasks(s)', nargs='+')
     parser.add_argument('--train-resizing', type=str, default='default')
     parser.add_argument('--val-resizing', type=str, default='default')
     parser.add_argument('--resize-size', type=int, default=224,
@@ -208,10 +204,9 @@ if __name__ == '__main__':
                         help='no pool layer after the feature extractor.')
     parser.add_argument('--scratch', action='store_true', help='whether train from scratch.')
     # training parameters
-    parser.add_argument('-b', '--batch-size', default=8, type=int,
+    parser.add_argument('-b', '--batch-size', default=48, type=int,
                         metavar='N',
-                        help='mini-batch size of each domain (default: 8)')
-    parser.add_argument('--test-batch-size', default=48, type=int)
+                        help='mini-batch size of each domain (default: 48)')
     parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -235,6 +230,5 @@ if __name__ == '__main__':
     parser.add_argument("--phase", type=str, default='train', choices=['train', 'test', 'analysis'],
                         help="When phase is 'test', only test the model."
                              "When phase is 'analysis', only analysis the model.")
-    parser.add_argument('--pretrained', default=None)
     args = parser.parse_args()
     main(args)
