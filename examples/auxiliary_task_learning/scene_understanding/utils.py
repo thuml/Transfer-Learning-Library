@@ -137,7 +137,7 @@ class SurfaceNormalPredictionMetric:
         return "Normal Mean: {:5.2f} Median: {:5.2f} <11.25: {:.2%} <22.5: {:.2%} <30: {:.2%}".format(*results)
 
 
-def train(data_loader, model, optimizer, epoch, args, device):
+def train(data_loader, model, optimizer, epoch, args, device, task_weights=None):
     loss_functions = {
         'segmentation': SegmentationLoss(),
         'depth': DepthEstimationLoss(),
@@ -174,12 +174,16 @@ def train(data_loader, model, optimizer, epoch, args, device):
         outputs = model(x)
 
         losses = {}
-        for task_name, output in outputs.items():
+        for task_name in args.train_tasks:
+            output = outputs[task_name]
             prediction = F.interpolate(output, args.img_size, mode='bilinear', align_corners=True)
             losses[task_name] = loss_functions[task_name](prediction, labels[task_name])
             loss_meters[task_name].update(losses[task_name])
             metric_functions[task_name].update(prediction, labels[task_name])
-        loss = sum(losses.values())
+        if task_weights is None:
+            loss = sum(losses.values())
+        else:
+            loss = sum([losses[task_name] * task_weights[task_name] for task_name in args.train_tasks])
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -192,6 +196,7 @@ def train(data_loader, model, optimizer, epoch, args, device):
 
         if i % args.print_freq == 0:
             progress.display(i)
+
 
 def validate(val_loader, model, args, device):
     loss_functions = {
@@ -230,7 +235,8 @@ def validate(val_loader, model, args, device):
             outputs = model(x)
 
             losses = {}
-            for task_name, output in outputs.items():
+            for task_name in args.test_tasks:
+                output = outputs[task_name]
                 prediction = F.interpolate(output, args.img_size, mode='bilinear', align_corners=True)
                 losses[task_name] = loss_functions[task_name](prediction, labels[task_name])
                 loss_meters[task_name].update(losses[task_name])

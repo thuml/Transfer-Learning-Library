@@ -169,15 +169,14 @@ def main(args):
         return
 
     # create trainers
-    # fork model into B copies
-    init_model_parameters = deepcopy(model.state_dict())
+    # fork model into B branches
     trainers = {}
     target_trainer = trainers["target"] = \
-        Trainer("target", model, logger.get_checkpoint_path("target"),
+        Trainer("target", deepcopy(model), logger.get_checkpoint_path("target"),
             args.lr, args.momentum, args.wd, args.epochs,
             {name: float(name in args.test_tasks) for name in args.train_tasks}
         )
-    trainers["all"] = Trainer("all", model, logger.get_checkpoint_path("all"),
+    trainers["all"] = Trainer("all", deepcopy(model), logger.get_checkpoint_path("all"),
             args.lr, args.momentum, args.wd, args.epochs,
             {name: 1 for name in args.train_tasks}
         )
@@ -185,17 +184,15 @@ def main(args):
         print("use fast version of ForkMerge")
     else:
         print("use full version of ForkMerge")
-        if len(args.train_tasks) - len(args.test_tasks) >= 2:
-            for aux_task_name in args.train_tasks:
-                if aux_task_name not in args.test_tasks:
-                    model.load_state_dict(init_model_parameters)
-                    name = "target+{}".format(aux_task_name)
-                    trainers[name] = Trainer(name, model,
-                                      logger.get_checkpoint_path(name),
-                                      args.lr, args.momentum, args.wd, args.epochs,
-                                      {name: float(name in args.test_tasks + [aux_task_name])
-                                       for name in args.train_tasks})
-
+        auxiliary_tasks = list(set(args.train_tasks) - set(args.test_tasks))
+        if len(auxiliary_tasks) >= 2:
+            for aux_task_name in auxiliary_tasks:
+                name = "target+{}".format(aux_task_name)
+                trainers[name] = Trainer(name, deepcopy(model),
+                                  logger.get_checkpoint_path(name),
+                                  args.lr, args.momentum, args.wd, args.epochs,
+                                  {name: float(name in args.test_tasks + [aux_task_name])
+                                   for name in args.train_tasks})
     print(trainers)
 
     def evaluate_function(theta):
