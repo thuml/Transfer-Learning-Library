@@ -122,6 +122,16 @@ def main(args):
 
 
 def train(data_loader, model, optimizer, weight_combiner, epoch, args, device):
+    loss_functions = {
+        'segmentation': utils.SegmentationLoss(),
+        'depth': utils.DepthEstimationLoss(),
+        'normal': utils.SurfaceNormalPredictionLoss(),
+    }
+    metric_functions = {
+        'segmentation': utils.SegmentationMetric(),
+        'depth': utils.DepthEstimationMetric(),
+        'normal': utils.SurfaceNormalPredictionMetric(),
+    }
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     loss_meters = {task_name: AverageMeter("Loss({})".format(task_name), ":5.2f")
@@ -129,7 +139,7 @@ def train(data_loader, model, optimizer, weight_combiner, epoch, args, device):
     progress = ProgressMeter(
         len(data_loader),
         [batch_time, data_time] + list(loss_meters.values()) +
-        [utils.metric_functions[task_name] for task_name in args.train_tasks],
+        [metric_functions[task_name] for task_name in args.train_tasks],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -154,9 +164,9 @@ def train(data_loader, model, optimizer, weight_combiner, epoch, args, device):
         for task_name in args.train_tasks:
             output = model(x, task_name)
             prediction = F.interpolate(output, args.img_size, mode='bilinear', align_corners=True)
-            losses[task_name] = utils.loss_functions[task_name](prediction, labels[task_name])
+            losses[task_name] = loss_functions[task_name](prediction, labels[task_name])
             loss_meters[task_name].update(losses[task_name])
-            utils.metric_functions[task_name].update(prediction, labels[task_name])
+            metric_functions[task_name].update(prediction, labels[task_name])
 
             losses[task_name].backward()
             # collect grad
@@ -197,8 +207,8 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-p', '--print-freq', default=10, type=int,
-                        metavar='N', help='print frequency (default: 100)')
+    parser.add_argument('-p', '--print-freq', default=50, type=int,
+                        metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument("--log", type=str, default='ew',

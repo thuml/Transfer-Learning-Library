@@ -137,18 +137,18 @@ class SurfaceNormalPredictionMetric:
         return "Normal Mean: {:5.2f} Median: {:5.2f} <11.25: {:.2%} <22.5: {:.2%} <30: {:.2%}".format(*results)
 
 
-loss_functions = {
-    'segmentation': SegmentationLoss(),
-    'depth': DepthEstimationLoss(),
-    'normal': SurfaceNormalPredictionLoss(),
-}
-metric_functions = {
-    'segmentation': SegmentationMetric(),
-    'depth': DepthEstimationMetric(),
-    'normal': SurfaceNormalPredictionMetric(),
-}
-
 def train(data_loader, model, optimizer, epoch, args, device):
+    loss_functions = {
+        'segmentation': SegmentationLoss(),
+        'depth': DepthEstimationLoss(),
+        'normal': SurfaceNormalPredictionLoss(),
+    }
+    metric_functions = {
+        'segmentation': SegmentationMetric(),
+        'depth': DepthEstimationMetric(),
+        'normal': SurfaceNormalPredictionMetric(),
+    }
+
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     loss_meters = {task_name: AverageMeter("Loss({})".format(task_name), ":5.2f")
@@ -194,6 +194,16 @@ def train(data_loader, model, optimizer, epoch, args, device):
             progress.display(i)
 
 def validate(val_loader, model, args, device):
+    loss_functions = {
+        'segmentation': SegmentationLoss(),
+        'depth': DepthEstimationLoss(),
+        'normal': SurfaceNormalPredictionLoss(),
+    }
+    metric_functions = {
+        'segmentation': SegmentationMetric(),
+        'depth': DepthEstimationMetric(),
+        'normal': SurfaceNormalPredictionMetric(),
+    }
     batch_time = AverageMeter('Time', ':5.2f')
     data_time = AverageMeter('Data', ':5.2f')
     loss_meters = {task_name: AverageMeter("Loss({})".format(task_name), ":5.2f")

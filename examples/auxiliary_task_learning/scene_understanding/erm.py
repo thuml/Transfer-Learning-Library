@@ -138,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('-p', '--print-freq', default=50, type=int,
-                        metavar='N', help='print frequency (default: 100)')
+                        metavar='N', help='print frequency (default: 50)')
     parser.add_argument('--seed', default=None, type=int,
                         help='seed for initializing training. ')
     parser.add_argument("--log", type=str, default='erm',
