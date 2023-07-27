@@ -36,10 +36,10 @@ class Office31(ImageList):
                 webcam.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/0ac1924f514b44788d1d/?dl=1"),
-        ("amazon", "amazon.tgz", "https://cloud.tsinghua.edu.cn/f/f40e5a484e7d43af9403/?dl=1"),
-        ("dslr", "dslr.tgz", "https://cloud.tsinghua.edu.cn/f/a6bc0fcca766496cb112/?dl=1"),
-        ("webcam", "webcam.tgz", "https://cloud.tsinghua.edu.cn/f/2e89cf41a299411093f0/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/2c1dd9fbcaa9455aa4ad/?dl=1"),
+        ("amazon", "amazon.tgz", "https://cloud.tsinghua.edu.cn/f/ec12dfcddade43ab8101/?dl=1"),
+        ("dslr", "dslr.tgz", "https://cloud.tsinghua.edu.cn/f/a41d818ae2f34da7bb32/?dl=1"),
+        ("webcam", "webcam.tgz", "https://cloud.tsinghua.edu.cn/f/8a41009a166e4131adcd/?dl=1"),
     ]
     image_list = {
         "A": "image_list/amazon.txt",
