@@ -34,8 +34,8 @@ class VisDA2017(ImageList):
     """
     download_list = [
         ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/c107de37b8094c5398dc/?dl=1"),
-        ("train", "train.tar", "https://cloud.tsinghua.edu.cn/f/c5f3ce59139144ec8221/?dl=1"),
-        ("validation", "validation.tar", "https://cloud.tsinghua.edu.cn/f/da70e4b1cf514ecea562/?dl=1")
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/c5f3ce59139144ec8221/?dl=1"),
+        ("validation", "validation.tgz", "https://cloud.tsinghua.edu.cn/f/da70e4b1cf514ecea562/?dl=1")
     ]
     image_list = {
         "Synthetic": "image_list/train.txt",
