@@ -28,6 +28,11 @@ class OxfordFlowers102(ImageList):
             transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
         target_transform (callable, optional): A function/transform that takes in the target and transforms it.
     """
+    download_list = [
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/161c7b222d6745408201/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/59b6a3fa3dac4404aa3b/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/ec77da479dfb471982fb/?dl=1")
+    ]
     CLASSES = ['pink primrose', 'hard-leaved pocket orchid', 'canterbury bells', 'sweet pea', 'english marigold',
                'tiger lily', 'moon orchid', 'bird of paradise', 'monkshood', 'globe thistle', 'snapdragon',
                "colt's foot", 'king protea', 'spear thistle', 'yellow iris', 'globe-flower', 'purple coneflower',
@@ -45,10 +50,11 @@ class OxfordFlowers102(ImageList):
                'hibiscus', 'columbine', 'desert-rose', 'tree mallow', 'magnolia', 'cyclamen', 'watercress',
                'canna lily', 'hippeastrum', 'bee balm', 'ball moss', 'foxglove', 'bougainvillea', 'camellia',
                'mallow', 'mexican petunia', 'bromelia', 'blanket flower', 'trumpet creeper', 'blackberry lily']
+
     def __init__(self, root, split='train', download=False, **kwargs):
         if download:
-            download_data(root, "oxford_flowers102", "oxford_flowers102.tgz", "https://cloud.tsinghua.edu.cn/f/61cb20241c1d43279d80/?dl=1")
+            list(map(lambda args: download_data(root, *args), self.download_list))
         else:
-            check_exits(root, "oxford_flowers102")
-        root = os.path.join(root, "oxford_flowers102")
-        super(OxfordFlowers102, self).__init__(root, OxfordFlowers102.CLASSES, os.path.join(root, 'imagelist', '{}.txt'.format(split)), **kwargs)
+            list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
+        super(OxfordFlowers102, self).__init__(root, OxfordFlowers102.CLASSES,
+                                               os.path.join(root, 'image_list', '{}.txt'.format(split)), **kwargs)
