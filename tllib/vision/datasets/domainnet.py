@@ -37,13 +37,13 @@ class DomainNet(ImageList):
                 ...
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/90ecb35bbd374e5e8c41/?dl=1"),
-        ("clipart", "clipart.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/clipart.zip"),
-        ("infograph", "infograph.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/infograph.zip"),
-        ("painting", "painting.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/groundtruth/painting.zip"),
-        ("quickdraw", "quickdraw.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/quickdraw.zip"),
-        ("real", "real.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/real.zip"),
-        ("sketch", "sketch.zip", "http://csr.bu.edu/ftp/visda/2019/multi-source/sketch.zip"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/bf0fe327e4b046eb89ba/?dl=1"),
+        ("clipart", "clipart.tgz", "https://cloud.tsinghua.edu.cn/f/f0515164a4864220b98b/?dl=1"),
+        ("infograph", "infograph.tgz", "https://cloud.tsinghua.edu.cn/f/98b19d5fc9884109a9cb/?dl=1"),
+        ("painting", "painting.tgz", "https://cloud.tsinghua.edu.cn/f/11285ce9fbd34bb7b28c/?dl=1"),
+        ("quickdraw", "quickdraw.tgz", "https://cloud.tsinghua.edu.cn/f/6faa9efb498b494abf66/?dl=1"),
+        ("real", "real.tgz", "https://cloud.tsinghua.edu.cn/f/17a101842c564959b525/?dl=1"),
+        ("sketch", "sketch.tgz", "https://cloud.tsinghua.edu.cn/f/b305add26e9d47349495/?dl=1"),
     ]
     image_list = {
         "c": "clipart",
