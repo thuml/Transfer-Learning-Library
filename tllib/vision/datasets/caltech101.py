@@ -22,6 +22,11 @@ class Caltech101(ImageList):
         target_transform (callable, optional): A function/transform that takes in the target and transforms it.
 
     """
+    download_list = [
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/d6d4b813a800403f835e/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/ed4d0de80da246f98171/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/db1c444200a848799683/?dl=1")
+    ]
 
     def __init__(self, root, split='train', download=True, **kwargs):
         classes = ['accordion', 'airplanes', 'anchor', 'ant', 'background_google', 'barrel', 'bass', 'beaver',
@@ -38,11 +43,9 @@ class Caltech101(ImageList):
                    'stop_sign', 'strawberry', 'sunflower', 'tick', 'trilobite', 'umbrella', 'watch', 'water_lilly',
                    'wheelchair', 'wild_cat', 'windsor_chair', 'wrench', 'yin_yang']
         if download:
-            download_data(root, "caltech101", "caltech101.tar",
-                          "https://cloud.tsinghua.edu.cn/f/445aead4a3e5443e9a4c/?dl=1")
+            list(map(lambda args: download_data(root, *args), self.download_list))
         else:
-            check_exits(root, "caltech101")
+            list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
-        root = os.path.join(root, 'caltech101')
         super(Caltech101, self).__init__(root, classes, os.path.join(root, 'image_list', '{}.txt'.format(split)),
                                          **kwargs)
