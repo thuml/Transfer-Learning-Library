@@ -37,9 +37,9 @@ class StanfordCars(ImageList):
                 test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/fd3c98c6b6734eaf83dd/?dl=1"),
-        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/0d08c6c7746f45e08e96/?dl=1"),
-        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/154aa99e32e441d38e71/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/aeeb690e9886442aa267/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/fd80c30c120a42a08fd3/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/01e6b279f20440cb8bf9/?dl=1"),
     ]
     image_list = {
         "train": "image_list/train_100.txt",
