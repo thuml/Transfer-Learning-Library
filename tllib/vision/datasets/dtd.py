@@ -25,6 +25,12 @@ class DTD(ImageList):
             transformed version. E.g, :class:`torchvision.transforms.RandomCrop`.
         target_transform (callable, optional): A function/transform that takes in the target and transforms it.
     """
+    download_list = [
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/2218bfa61bac46539dd7/?dl=1"),
+        ("train", "train.tgz", "https://cloud.tsinghua.edu.cn/f/08fd47d35fc94f36a508/?dl=1"),
+        ("test", "test.tgz", "https://cloud.tsinghua.edu.cn/f/15873fe162c343cca8ed/?dl=1"),
+        ("validation", "validation.tgz", "https://cloud.tsinghua.edu.cn/f/75c9ab22ebea4c3b87e7/?dl=1"),
+    ]
     CLASSES = ['banded', 'blotchy', 'braided', 'bubbly', 'bumpy', 'chequered', 'cobwebbed', 'cracked',
                'crosshatched', 'crystalline', 'dotted', 'fibrous', 'flecked', 'freckled', 'frilly', 'gauzy',
                'grid', 'grooved', 'honeycombed', 'interlaced', 'knitted', 'lacelike', 'lined', 'marbled',
@@ -34,9 +40,8 @@ class DTD(ImageList):
 
     def __init__(self, root, split, download=False, **kwargs):
         if download:
-            download_data(root, "dtd", "dtd.tar", "https://cloud.tsinghua.edu.cn/f/77ad660967b647568710/?dl=1")
+            list(map(lambda args: download_data(root, *args), self.download_list))
         else:
-            check_exits(root, "dtd")
+            list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
-        root = os.path.join(root, "dtd")
         super(DTD, self).__init__(root, DTD.CLASSES, os.path.join(root, "image_list", "{}.txt".format(split)), **kwargs)
