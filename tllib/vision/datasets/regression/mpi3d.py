@@ -38,10 +38,10 @@ class MPI3D(ImageRegression):
                 toy_test.txt
         """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/f0ff24df967b42479d9e/?dl=1"),
-        ("real", "real.tgz", "https://cloud.tsinghua.edu.cn/f/04c1318555fc4283862b/?dl=1"),
-        ("realistic", "realistic.tgz", "https://cloud.tsinghua.edu.cn/f/2c0f7dacc73148cea593/?dl=1"),
-        ("toy", "toy.tgz", "https://cloud.tsinghua.edu.cn/f/6327912a50374e20af95/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/feacec494d5347b7a6aa/?dl=1"),
+        ("real", "real.tgz", "https://cloud.tsinghua.edu.cn/f/605dd842cd9d4071a0ae/?dl=1"),
+        ("realistic", "realistic.tgz", "https://cloud.tsinghua.edu.cn/f/05743f3071054cc29e25/?dl=1"),
+        ("toy", "toy.tgz", "https://cloud.tsinghua.edu.cn/f/1511dff7853d4abea38f/?dl=1"),
     ]
     image_list = {
         "RL": "real",
