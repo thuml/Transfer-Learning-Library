@@ -38,10 +38,10 @@ class DSprites(ImageRegression):
                 scream_test.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/fbbb6b1a43034712b34d/?dl=1"),
-        ("color", "color.tgz", "https://cloud.tsinghua.edu.cn/f/9ce9f2abc61f49ed995a/?dl=1"),
-        ("noisy", "noisy.tgz", "https://cloud.tsinghua.edu.cn/f/674435c8cb914ca0ad10/?dl=1"),
-        ("scream", "scream.tgz", "https://cloud.tsinghua.edu.cn/f/0613675916ac4c3bb6bd/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/4392ef903ed14017a042/?dl=1"),
+        ("color", "color.tgz", "https://cloud.tsinghua.edu.cn/f/6d243c589d384ff5a212/?dl=1"),
+        ("noisy", "noisy.tgz", "https://cloud.tsinghua.edu.cn/f/9a23ede3be1740328637/?dl=1"),
+        ("scream", "scream.tgz", "https://cloud.tsinghua.edu.cn/f/8fc4d34311bb4db6bcde/?dl=1"),
     ]
     image_list = {
         "C": "color",
@@ -72,5 +72,5 @@ class DSprites(ImageRegression):
         else:
             list(map(lambda file_name, _: check_exits(root, file_name), self.download_list))
 
-        super(DSprites, self).__init__(root, factors, data_list_file=data_list_file, target_transform=target_transform, **kwargs)
-
+        super(DSprites, self).__init__(root, factors, data_list_file=data_list_file, target_transform=target_transform,
+                                       **kwargs)
