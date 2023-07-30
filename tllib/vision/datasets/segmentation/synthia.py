@@ -32,7 +32,7 @@ class Synthia(SegmentationList):
         8: 13, 18: 14, 19: 15, 20: 16, 12: 17, 11: 18
     }
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/15c4d0f8e62e45d9a6b7/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/1c652d518e0347e2800d/?dl=1"),
     ]
 
     def __init__(self, root, split='train', data_folder='RGB', label_folder='synthia_mapped_to_cityscapes', **kwargs):
