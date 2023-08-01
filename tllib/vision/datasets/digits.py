@@ -24,9 +24,9 @@ class MNIST(ImageList):
             and returns a transformed version. E.g, ``transforms.RandomCrop``
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/2ebc2d10b8bd4087bf85/?dl=1"),
-        ("mnist_train_image", "mnist_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/3c69c92db22e4a8bac2d/?dl=1"),
-        # ("mnist_test_image", "mnist_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/3c69c92db22e4a8bac2d/?dl=1")
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/16feadf7fb3641c2be9a/?dl=1"),
+        ("mnist_train_image", "mnist_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/c93080af28e54559aeeb/?dl=1"),
+        # ("mnist_test_image", "mnist_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/c93080af28e54559aeeb/?dl=1")
     ]
     image_list = {
         "train": "image_list/mnist_train.txt",
@@ -87,9 +87,9 @@ class USPS(ImageList):
 
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/68e31dde296c4d028078/?dl=1"),
-        ("usps_train_image", "usps_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/7b0b4ed5f3b940e6bf5d/?dl=1"),
-        # ("usps_test_image", "usps_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/7b0b4ed5f3b940e6bf5d/?dl=1")
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/721ceaf3c031413cb62f/?dl=1"),
+        ("usps_train_image", "usps_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/c5bd329a00fb4dc79608/?dl=1"),
+        # ("usps_test_image", "usps_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/c5bd329a00fb4dc79608/?dl=1")
     ]
     image_list = {
         "train": "image_list/usps_train.txt",
@@ -151,8 +151,8 @@ class SVHN(ImageList):
 
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/cd065aa302984b06a940/?dl=1"),
-        ("svhn_image", "svhn_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/56249498b22141a5841a/?dl=1")
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/12b35fb08f8049f98362/?dl=1"),
+        ("svhn_image", "svhn_image.tar.gz", "https://cloud.tsinghua.edu.cn/f/cc02de6cf81543378cce/?dl=1")
     ]
     image_list = "image_list/svhn_balanced.txt"
     # image_list = "image_list/svhn.txt"
