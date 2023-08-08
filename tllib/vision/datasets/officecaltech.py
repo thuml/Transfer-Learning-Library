@@ -51,9 +51,10 @@ class OfficeCaltech(DatasetFolder):
         if download:
             for dir in self.directories.values():
                 if not os.path.exists(os.path.join(root, dir)):
-                    download_and_extract_archive(url="https://cloud.tsinghua.edu.cn/f/e93f2e07d93243d6b57e/?dl=1",
+                    download_and_extract_archive(url="https://cloud.tsinghua.edu.cn/f/eea518fa781a41d1b20e/?dl=1",
                                                  download_root=os.path.join(root, 'download'),
-                                                 filename="officecaltech.tgz", remove_finished=False, extract_root=root)
+                                                 filename="office-caltech.tgz", remove_finished=False,
+                                                 extract_root=root)
                     break
         else:
             list(map(lambda dir, _: check_exits(root, dir), self.directories.values()))
