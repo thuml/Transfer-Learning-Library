@@ -25,7 +25,7 @@ class MSMT17(BaseImageDataset):
     """
     dataset_dir = '.'
     archive_name = 'MSMT17_V1.zip'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/55d7e5aa3c224f49b908/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/c254ea490cfa4115940d/?dl=1'
 
     def __init__(self, root, verbose=True):
         super(MSMT17, self).__init__()
