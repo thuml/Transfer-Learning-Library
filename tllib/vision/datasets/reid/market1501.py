@@ -27,7 +27,7 @@ class Market1501(BaseImageDataset):
     """
     dataset_dir = 'Market-1501-v15.09.15'
     archive_name = 'Market-1501-v15.09.15.tgz'
-    dataset_url = 'https://cloud.tsinghua.edu.cn/f/aad1f51c221f40c7b2a7/?dl=1'
+    dataset_url = 'https://cloud.tsinghua.edu.cn/f/29e5f015a7314531b645/?dl=1'
 
     def __init__(self, root, verbose=True):
         super(Market1501, self).__init__()
