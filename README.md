@@ -10,6 +10,56 @@
 - [Contact](#contact)
 - [Citation](#citation)
 
+## Notice (2023-08-09)
+
+目前大部分数据集的链接已经恢复，确认无备份的数据集如下：
+
+- Classification
+  - COCO70
+  - EuroSAT
+  - PACS
+  - PatchCamelyon
+  - [Partial Domain Adaptation]
+    - CaltechImageNet
+
+- Keypoint Detection
+  - Hand3DStudio
+  - LSP
+  - SURREAL
+
+- Object Detection
+  - Comic
+
+- Re-Identification
+  - PersonX
+  - UnrealPerson
+
+对于这些数据集，如果您之前有下载到本地，请通过邮件联系我们，非常感谢大家的支持。
+
+Most of the dataset links have been restored at present. The confirmed datasets without backups are as follows:
+
+- Classification
+  - COCO70
+  - EuroSAT
+  - PACS
+  - PatchCamelyon
+  - [Partial Domain Adaptation]
+    - CaltechImageNet
+
+- Keypoint Detection
+  - Hand3DStudio
+  - LSP
+  - SURREAL
+
+- Object Detection
+  - Comic
+
+- Re-Identification
+  - PersonX
+  - UnrealPerson
+
+For these datasets, if you had previously downloaded them locally, please contact us via email. We greatly appreciate everyone's support.
+
 ## Notice (2023-08-01)
 
 ### Transfer-Learning-Library数据集链接失效问题
