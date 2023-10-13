@@ -33,11 +33,11 @@ class PACS(ImageList):
                 sketch.txt
     """
     download_list = [
-        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/add42cc3859847bc988c/?dl=1"),
-        ("art_painting", "art_painting.tgz", "https://cloud.tsinghua.edu.cn/f/4eb7db4f3eec41719856/?dl=1"),
-        ("cartoon", "cartoon.tgz", "https://cloud.tsinghua.edu.cn/f/d847ac22497b4826889f/?dl=1"),
-        ("photo", "photo.tgz", "https://cloud.tsinghua.edu.cn/f/458ad21483da4a45935b/?dl=1"),
-        ("sketch", "sketch.tgz", "https://cloud.tsinghua.edu.cn/f/c892ac2d94a44b1196b8/?dl=1"),
+        ("image_list", "image_list.zip", "https://cloud.tsinghua.edu.cn/f/603a1fea81f2415ab7e0/?dl=1"),
+        ("art_painting", "art_painting.tgz", "https://cloud.tsinghua.edu.cn/f/46684292e979402b8d87/?dl=1"),
+        ("cartoon", "cartoon.tgz", "https://cloud.tsinghua.edu.cn/f/7bfa413b34ec4f4fa384/?dl=1"),
+        ("photo", "photo.tgz", "https://cloud.tsinghua.edu.cn/f/45f71386a668475d8b42/?dl=1"),
+        ("sketch", "sketch.tgz", "https://cloud.tsinghua.edu.cn/f/4ba559535e4b4b6981e5/?dl=1"),
     ]
     image_list = {
         "A": "image_list/art_painting_{}.txt",
