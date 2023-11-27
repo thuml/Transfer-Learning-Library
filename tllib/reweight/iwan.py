@@ -48,7 +48,7 @@ class ImportanceWeightModule(object):
             instance weight in shape :math:`(N, 1)`
         """
         weight = 1. - self.discriminator(feature)
-        weight = weight / weight.mean()
+        weight = weight / (weight.mean() + 1e-5)
         weight = weight.detach()
         return weight
 
