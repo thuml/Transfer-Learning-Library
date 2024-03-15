@@ -10,6 +10,10 @@
 - [Contact](#contact)
 - [Citation](#citation)
 
+## Update (2024-03-15)
+
+We upload an offline version of documentation [here](/docs/html.zip). You can download and unzip it to view the documentation.
+
 ## Notice (2023-08-09)
 
 目前大部分数据集的链接已经恢复，确认无备份的数据集如下：
