@@ -68,7 +68,7 @@ class WarmStartGradientReverseLayer(nn.Module):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         """"""
-        coeff = np.float(
+        coeff = float(
             2.0 * (self.hi - self.lo) / (1.0 + np.exp(-self.alpha * self.iter_num / self.max_iters))
             - (self.hi - self.lo) + self.lo
         )
